@@ -326,7 +326,17 @@ $cities = get_posts(array(
             </div>
             
             <!-- Résultat de l'import -->
-            <div id="import-result" class="mt-4"></div>
+            <div id="import-result" class="mt-4">
+                <?php if (isset($import_success) && $import_success): ?>
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong><?php echo esc_html($import_message); ?></strong>
+                    </div>
+                <?php endif; ?>
+            </div>
+            
+            <!-- Nonce caché pour la sécurité -->
+            <input type="hidden" id="import_nonce" name="import_nonce" value="<?php echo wp_create_nonce('osmose_ads_import_communes'); ?>">
         </div>
     </div>
 </div>
