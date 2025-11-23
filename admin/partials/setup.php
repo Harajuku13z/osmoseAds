@@ -473,3 +473,8 @@ jQuery(document).ready(function($) {
 });
 </script>
 
+<?php
+// Inclure le footer global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
+?>
+
