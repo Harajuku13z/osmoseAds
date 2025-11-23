@@ -377,6 +377,19 @@ body[class*="osmose-ads"] {
     max-width: 600px;
 }
 
+/* Tables responsive */
+.wp-list-table {
+    width: 100%;
+    max-width: 100%;
+    table-layout: auto;
+}
+
+.wp-list-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+}
+
 /* Badges et indicateurs */
 .badge {
     display: inline-block;
