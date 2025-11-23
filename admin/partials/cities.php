@@ -57,7 +57,33 @@ if (isset($_POST['add_city'])) {
     }
 }
 
-// Traitement import en masse (sans AJAX)
+// Traitement suppression de toutes les villes
+if (isset($_POST['delete_all_cities']) && wp_verify_nonce($_POST['delete_all_nonce'], 'osmose_ads_delete_all_cities')) {
+    global $wpdb;
+    
+    // Récupérer tous les IDs des villes
+    $city_ids = $wpdb->get_col($wpdb->prepare(
+        "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish'",
+        'city'
+    ));
+    
+    $deleted = 0;
+    if (!empty($city_ids)) {
+        // Désactiver les hooks pour accélérer
+        remove_action('before_delete_post', '_wp_delete_post_menu_item');
+        
+        foreach ($city_ids as $city_id) {
+            if (wp_delete_post($city_id, true)) {
+                $deleted++;
+            }
+        }
+    }
+    
+    $delete_message = sprintf(__('%d ville(s) supprimée(s) avec succès', 'osmose-ads'), $deleted);
+    $delete_success = true;
+}
+
+// Traitement import en masse (optimisé)
 if (isset($_POST['import_communes']) && wp_verify_nonce($_POST['import_nonce'], 'osmose_ads_import_communes')) {
     $communes_json = wp_unslash($_POST['communes_json'] ?? '');
     $import_type = sanitize_text_field($_POST['import_type'] ?? '');
@@ -70,62 +96,100 @@ if (isset($_POST['import_communes']) && wp_verify_nonce($_POST['import_nonce'], 
                 require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-france-geo-api.php';
             }
             
+            // OPTIMISATION : Récupérer tous les codes INSEE existants en une seule requête
+            global $wpdb;
+            $existing_codes = $wpdb->get_col($wpdb->prepare(
+                "SELECT meta_value FROM {$wpdb->postmeta} pm
+                INNER JOIN {$wpdb->posts} p ON pm.post_id = p.ID
+                WHERE p.post_type = %s AND p.post_status = 'publish' AND pm.meta_key = 'insee_code'",
+                'city'
+            ));
+            $existing_codes = array_flip($existing_codes); // Pour recherche O(1)
+            
+            // Désactiver les hooks pour accélérer l'import
+            remove_action('post_updated', 'wp_save_post_revision');
+            add_filter('wp_insert_post_data', function($data) {
+                $data['post_modified'] = current_time('mysql');
+                $data['post_modified_gmt'] = current_time('mysql', 1);
+                return $data;
+            });
+            
+            // Désactiver le cache de requête pendant l'import
+            wp_suspend_cache_addition(true);
+            
             $geo_api = new France_Geo_API();
             $imported = 0;
             $skipped = 0;
+            $batch_size = 50; // Traiter par lots
             
+            // Préparer toutes les données d'abord
+            $to_import = array();
             foreach ($communes as $commune) {
                 $normalized = $geo_api->normalize_commune_data($commune);
-                
-                // Vérifier si la ville existe déjà
-                $existing = get_posts(array(
-                    'post_type' => 'city',
-                    'meta_query' => array(
-                        array(
-                            'key' => 'insee_code',
-                            'value' => $normalized['code'],
-                            'compare' => '='
-                        )
-                    ),
-                    'posts_per_page' => 1,
-                ));
-                
-                if (!empty($existing)) {
-                    $skipped++;
-                    continue;
-                }
                 
                 if (empty($normalized['name']) || empty($normalized['code'])) {
                     $skipped++;
                     continue;
                 }
                 
+                // Vérification rapide avec tableau
+                if (isset($existing_codes[$normalized['code']])) {
+                    $skipped++;
+                    continue;
+                }
+                
+                $to_import[] = $normalized;
+                // Mettre à jour le tableau des codes existants pour éviter les doublons dans le même import
+                $existing_codes[$normalized['code']] = true;
+            }
+            
+            // Import par lots
+            foreach (array_chunk($to_import, $batch_size) as $batch) {
+                foreach ($batch as $normalized) {
                 $city_id = wp_insert_post(array(
                     'post_title' => $normalized['name'],
                     'post_type' => 'city',
                     'post_status' => 'publish',
-                ));
-                
-                if ($city_id && !is_wp_error($city_id)) {
-                    update_post_meta($city_id, 'name', $normalized['name']);
-                    update_post_meta($city_id, 'insee_code', $normalized['code']);
-                    update_post_meta($city_id, 'postal_code', $normalized['postal_code']);
-                    update_post_meta($city_id, 'all_postal_codes', $normalized['all_postal_codes'] ?? $normalized['postal_code']);
-                    update_post_meta($city_id, 'department', $normalized['department']);
-                    update_post_meta($city_id, 'department_name', $normalized['department_name'] ?? '');
-                    update_post_meta($city_id, 'region', $normalized['region']);
-                    update_post_meta($city_id, 'region_name', $normalized['region_name'] ?? '');
-                    update_post_meta($city_id, 'population', $normalized['population']);
-                    update_post_meta($city_id, 'surface', $normalized['surface'] ?? 0);
-                    if (isset($normalized['latitude'])) {
-                        update_post_meta($city_id, 'latitude', $normalized['latitude']);
+                ), true); // true = wp_error en cas d'erreur
+                    
+                    if ($city_id && !is_wp_error($city_id)) {
+                        // Utiliser une seule requête pour toutes les meta
+                        $meta_data = array(
+                            'name' => $normalized['name'],
+                            'insee_code' => $normalized['code'],
+                            'postal_code' => $normalized['postal_code'],
+                            'all_postal_codes' => $normalized['all_postal_codes'] ?? $normalized['postal_code'],
+                            'department' => $normalized['department'],
+                            'department_name' => $normalized['department_name'] ?? '',
+                            'region' => $normalized['region'],
+                            'region_name' => $normalized['region_name'] ?? '',
+                            'population' => $normalized['population'],
+                            'surface' => $normalized['surface'] ?? 0,
+                        );
+                        
+                        if (isset($normalized['latitude'])) {
+                            $meta_data['latitude'] = $normalized['latitude'];
+                        }
+                        if (isset($normalized['longitude'])) {
+                            $meta_data['longitude'] = $normalized['longitude'];
+                        }
+                        
+                        // Insérer toutes les meta en une seule fois
+                        foreach ($meta_data as $key => $value) {
+                            if ($value !== '' && $value !== null) {
+                                update_post_meta($city_id, $key, $value);
+                            }
+                        }
+                        
+                        $imported++;
+                    } else {
+                        $skipped++;
                     }
-                    if (isset($normalized['longitude'])) {
-                        update_post_meta($city_id, 'longitude', $normalized['longitude']);
-                    }
-                    $imported++;
                 }
             }
+            
+            // Réactiver le cache
+            wp_suspend_cache_addition(false);
             
             // Message de succès
             $import_message = sprintf(
@@ -138,9 +202,12 @@ if (isset($_POST['import_communes']) && wp_verify_nonce($_POST['import_nonce'], 
     }
 }
 
-// Afficher le message d'import si présent
+// Afficher les messages
 if (isset($import_success) && $import_success) {
     echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($import_message) . '</p></div>';
+}
+if (isset($delete_success) && $delete_success) {
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($delete_message) . '</p></div>';
 }
 
 $cities = get_posts(array(
@@ -164,11 +231,23 @@ $cities = get_posts(array(
 <div class="row mb-4">
     <div class="col-12">
         <div class="osmose-ads-card">
-            <h2 class="mb-3">
-                <i class="bi bi-list-ul me-2"></i>
-                <?php _e('Liste des Villes', 'osmose-ads'); ?>
-                <span class="badge bg-primary ms-2"><?php echo count($cities); ?></span>
-            </h2>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="mb-0">
+                    <i class="bi bi-list-ul me-2"></i>
+                    <?php _e('Liste des Villes', 'osmose-ads'); ?>
+                    <span class="badge bg-primary ms-2"><?php echo count($cities); ?></span>
+                </h2>
+                <?php if (!empty($cities)): ?>
+                    <form method="post" style="display: inline;" onsubmit="return confirm('<?php _e('Êtes-vous sûr de vouloir supprimer TOUTES les villes ? Cette action est irréversible !', 'osmose-ads'); ?>');">
+                        <?php wp_nonce_field('osmose_ads_delete_all_cities', 'delete_all_nonce'); ?>
+                        <input type="hidden" name="delete_all_cities" value="1">
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash me-1"></i>
+                            <?php _e('Supprimer toutes les villes', 'osmose-ads'); ?>
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </div>
             
             <div class="cities-scroll-container" style="max-height: 500px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
                 <?php if (!empty($cities)): ?>
