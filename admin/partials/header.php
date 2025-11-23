@@ -12,17 +12,29 @@ function osmose_ads_get_logo_url() {
     $logo_paths = array(
         OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.jpg',
         OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.png',
+        OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.JPG',
+        OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.PNG',
         OSMOSE_ADS_PLUGIN_DIR . '../logo.jpg',
         OSMOSE_ADS_PLUGIN_DIR . '../logo.png',
         ABSPATH . 'logo.jpg',
     );
     
     foreach ($logo_paths as $path) {
-        if (file_exists($path)) {
-            if (strpos($path, ABSPATH) === 0) {
-                return str_replace(ABSPATH, home_url('/'), $path);
+        // Normaliser le chemin
+        $path = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $path);
+        $real_path = @realpath($path);
+        
+        if ($real_path && file_exists($real_path)) {
+            // Convertir en URL
+            if (strpos($real_path, ABSPATH) === 0) {
+                $url = str_replace(ABSPATH, home_url('/'), $real_path);
+                $url = str_replace(DIRECTORY_SEPARATOR, '/', $url);
+                return $url;
             }
-            $relative = str_replace(OSMOSE_ADS_PLUGIN_DIR, '', $path);
+            
+            // Chemin relatif au plugin
+            $relative = str_replace(OSMOSE_ADS_PLUGIN_DIR, '', $real_path);
+            $relative = str_replace(DIRECTORY_SEPARATOR, '/', $relative);
             return OSMOSE_ADS_PLUGIN_URL . $relative;
         }
     }
@@ -75,13 +87,13 @@ $nav_items = array(
     <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center" href="<?php echo admin_url('admin.php?page=osmose-ads'); ?>">
             <?php if ($logo_url): ?>
-                <img src="<?php echo esc_url($logo_url); ?>" alt="Osmose" class="me-3 osmose-logo-rounded" style="height: 50px; width: auto; max-width: 200px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);">
+                <img src="<?php echo esc_url($logo_url); ?>" alt="Osmose" class="osmose-logo-rounded" style="height: 50px; width: auto; max-width: 200px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);">
             <?php else: ?>
-                <div class="osmose-logo-placeholder me-3" style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                <!-- Fallback si logo non trouvé -->
+                <div class="osmose-logo-placeholder" style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                     <span class="dashicons dashicons-admin-site" style="color: white; font-size: 24px;"></span>
                 </div>
             <?php endif; ?>
-            <span class="fw-bold">Osmose ADS</span>
         </a>
         
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#osmoseNavbar" aria-controls="osmoseNavbar" aria-expanded="false" aria-label="Toggle navigation">

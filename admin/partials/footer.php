@@ -66,11 +66,19 @@ body[class*="osmose"] {
 
 .osmose-logo-rounded {
     border-radius: 12px !important;
-    object-fit: cover;
+    object-fit: contain;
     background: rgba(255, 255, 255, 0.1);
     padding: 4px;
     max-width: 100%;
     height: auto;
+    display: block;
+}
+
+/* Assurer que le logo est visible */
+.navbar-brand img.osmose-logo-rounded {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .osmose-navbar .nav-link {
