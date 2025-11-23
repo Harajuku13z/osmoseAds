@@ -72,15 +72,16 @@ $templates = get_posts(array(
 ?>
 
 <!-- Page Header -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4" style="margin-top: 20px;">
     <div>
         <h1 class="h3 mb-1"><?php echo esc_html(get_admin_page_title()); ?></h1>
+        <p class="text-muted mb-0"><?php _e('Gérez vos templates de services', 'osmose-ads'); ?></p>
     </div>
     <div>
-        <a href="#" id="create-template-btn" class="btn btn-primary">
+        <button type="button" id="create-template-btn" class="btn btn-primary" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;">
             <i class="bi bi-plus-circle me-2"></i>
-            <?php _e('Créer depuis un Service', 'osmose-ads'); ?>
-        </a>
+            <?php _e('Créer un Template', 'osmose-ads'); ?>
+        </button>
     </div>
 </div>
     
