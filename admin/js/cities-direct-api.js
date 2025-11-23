@@ -498,11 +498,22 @@
             .val(importType)
         );
         
-        // Nonce de sécurité
+        // Nonce de sécurité - essayer plusieurs emplacements
+        var nonce = $('#import_nonce').val() || 
+                    $('input[name="import_nonce"]').val() || 
+                    '';
+        
+        if (!nonce) {
+            console.error('Osmose ADS: Import nonce not found in page!');
+            resultDiv.html('<div class="alert alert-danger">Erreur de sécurité : nonce manquant. Rechargez la page.</div>');
+            $('button[type="submit"]').prop('disabled', false);
+            return;
+        }
+        
         form.append($('<input>')
             .attr('type', 'hidden')
             .attr('name', 'import_nonce')
-            .val($('#import_nonce').val() || '')
+            .val(nonce)
         );
         
         // Champ pour déclencher l'import
