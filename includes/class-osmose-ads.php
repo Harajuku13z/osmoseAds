@@ -62,9 +62,10 @@ class Osmose_Ads {
         // Redirection après activation
         $this->loader->add_action('admin_init', $plugin_admin, 'activation_redirect');
         
-        // Enregistrer les handlers AJAX
-        $this->loader->add_action('admin_init', $plugin_admin, 'register_ajax_handlers');
-        $this->loader->add_action('admin_init', $plugin_admin, 'register_cities_ajax_handlers');
+        // Enregistrer les handlers AJAX (doit être fait tôt, pas dans admin_init)
+        // Les handlers AJAX WordPress doivent être enregistrés avant que les requêtes ne soient faites
+        $this->loader->add_action('init', $plugin_admin, 'register_ajax_handlers', 1);
+        $this->loader->add_action('init', $plugin_admin, 'register_cities_ajax_handlers', 1);
     }
 
     /**

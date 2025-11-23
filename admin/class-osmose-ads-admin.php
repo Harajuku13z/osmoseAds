@@ -285,10 +285,21 @@ class Osmose_Ads_Admin {
      * Handler AJAX pour importer des villes
      */
     public function ajax_import_cities() {
-        check_ajax_referer('osmose_ads_nonce', 'nonce');
+        // Log pour débogage
+        error_log('Osmose ADS: ajax_import_cities called');
+        error_log('Osmose ADS: POST data = ' . print_r($_POST, true));
+        
+        // Vérifier le nonce
+        if (!check_ajax_referer('osmose_ads_nonce', 'nonce', false)) {
+            error_log('Osmose ADS: Nonce check failed');
+            wp_send_json_error(array('message' => __('Erreur de sécurité - nonce invalide', 'osmose-ads')));
+            return;
+        }
         
         if (!current_user_can('manage_options')) {
+            error_log('Osmose ADS: User does not have manage_options capability');
             wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+            return;
         }
         
         // Charger les dépendances
@@ -297,6 +308,15 @@ class Osmose_Ads_Admin {
         }
         
         $import_type = sanitize_text_field($_POST['import_type'] ?? '');
+        
+        if (empty($import_type)) {
+            error_log('Osmose ADS: import_type is empty');
+            wp_send_json_error(array('message' => __('Type d\'import non spécifié', 'osmose-ads')));
+            return;
+        }
+        
+        error_log('Osmose ADS: import_type = ' . $import_type);
+        
         $geo_api = new France_Geo_API();
         
         $communes = array();
@@ -305,46 +325,69 @@ class Osmose_Ads_Admin {
         switch ($import_type) {
             case 'department':
                 $department_code = sanitize_text_field($_POST['department_code'] ?? '');
+                error_log('Osmose ADS: department_code = ' . $department_code);
                 if (empty($department_code)) {
                     wp_send_json_error(array('message' => __('Code département requis', 'osmose-ads')));
+                    return;
                 }
+                error_log('Osmose ADS: Calling get_communes_by_department...');
                 $communes = $geo_api->get_communes_by_department($department_code);
                 break;
                 
             case 'region':
                 $region_code = sanitize_text_field($_POST['region_code'] ?? '');
+                error_log('Osmose ADS: region_code = ' . $region_code);
                 if (empty($region_code)) {
                     wp_send_json_error(array('message' => __('Code région requis', 'osmose-ads')));
+                    return;
                 }
+                error_log('Osmose ADS: Calling get_communes_by_region...');
                 $communes = $geo_api->get_communes_by_region($region_code);
                 break;
                 
             case 'distance':
                 $city_code = sanitize_text_field($_POST['city_code'] ?? '');
                 $distance = floatval($_POST['distance'] ?? 10);
+                error_log('Osmose ADS: city_code = ' . $city_code . ', distance = ' . $distance);
                 if (empty($city_code)) {
                     wp_send_json_error(array('message' => __('Ville de référence requise', 'osmose-ads')));
+                    return;
                 }
+                error_log('Osmose ADS: Calling get_communes_by_distance...');
                 $communes = $geo_api->get_communes_by_distance($city_code, $distance);
                 break;
                 
             default:
-                wp_send_json_error(array('message' => __('Type d\'import invalide', 'osmose-ads')));
+                error_log('Osmose ADS: Invalid import_type = ' . $import_type);
+                wp_send_json_error(array('message' => __('Type d\'import invalide: ' . $import_type, 'osmose-ads')));
+                return;
         }
         
         if (is_wp_error($communes)) {
-            wp_send_json_error(array('message' => $communes->get_error_message()));
+            error_log('Osmose ADS: API returned WP_Error: ' . $communes->get_error_message());
+            wp_send_json_error(array('message' => __('Erreur API: ' . $communes->get_error_message(), 'osmose-ads')));
+            return;
         }
         
-        if (empty($communes)) {
-            wp_send_json_error(array('message' => __('Aucune commune trouvée', 'osmose-ads')));
+        if (empty($communes) || !is_array($communes)) {
+            error_log('Osmose ADS: No communes found or invalid format. Type: ' . gettype($communes) . ', Count: ' . (is_array($communes) ? count($communes) : 'N/A'));
+            wp_send_json_error(array('message' => __('Aucune commune trouvée ou format de réponse invalide', 'osmose-ads')));
+            return;
         }
+        
+        error_log('Osmose ADS: Found ' . count($communes) . ' communes');
         
         // Importer les communes
         $imported = 0;
         $skipped = 0;
+        $errors_count = 0;
         
-        foreach ($communes as $commune) {
+        error_log('Osmose ADS: Starting import of ' . count($communes) . ' communes');
+        
+        foreach ($communes as $index => $commune) {
+            if ($index % 100 === 0) {
+                error_log('Osmose ADS: Processing commune ' . ($index + 1) . ' / ' . count($communes));
+            }
             $normalized = $geo_api->normalize_commune_data($commune);
             
             // Vérifier si la ville existe déjà (par code INSEE)
@@ -367,6 +410,7 @@ class Osmose_Ads_Admin {
             
             // Vérifier les données minimales
             if (empty($normalized['name']) || empty($normalized['code'])) {
+                error_log('Osmose ADS: Skipping commune with missing data: ' . print_r($commune, true));
                 $skipped++;
                 continue;
             }
@@ -378,7 +422,13 @@ class Osmose_Ads_Admin {
                 'post_status' => 'publish',
             ));
             
-            if ($city_id && !is_wp_error($city_id)) {
+            if (is_wp_error($city_id)) {
+                error_log('Osmose ADS: Error creating post for ' . $normalized['name'] . ': ' . $city_id->get_error_message());
+                $errors_count++;
+                continue;
+            }
+            
+            if ($city_id) {
                 update_post_meta($city_id, 'name', $normalized['name']);
                 update_post_meta($city_id, 'insee_code', $normalized['code']);
                 update_post_meta($city_id, 'postal_code', $normalized['postal_code']);
@@ -396,17 +446,24 @@ class Osmose_Ads_Admin {
                     update_post_meta($city_id, 'longitude', $normalized['longitude']);
                 }
                 $imported++;
+            } else {
+                error_log('Osmose ADS: wp_insert_post returned false for ' . $normalized['name']);
+                $errors_count++;
             }
         }
         
+        error_log('Osmose ADS: Import completed. Imported: ' . $imported . ', Skipped: ' . $skipped . ', Errors: ' . $errors_count);
+        
         wp_send_json_success(array(
             'message' => sprintf(
-                __('%d ville(s) importée(s), %d ignorée(s) (déjà existantes)', 'osmose-ads'),
+                __('%d ville(s) importée(s), %d ignorée(s) (déjà existantes), %d erreur(s)', 'osmose-ads'),
                 $imported,
-                $skipped
+                $skipped,
+                $errors_count
             ),
             'imported' => $imported,
             'skipped' => $skipped,
+            'errors' => $errors_count,
             'total' => count($communes),
         ));
     }

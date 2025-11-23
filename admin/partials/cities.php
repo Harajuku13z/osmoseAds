@@ -692,16 +692,49 @@ jQuery(document).ready(function($) {
                 }
             },
             error: function(xhr, status, error) {
+                console.error('AJAX Error:', {
+                    status: status,
+                    error: error,
+                    statusCode: xhr.status,
+                    responseText: xhr.responseText,
+                    readyState: xhr.readyState
+                });
+                
                 $('button[type="submit"]').prop('disabled', false);
                 
                 var errorMsg = '<?php _e('Erreur lors de l\'import', 'osmose-ads'); ?>';
+                var errorDetails = '';
+                
+                // Analyser la réponse pour obtenir plus de détails
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    if (response && response.data && response.data.message) {
+                        errorDetails = response.data.message;
+                    }
+                } catch (e) {
+                    // Pas de JSON valide
+                }
+                
                 if (status === 'timeout') {
                     errorMsg = '<?php _e('Le délai d\'import a été dépassé. L\'import peut continuer en arrière-plan.', 'osmose-ads'); ?>';
+                } else if (xhr.status === 0) {
+                    errorMsg = '<?php _e('Erreur de connexion. Vérifiez votre connexion Internet et réessayez.', 'osmose-ads'); ?>';
+                } else if (xhr.status === 403) {
+                    errorMsg = '<?php _e('Accès refusé. Vérifiez vos permissions.', 'osmose-ads'); ?>';
+                } else if (xhr.status === 500) {
+                    errorMsg = '<?php _e('Erreur serveur. Vérifiez les logs WordPress (debug.log).', 'osmose-ads'); ?>';
                 }
+                
+                if (errorDetails) {
+                    errorMsg += '<br><small>' + errorDetails + '</small>';
+                }
+                
+                errorMsg += '<br><small class="text-muted">Code HTTP: ' + xhr.status + ' | Status: ' + status + '</small>';
                 
                 resultDiv.html(
                     '<div class="alert alert-danger">' +
                     '<i class="bi bi-exclamation-triangle me-2"></i>' +
+                    '<strong>Erreur</strong><br>' +
                     errorMsg +
                     '</div>'
                 );

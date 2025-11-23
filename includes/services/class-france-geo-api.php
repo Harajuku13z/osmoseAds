@@ -23,28 +23,53 @@ class France_Geo_API {
         // Ajouter les paramètres pour obtenir toutes les informations nécessaires
         $url .= '?fields=nom,code,codeDepartement,codeRegion,centre,population,codesPostaux,surface';
         
+        error_log('Osmose ADS API: Calling URL: ' . $url);
+        
         $response = wp_remote_get($url, array(
             'timeout' => 60,
+            'sslverify' => true,
             'headers' => array(
                 'Accept' => 'application/json',
+                'User-Agent' => 'WordPress/Osmose-ADS',
             ),
         ));
         
         if (is_wp_error($response)) {
-            return $response;
+            $error_message = $response->get_error_message();
+            error_log('Osmose ADS API: WP_Error: ' . $error_message);
+            return new WP_Error('api_connection_error', sprintf(__('Erreur de connexion à l\'API: %s', 'osmose-ads'), $error_message));
         }
         
         $code = wp_remote_retrieve_response_code($response);
+        error_log('Osmose ADS API: Response code: ' . $code);
+        
         if ($code !== 200) {
-            return new WP_Error('api_error', sprintf(__('Erreur API : code %d', 'osmose-ads'), $code));
+            $body = wp_remote_retrieve_body($response);
+            error_log('Osmose ADS API: Error body: ' . $body);
+            return new WP_Error('api_error', sprintf(__('Erreur API : code %d - %s', 'osmose-ads'), $code, substr($body, 0, 200)));
         }
         
         $body = wp_remote_retrieve_body($response);
+        
+        if (empty($body)) {
+            error_log('Osmose ADS API: Empty response body');
+            return new WP_Error('empty_response', __('Réponse vide de l\'API', 'osmose-ads'));
+        }
+        
         $communes = json_decode($body, true);
         
-        if (!is_array($communes)) {
-            return new WP_Error('invalid_response', __('Réponse invalide de l\'API', 'osmose-ads'));
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log('Osmose ADS API: JSON decode error: ' . json_last_error_msg());
+            error_log('Osmose ADS API: Body preview: ' . substr($body, 0, 500));
+            return new WP_Error('json_decode_error', sprintf(__('Erreur de décodage JSON: %s', 'osmose-ads'), json_last_error_msg()));
         }
+        
+        if (!is_array($communes)) {
+            error_log('Osmose ADS API: Response is not an array. Type: ' . gettype($communes));
+            return new WP_Error('invalid_response', __('Réponse invalide de l\'API (pas un tableau)', 'osmose-ads'));
+        }
+        
+        error_log('Osmose ADS API: Successfully retrieved ' . count($communes) . ' communes');
         
         return $communes;
     }
@@ -59,23 +84,37 @@ class France_Geo_API {
         
         $departments_url = $this->api_base_url . '/regions/' . urlencode($region_code) . '/departements';
         
+        error_log('Osmose ADS API: Getting departments for region: ' . $region_code);
+        
         $response = wp_remote_get($departments_url, array(
             'timeout' => 30,
+            'sslverify' => true,
             'headers' => array(
                 'Accept' => 'application/json',
+                'User-Agent' => 'WordPress/Osmose-ADS',
             ),
         ));
         
         if (is_wp_error($response)) {
+            error_log('Osmose ADS API: Error getting departments: ' . $response->get_error_message());
             return $response;
+        }
+        
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code !== 200) {
+            error_log('Osmose ADS API: Error code when getting departments: ' . $code);
+            return new WP_Error('api_error', sprintf(__('Erreur API : code %d', 'osmose-ads'), $code));
         }
         
         $body = wp_remote_retrieve_body($response);
         $departments = json_decode($body, true);
         
         if (!is_array($departments)) {
+            error_log('Osmose ADS API: Invalid response format for departments');
             return new WP_Error('invalid_response', __('Réponse invalide de l\'API pour les départements', 'osmose-ads'));
         }
+        
+        error_log('Osmose ADS API: Found ' . count($departments) . ' departments for region ' . $region_code);
         
         // Récupérer toutes les communes de tous les départements de la région
         $all_communes = array();
