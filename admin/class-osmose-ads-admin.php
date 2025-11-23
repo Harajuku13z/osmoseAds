@@ -50,7 +50,7 @@ class Osmose_Ads_Admin {
         );
         
         // Charger le script d'import direct depuis l'API sur la page des villes
-        if ($hook === 'osmose-ads_page_osmose-ads-cities') {
+        if (strpos($hook, 'osmose-ads-cities') !== false) {
             wp_enqueue_script(
                 'osmose-ads-cities-direct',
                 OSMOSE_ADS_PLUGIN_URL . 'admin/js/cities-direct-api.js',
@@ -64,6 +64,22 @@ class Osmose_Ads_Admin {
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('osmose_ads_nonce'),
             ));
+            
+            // S'assurer que la variable est disponible même pour les scripts inline
+            add_action('admin_footer', function() use ($hook) {
+                if (strpos($hook, 'osmose-ads-cities') !== false) {
+                    ?>
+                    <script>
+                    if (typeof osmoseAds === 'undefined') {
+                        window.osmoseAds = {
+                            ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
+                            nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>'
+                        };
+                    }
+                    </script>
+                    <?php
+                }
+            }, 5);
         }
         
         // Créer le nonce et localiser le script
