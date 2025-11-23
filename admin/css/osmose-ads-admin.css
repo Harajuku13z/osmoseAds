@@ -1,0 +1,361 @@
+/* ========================================
+   OSMOSE ADS - Interface Admin Personnalisée
+   Style moderne avec bleu dominant
+   ======================================== */
+
+/* Masquer les notifications WordPress dans les pages Osmose ADS */
+body[class*="osmose"] .notice,
+body[class*="osmose"] .update-nag,
+body[class*="osmose"] .error,
+body[class*="osmose"] .updated,
+.osmose-ads-page .notice,
+.osmose-ads-page .update-nag,
+.osmose-ads-page .error,
+.osmose-ads-page .updated {
+    display: none !important;
+}
+
+/* Style global pour les pages Osmose ADS */
+.osmose-ads-page {
+    background: #f0f4f8;
+    min-height: calc(100vh - 32px);
+    margin: 0 -20px 0 -2px;
+    padding: 0;
+}
+
+.osmose-ads-page .wrap {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+}
+
+/* Header personnalisé avec logo */
+.osmose-ads-header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 50%, #3b82f6 100%);
+    padding: 30px 40px;
+    margin: 0 -20px 30px -2px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.osmose-ads-header-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.osmose-ads-logo {
+    height: 50px;
+    width: auto;
+    filter: brightness(0) invert(1);
+}
+
+.osmose-ads-header h1 {
+    color: #ffffff;
+    font-size: 32px;
+    font-weight: 600;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.osmose-ads-header .description {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    margin: 5px 0 0 0;
+}
+
+/* Container principal */
+.osmose-ads-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px 40px;
+}
+
+/* Cards modernes */
+.osmose-ads-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 30px;
+    margin-bottom: 25px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.osmose-ads-card:hover {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    transform: translateY(-2px);
+}
+
+.osmose-ads-card h2 {
+    color: #1e3a5f;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 20px 0;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #3b82f6;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.osmose-ads-card h3 {
+    color: #2c5282;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 25px 0 15px 0;
+}
+
+/* Icône personnalisée dans la sidebar */
+#toplevel_page_osmose-ads .wp-menu-image:before {
+    content: "\f488"; /* dashicons-megaphone */
+    font-family: dashicons;
+    font-size: 20px;
+    padding: 6px 0 0 0;
+    color: #3b82f6;
+}
+
+#toplevel_page_osmose-ads:hover .wp-menu-image:before,
+#toplevel_page_osmose-ads.current .wp-menu-image:before {
+    color: #1e3a5f;
+}
+
+/* Statistiques modernes */
+.osmose-ads-dashboard {
+    margin-top: 0;
+}
+
+.osmose-ads-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.stat-box {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
+}
+
+.stat-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon .dashicons {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    color: #ffffff;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-content h3 {
+    font-size: 36px;
+    font-weight: 700;
+    margin: 0 0 5px 0;
+    color: #1e3a5f;
+    line-height: 1;
+}
+
+.stat-content p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0 0 15px 0;
+    font-weight: 500;
+}
+
+/* Actions rapides */
+.osmose-ads-quick-actions {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+/* Boutons personnalisés */
+.osmose-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.osmose-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    text-decoration: none;
+}
+
+.osmose-btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #ffffff;
+    border-color: #3b82f6;
+}
+
+.osmose-btn-primary:hover {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    color: #ffffff;
+}
+
+.osmose-btn-secondary {
+    background: #ffffff;
+    color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.osmose-btn-secondary:hover {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.osmose-btn-outline {
+    background: transparent;
+    color: #3b82f6;
+    border-color: #3b82f6;
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.osmose-btn-outline:hover {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.osmose-btn-large {
+    padding: 16px 32px;
+    font-size: 16px;
+}
+
+.osmose-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* Formulaire modernisé */
+.osmose-ads-card .form-table th {
+    color: #1e3a5f;
+    font-weight: 600;
+    padding: 15px 10px 15px 0;
+}
+
+.osmose-ads-card .form-table td {
+    padding: 15px 10px;
+}
+
+.osmose-ads-card input[type="text"],
+.osmose-ads-card input[type="password"],
+.osmose-ads-card input[type="number"],
+.osmose-ads-card textarea,
+.osmose-ads-card select {
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 12px;
+    transition: all 0.3s ease;
+}
+
+.osmose-ads-card input:focus,
+.osmose-ads-card textarea:focus,
+.osmose-ads-card select:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Tables modernisées */
+.osmose-ads-card .wp-list-table {
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.osmose-ads-card .wp-list-table thead th {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    color: #1e3a5f;
+    font-weight: 600;
+    padding: 15px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.osmose-ads-card .wp-list-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.osmose-ads-card .wp-list-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Modals */
+#create-template-modal {
+    background: white;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    margin: 20px 0;
+}
+
+.service-item {
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.service-item input {
+    flex: 1;
+}
+
+.osmose-ads-cities .add-city-form {
+    max-width: 600px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .osmose-ads-header {
+        padding: 20px;
+    }
+    
+    .osmose-ads-header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .osmose-ads-container {
+        padding: 0 20px 20px;
+    }
+    
+    .osmose-ads-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .osmose-ads-quick-actions {
+        flex-direction: column;
+    }
+    
+    .osmose-btn-large {
+        width: 100%;
+        justify-content: center;
+    }
+}
