@@ -75,9 +75,11 @@ $nav_items = array(
     <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center" href="<?php echo admin_url('admin.php?page=osmose-ads'); ?>">
             <?php if ($logo_url): ?>
-                <img src="<?php echo esc_url($logo_url); ?>" alt="Osmose" class="me-3" style="height: 50px; width: auto; max-width: 200px;">
+                <img src="<?php echo esc_url($logo_url); ?>" alt="Osmose" class="me-3 osmose-logo-rounded" style="height: 50px; width: auto; max-width: 200px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);">
             <?php else: ?>
-                <span class="dashicons dashicons-admin-site me-2" style="font-size: 30px;"></span>
+                <div class="osmose-logo-placeholder me-3" style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <span class="dashicons dashicons-admin-site" style="color: white; font-size: 24px;"></span>
+                </div>
             <?php endif; ?>
             <span class="fw-bold">Osmose ADS</span>
         </a>

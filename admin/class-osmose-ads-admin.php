@@ -56,30 +56,20 @@ class Osmose_Ads_Admin {
     }
 
     public function add_admin_menu() {
-        // Chercher le logo pour l'icône du menu
-        $logo_paths = array(
-            OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.jpg',
-            OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.png',
-        );
-        
-        $menu_icon = 'dashicons-megaphone';
-        foreach ($logo_paths as $path) {
-            if (file_exists($path)) {
-                $menu_icon = OSMOSE_ADS_PLUGIN_URL . 'admin/img/' . basename($path);
-                break;
-            }
-        }
-        
-        // Utiliser le logo comme icône si disponible
+        // Pas d'icône dans le menu - on utilisera juste le texte
+        // On pourra ajouter un logo dans le header plus tard si nécessaire
         add_menu_page(
             __('Osmose ADS', 'osmose-ads'),
             __('Osmose ADS', 'osmose-ads'),
             'manage_options',
             'osmose-ads',
             array($this, 'display_dashboard'),
-            $menu_icon,
+            '', // Pas d'icône
             30
         );
+        
+        // Masquer l'icône par défaut avec CSS
+        add_action('admin_head', array($this, 'hide_menu_icon'));
         
         add_submenu_page(
             'osmose-ads',
@@ -197,6 +187,20 @@ class Osmose_Ads_Admin {
 
     public function display_settings() {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/settings.php';
+    }
+    
+    /**
+     * Masquer l'icône du menu dans la sidebar
+     */
+    public function hide_menu_icon() {
+        echo '<style>
+            #toplevel_page_osmose-ads .wp-menu-image {
+                display: none !important;
+            }
+            #toplevel_page_osmose-ads .wp-menu-name {
+                padding-left: 12px !important;
+            }
+        </style>';
     }
 
     /**

@@ -43,6 +43,13 @@ if (!defined('ABSPATH')) {
     color: #ffffff !important;
 }
 
+.osmose-logo-rounded {
+    border-radius: 12px !important;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px;
+}
+
 .osmose-navbar .nav-link {
     color: rgba(255, 255, 255, 0.9) !important;
     padding: 8px 16px !important;
