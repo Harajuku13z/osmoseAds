@@ -35,7 +35,12 @@ class Osmose_Ads_Admin {
         }
     }
 
-    public function enqueue_scripts() {
+    public function enqueue_scripts($hook) {
+        // Charger uniquement sur les pages Osmose ADS
+        if (strpos($hook, 'osmose-ads') === false) {
+            return;
+        }
+        
         wp_enqueue_script(
             'osmose-ads-admin',
             OSMOSE_ADS_PLUGIN_URL . 'admin/js/osmose-ads-admin.js',

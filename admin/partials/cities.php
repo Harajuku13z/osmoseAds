@@ -3,24 +3,41 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Chemin du logo
-$logo_paths = array(
-    OSMOSE_ADS_PLUGIN_DIR . '../logo.jpg',
-    OSMOSE_ADS_PLUGIN_DIR . 'img/logo.jpg',
-    ABSPATH . 'logo.jpg'
-);
-
-$logo_url = '';
-foreach ($logo_paths as $path) {
-    if (file_exists($path)) {
-        $logo_url = str_replace(ABSPATH, home_url('/'), $path);
-        break;
+// Fonction helper pour trouver le logo
+function osmose_ads_find_logo() {
+    $logo_paths = array(
+        OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.jpg',
+        OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.png',
+        OSMOSE_ADS_PLUGIN_DIR . '../logo.jpg',
+        OSMOSE_ADS_PLUGIN_DIR . '../logo.png',
+        ABSPATH . 'logo.jpg',
+        ABSPATH . 'logo.png',
+    );
+    
+    foreach ($logo_paths as $path) {
+        // Normaliser le chemin
+        $path = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $path);
+        $real_path = @realpath($path);
+        
+        if ($real_path && file_exists($real_path)) {
+            // Convertir en URL
+            if (strpos($real_path, ABSPATH) === 0) {
+                $url = str_replace(ABSPATH, home_url('/'), $real_path);
+                $url = str_replace(DIRECTORY_SEPARATOR, '/', $url);
+                return $url;
+            }
+            
+            // Chemin relatif au plugin
+            $relative = str_replace(OSMOSE_ADS_PLUGIN_DIR, '', $real_path);
+            $relative = str_replace(DIRECTORY_SEPARATOR, '/', $relative);
+            return OSMOSE_ADS_PLUGIN_URL . $relative;
+        }
     }
+    
+    return false;
 }
 
-if (empty($logo_url)) {
-    $logo_url = OSMOSE_ADS_PLUGIN_URL . '../logo.jpg';
-}
+$logo_url = osmose_ads_find_logo();
 
 // Traitement formulaire simple
 if (isset($_POST['add_city'])) {
@@ -61,7 +78,11 @@ $cities = get_posts(array(
     <div class="osmose-ads-header">
         <div class="osmose-ads-header-content">
             <?php if ($logo_url): ?>
-                <img src="<?php echo esc_url($logo_url); ?>" alt="Osmose" class="osmose-ads-logo">
+                <img src="<?php echo esc_url($logo_url); ?>" alt="Osmose" class="osmose-ads-logo" style="max-height: 50px; width: auto;">
+            <?php else: ?>
+                <div class="osmose-ads-logo-placeholder" style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <span class="dashicons dashicons-admin-site" style="color: white; font-size: 24px;"></span>
+                </div>
             <?php endif; ?>
             <div>
                 <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
@@ -74,25 +95,77 @@ $cities = get_posts(array(
         
         <!-- Onglets -->
         <div class="osmose-ads-tabs">
-            <button class="osmose-tab-btn active" data-tab="import">
-                <span class="dashicons dashicons-download"></span>
-                <?php _e('Import en Masse', 'osmose-ads'); ?>
-            </button>
-            <button class="osmose-tab-btn" data-tab="manual">
-                <span class="dashicons dashicons-plus-alt"></span>
-                <?php _e('Ajout Manuel', 'osmose-ads'); ?>
-            </button>
-            <button class="osmose-tab-btn" data-tab="list">
+            <button class="osmose-tab-btn active" data-tab="list" type="button">
                 <span class="dashicons dashicons-list-view"></span>
                 <?php _e('Liste des Villes', 'osmose-ads'); ?>
                 <span class="badge"><?php echo count($cities); ?></span>
+            </button>
+            <button class="osmose-tab-btn" data-tab="import" type="button">
+                <span class="dashicons dashicons-download"></span>
+                <?php _e('Import en Masse', 'osmose-ads'); ?>
+            </button>
+            <button class="osmose-tab-btn" data-tab="manual" type="button">
+                <span class="dashicons dashicons-plus-alt"></span>
+                <?php _e('Ajout Manuel', 'osmose-ads'); ?>
             </button>
         </div>
         
         <!-- Contenu des onglets -->
         
+        <!-- Onglet Liste (actif par défaut) -->
+        <div class="osmose-tab-content active" id="tab-list" style="display: block;">
+            <div class="osmose-ads-card">
+                <h2>
+                    <span class="dashicons dashicons-list-view"></span>
+                    <?php _e('Liste des Villes', 'osmose-ads'); ?>
+                    <span class="badge"><?php echo count($cities); ?></span>
+                </h2>
+                
+                <?php if (!empty($cities)): ?>
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
+                            <tr>
+                                <th><?php _e('Nom', 'osmose-ads'); ?></th>
+                                <th><?php _e('Code Postal', 'osmose-ads'); ?></th>
+                                <th><?php _e('Département', 'osmose-ads'); ?></th>
+                                <th><?php _e('Région', 'osmose-ads'); ?></th>
+                                <th><?php _e('Population', 'osmose-ads'); ?></th>
+                                <th><?php _e('Actions', 'osmose-ads'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($cities as $city): 
+                                $name = get_post_meta($city->ID, 'name', true) ?: $city->post_title;
+                                $postal_code = get_post_meta($city->ID, 'postal_code', true);
+                                $department = get_post_meta($city->ID, 'department_name', true) ?: get_post_meta($city->ID, 'department', true);
+                                $region = get_post_meta($city->ID, 'region_name', true) ?: get_post_meta($city->ID, 'region', true);
+                                $population = get_post_meta($city->ID, 'population', true);
+                            ?>
+                                <tr>
+                                    <td><strong><?php echo esc_html($name); ?></strong></td>
+                                    <td><?php echo esc_html($postal_code); ?></td>
+                                    <td><?php echo esc_html($department); ?></td>
+                                    <td><?php echo esc_html($region); ?></td>
+                                    <td><?php echo $population ? number_format_i18n($population) : '—'; ?></td>
+                                    <td>
+                                        <a href="<?php echo get_edit_post_link($city->ID); ?>"><?php _e('Modifier', 'osmose-ads'); ?></a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <div class="notice notice-info" style="margin: 20px 0;">
+                        <p>
+                            <?php _e('Aucune ville trouvée. Utilisez l\'onglet "Import en Masse" pour importer des villes via l\'API officielle française, ou l\'onglet "Ajout Manuel" pour ajouter une ville manuellement.', 'osmose-ads'); ?>
+                        </p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        
         <!-- Onglet Import en Masse -->
-        <div class="osmose-tab-content active" id="tab-import">
+        <div class="osmose-tab-content" id="tab-import" style="display: none;">
             <div class="osmose-ads-card">
                 <h2>
                     <span class="dashicons dashicons-download"></span>
@@ -217,7 +290,7 @@ $cities = get_posts(array(
         </div>
         
         <!-- Onglet Ajout Manuel -->
-        <div class="osmose-tab-content" id="tab-manual">
+        <div class="osmose-tab-content" id="tab-manual" style="display: none;">
             <div class="osmose-ads-card">
                 <h2>
                     <span class="dashicons dashicons-plus-alt"></span>
@@ -251,55 +324,6 @@ $cities = get_posts(array(
             </div>
         </div>
         
-        <!-- Onglet Liste -->
-        <div class="osmose-tab-content" id="tab-list">
-            <div class="osmose-ads-card">
-                <h2>
-                    <span class="dashicons dashicons-list-view"></span>
-                    <?php _e('Liste des Villes', 'osmose-ads'); ?>
-                    <span class="badge"><?php echo count($cities); ?></span>
-                </h2>
-                
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Nom', 'osmose-ads'); ?></th>
-                            <th><?php _e('Code Postal', 'osmose-ads'); ?></th>
-                            <th><?php _e('Département', 'osmose-ads'); ?></th>
-                            <th><?php _e('Région', 'osmose-ads'); ?></th>
-                            <th><?php _e('Population', 'osmose-ads'); ?></th>
-                            <th><?php _e('Actions', 'osmose-ads'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (!empty($cities)): ?>
-                            <?php foreach ($cities as $city): 
-                                $name = get_post_meta($city->ID, 'name', true) ?: $city->post_title;
-                                $postal_code = get_post_meta($city->ID, 'postal_code', true);
-                                $department = get_post_meta($city->ID, 'department_name', true) ?: get_post_meta($city->ID, 'department', true);
-                                $region = get_post_meta($city->ID, 'region_name', true) ?: get_post_meta($city->ID, 'region', true);
-                                $population = get_post_meta($city->ID, 'population', true);
-                            ?>
-                                <tr>
-                                    <td><strong><?php echo esc_html($name); ?></strong></td>
-                                    <td><?php echo esc_html($postal_code); ?></td>
-                                    <td><?php echo esc_html($department); ?></td>
-                                    <td><?php echo esc_html($region); ?></td>
-                                    <td><?php echo $population ? number_format_i18n($population) : '—'; ?></td>
-                                    <td>
-                                        <a href="<?php echo get_edit_post_link($city->ID); ?>"><?php _e('Modifier', 'osmose-ads'); ?></a>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="6"><?php _e('Aucune ville trouvée', 'osmose-ads'); ?></td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
         
     </div>
 </div>
@@ -349,11 +373,11 @@ $cities = get_posts(array(
 }
 
 .osmose-tab-content {
-    display: none;
+    display: none !important;
 }
 
 .osmose-tab-content.active {
-    display: block;
+    display: block !important;
 }
 
 /* Sous-onglets */
@@ -433,16 +457,22 @@ $cities = get_posts(array(
 
 <script>
 jQuery(document).ready(function($) {
-    // Gestion des onglets
-    $('.osmose-tab-btn').on('click', function() {
-        var tab = $(this).data('tab');
-        
-        $('.osmose-tab-btn').removeClass('active');
-        $(this).addClass('active');
-        
-        $('.osmose-tab-content').removeClass('active');
-        $('#tab-' + tab).addClass('active');
-    });
+        // Gestion des onglets
+        $('.osmose-tab-btn').on('click', function(e) {
+            e.preventDefault();
+            var tab = $(this).data('tab');
+            
+            if (!tab) return;
+            
+            $('.osmose-tab-btn').removeClass('active');
+            $(this).addClass('active');
+            
+            $('.osmose-tab-content').removeClass('active').hide();
+            var targetTab = $('#tab-' + tab);
+            if (targetTab.length) {
+                targetTab.addClass('active').show();
+            }
+        });
     
     // Gestion des sous-onglets
     $('.osmose-subtab-btn').on('click', function() {
