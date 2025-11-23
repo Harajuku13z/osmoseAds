@@ -8,6 +8,24 @@ if (!defined('OSMOSE_ADS_PLUGIN_DIR')) {
     wp_die(__('Erreur: Les constantes du plugin ne sont pas définies. Veuillez réactiver le plugin.', 'osmose-ads'));
 }
 
+// Nettoyer l'URL si des paramètres GET non désirés sont présents (empêche les pages blanches)
+$has_unwanted_params = false;
+$clean_params = array();
+if (isset($_GET['city_search']) || isset($_GET['city_code']) || isset($_GET['distance_km'])) {
+    $has_unwanted_params = true;
+}
+
+// Conserver uniquement le paramètre 'page'
+if (isset($_GET['page'])) {
+    $clean_params['page'] = sanitize_text_field($_GET['page']);
+}
+
+// Rediriger vers l'URL propre si nécessaire
+if ($has_unwanted_params) {
+    wp_safe_redirect(admin_url('admin.php?' . http_build_query($clean_params)));
+    exit;
+}
+
 // Inclure le header global seulement si pas déjà inclus
 if (!defined('OSMOSE_ADS_HEADER_LOADED')) {
     $header_path = OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
