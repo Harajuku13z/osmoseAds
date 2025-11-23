@@ -320,8 +320,4 @@ jQuery(document).ready(function($) {
     });
 });
 </script>
-
 <?php
-// Enqueue WordPress Media scripts
-wp_enqueue_media();
-
