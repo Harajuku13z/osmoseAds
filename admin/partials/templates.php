@@ -256,23 +256,97 @@ $templates = get_posts(array(
 </div>
 
 <script>
+// Définir osmoseAds si non défini
+if (typeof osmoseAds === 'undefined') {
+    window.osmoseAds = {
+        ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
+        nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>',
+        plugin_url: '<?php echo esc_url(OSMOSE_ADS_PLUGIN_URL); ?>'
+    };
+}
+
 jQuery(document).ready(function($) {
+    console.log('Osmose ADS: Script de création de template chargé');
+    
     // Enqueue WordPress Media si disponible
     if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
         console.warn('WordPress Media Library non disponible');
     }
     
-    $('#create-template-btn').on('click', function(e) {
+    // Vérifier que le bouton existe
+    var $createBtn = $('#create-template-btn');
+    var $modal = $('#create-template-modal');
+    
+    console.log('Bouton trouvé:', $createBtn.length);
+    console.log('Modal trouvé:', $modal.length);
+    
+    if ($createBtn.length === 0) {
+        console.error('Osmose ADS: Le bouton create-template-btn n\'a pas été trouvé dans le DOM!');
+        return;
+    }
+    
+    if ($modal.length === 0) {
+        console.error('Osmose ADS: Le modal create-template-modal n\'a pas été trouvé dans le DOM!');
+        return;
+    }
+    
+    // Gérer le clic sur le bouton
+    $createBtn.on('click', function(e) {
         e.preventDefault();
-        $('#create-template-modal').show();
+        e.stopPropagation();
+        console.log('Osmose ADS: Bouton cliqué, affichage du modal');
+        
+        // Afficher le modal avec animation Bootstrap si disponible, sinon show()
+        if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined') {
+            // Utiliser Bootstrap Modal
+            var modalElement = document.getElementById('create-template-modal');
+            if (modalElement) {
+                var modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            } else {
+                $modal.show();
+            }
+        } else {
+            // Fallback : affichage simple
+            $modal.css({
+                'display': 'block',
+                'position': 'fixed',
+                'top': '50%',
+                'left': '50%',
+                'transform': 'translate(-50%, -50%)',
+                'z-index': '9999',
+                'background': 'white',
+                'box-shadow': '0 4px 20px rgba(0,0,0,0.3)'
+            });
+            $('body').append('<div id="modal-backdrop" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;"></div>');
+        }
+        
         // Enqueue media si nécessaire
         if (typeof wp !== 'undefined' && typeof wp.media !== 'undefined') {
             // Media déjà chargé
         }
     });
     
+    // Gérer la fermeture du modal
     $('.cancel-modal').on('click', function() {
+        console.log('Osmose ADS: Fermeture du modal');
+        if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined') {
+            var modalElement = document.getElementById('create-template-modal');
+            if (modalElement) {
+                var modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+            }
+        }
         $('#create-template-modal').hide();
+        $('#modal-backdrop').remove();
+    });
+    
+    // Fermer le modal en cliquant sur le backdrop
+    $(document).on('click', '#modal-backdrop', function() {
+        $('#create-template-modal').hide();
+        $(this).remove();
     });
     
     // Media Library pour l'image mise en avant (création)
