@@ -355,12 +355,6 @@ $cities = get_posts(array(
 
 <script>
 jQuery(document).ready(function($) {
-    // Vérifier que osmoseAds est défini
-    if (typeof osmoseAds === 'undefined') {
-        console.error('Osmose ADS: osmoseAds object is not defined');
-        return;
-    }
-    
     // Fonction pour s'assurer que osmoseAds est disponible
     function ensureOsmoseAds() {
         if (typeof osmoseAds === 'undefined') {
@@ -368,7 +362,7 @@ jQuery(document).ready(function($) {
                 ajax_url: '<?php echo esc_js(admin_url('admin-ajax.php')); ?>',
                 nonce: '<?php echo esc_js(wp_create_nonce('osmose_ads_nonce')); ?>'
             };
-            console.log('Osmose ADS: Created osmoseAds object');
+            console.log('Osmose ADS: Created osmoseAds object', window.osmoseAds);
         }
         return window.osmoseAds;
     }
