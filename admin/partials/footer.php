@@ -45,12 +45,30 @@ body[class*="osmose"] {
     overflow-x: hidden !important;
 }
 
-/* Navbar */
+/* Navbar - collé au header WordPress */
 .osmose-navbar {
     width: 100%;
     padding: 15px 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin: 0;
+    margin: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* Supprimer les marges/padding du wrap WordPress */
+.wrap {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Assurer que le header est collé */
+#wpbody-content {
+    padding-top: 0 !important;
+}
+
+/* Correction pour supprimer l'espace */
+.wrap > *:first-child {
+    margin-top: 0 !important;
 }
 
 .osmose-navbar .container-fluid {
@@ -109,6 +127,7 @@ body[class*="osmose"] {
     overflow-x: hidden;
     padding: 0 !important;
     margin: 0 !important;
+    margin-top: 0 !important;
 }
 
 .osmose-ads-page .container-fluid {
@@ -116,11 +135,13 @@ body[class*="osmose"] {
     padding-right: 20px;
     max-width: 100%;
     overflow-x: hidden;
+    margin-top: 0 !important;
 }
 
 .osmose-ads-page .container-xxl {
     max-width: 100%;
     overflow-x: hidden;
+    margin-top: 0 !important;
 }
 
 /* Footer */

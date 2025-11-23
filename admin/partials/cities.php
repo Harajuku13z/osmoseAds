@@ -48,43 +48,20 @@ $cities = get_posts(array(
     </div>
 </div>
 
-<!-- Onglets Bootstrap -->
-<ul class="nav nav-tabs mb-4" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active osmose-tab-btn" data-tab="list" type="button" role="tab">
-            <i class="bi bi-list-ul me-2"></i>
-            <?php _e('Liste des Villes', 'osmose-ads'); ?>
-            <span class="badge bg-primary ms-2"><?php echo count($cities); ?></span>
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link osmose-tab-btn" data-tab="import" type="button" role="tab">
-            <i class="bi bi-download me-2"></i>
-            <?php _e('Import en Masse', 'osmose-ads'); ?>
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link osmose-tab-btn" data-tab="manual" type="button" role="tab">
-            <i class="bi bi-plus-circle me-2"></i>
-            <?php _e('Ajout Manuel', 'osmose-ads'); ?>
-        </button>
-    </li>
-</ul>
-
-<!-- Contenu des onglets -->
-<div class="tab-content">
-    <!-- Onglet Liste (actif par défaut) -->
-    <div class="tab-pane fade show active" id="tab-list" role="tabpanel">
-            <div class="osmose-ads-card">
-                <h2>
-                    <span class="dashicons dashicons-list-view"></span>
-                    <?php _e('Liste des Villes', 'osmose-ads'); ?>
-                    <span class="badge"><?php echo count($cities); ?></span>
-                </h2>
-                
+<!-- Section 1: Liste des Villes avec scroll interne -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="osmose-ads-card">
+            <h2 class="mb-3">
+                <i class="bi bi-list-ul me-2"></i>
+                <?php _e('Liste des Villes', 'osmose-ads'); ?>
+                <span class="badge bg-primary ms-2"><?php echo count($cities); ?></span>
+            </h2>
+            
+            <div class="cities-scroll-container" style="max-height: 500px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
                 <?php if (!empty($cities)): ?>
-                    <table class="wp-list-table widefat fixed striped">
-                        <thead>
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light sticky-top">
                             <tr>
                                 <th><?php _e('Nom', 'osmose-ads'); ?></th>
                                 <th><?php _e('Code Postal', 'osmose-ads'); ?></th>
@@ -109,282 +86,235 @@ $cities = get_posts(array(
                                     <td><?php echo esc_html($region); ?></td>
                                     <td><?php echo $population ? number_format_i18n($population) : '—'; ?></td>
                                     <td>
-                                        <a href="<?php echo get_edit_post_link($city->ID); ?>"><?php _e('Modifier', 'osmose-ads'); ?></a>
+                                        <a href="<?php echo get_edit_post_link($city->ID); ?>" class="btn btn-sm btn-outline-primary">
+                                            <?php _e('Modifier', 'osmose-ads'); ?>
+                                        </a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 <?php else: ?>
-                    <div class="notice notice-info" style="margin: 20px 0;">
-                        <p>
-                            <?php _e('Aucune ville trouvée. Utilisez l\'onglet "Import en Masse" pour importer des villes via l\'API officielle française, ou l\'onglet "Ajout Manuel" pour ajouter une ville manuellement.', 'osmose-ads'); ?>
-                        </p>
+                    <div class="alert alert-info m-3" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <?php _e('Aucune ville trouvée. Utilisez la section "Import en Masse" pour importer des villes via l\'API officielle française.', 'osmose-ads'); ?>
                     </div>
                 <?php endif; ?>
             </div>
+        </div>
     </div>
-    
-    <!-- Onglet Import en Masse -->
-    <div class="tab-pane fade" id="tab-import" role="tabpanel">
-            <div class="osmose-ads-card">
-                <h2>
-                    <span class="dashicons dashicons-download"></span>
-                    <?php _e('Import en Masse via API Officielle', 'osmose-ads'); ?>
-                </h2>
-                <p class="description">
-                    <?php _e('Importez des villes depuis l\'API géographique officielle de la France (data.gouv.fr)', 'osmose-ads'); ?>
-                </p>
-                
-                <!-- Sous-onglets pour les méthodes d'import -->
-                <div class="osmose-ads-subtabs">
-                    <button class="osmose-subtab-btn active" data-subtab="department">
-                        <?php _e('Par Département', 'osmose-ads'); ?>
-                    </button>
-                    <button class="osmose-subtab-btn" data-subtab="region">
-                        <?php _e('Par Région', 'osmose-ads'); ?>
-                    </button>
-                    <button class="osmose-subtab-btn" data-subtab="distance">
-                        <?php _e('Par Rayon', 'osmose-ads'); ?>
-                    </button>
-                </div>
-                
+</div>
+
+<!-- Section 2: Import en Masse -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="osmose-ads-card">
+            <h2 class="mb-3">
+                <i class="bi bi-download me-2"></i>
+                <?php _e('Import en Masse via API Officielle', 'osmose-ads'); ?>
+            </h2>
+            <p class="text-muted mb-4">
+                <?php _e('Importez des villes depuis l\'API géographique officielle de la France (geo.api.gouv.fr)', 'osmose-ads'); ?>
+            </p>
+            
+            <!-- Sous-sections pour les méthodes d'import -->
+            <div class="accordion" id="importMethodsAccordion">
                 <!-- Import par Département -->
-                <div class="osmose-subtab-content active" id="subtab-department">
-                    <form id="import-department-form">
-                        <table class="form-table">
-                            <tr>
-                                <th scope="row">
-                                    <label for="department_code"><?php _e('Département', 'osmose-ads'); ?></label>
-                                </th>
-                                <td>
-                                    <select id="department_code" name="department_code" class="regular-text" required>
+                <div class="accordion-item">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDepartment" aria-expanded="true" aria-controls="collapseDepartment">
+                            <i class="bi bi-geo-alt me-2"></i>
+                            <?php _e('Import par Département', 'osmose-ads'); ?>
+                        </button>
+                    </h3>
+                    <div id="collapseDepartment" class="accordion-collapse collapse show" data-bs-parent="#importMethodsAccordion">
+                        <div class="accordion-body">
+                            <form id="import-department-form">
+                                <div class="mb-3">
+                                    <label for="department_code" class="form-label"><?php _e('Département', 'osmose-ads'); ?></label>
+                                    <select id="department_code" name="department_code" class="form-select" required>
                                         <option value=""><?php _e('Chargement...', 'osmose-ads'); ?></option>
                                     </select>
-                                    <p class="description"><?php _e('Sélectionnez un département pour importer toutes ses communes', 'osmose-ads'); ?></p>
-                                </td>
-                            </tr>
-                        </table>
-                        <p class="submit">
-                            <button type="submit" class="osmose-btn osmose-btn-primary">
-                                <span class="dashicons dashicons-download"></span>
-                                <?php _e('Importer les Villes', 'osmose-ads'); ?>
-                            </button>
-                        </p>
-                    </form>
+                                    <div class="form-text"><?php _e('Sélectionnez un département pour importer toutes ses communes', 'osmose-ads'); ?></div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-download me-2"></i>
+                                    <?php _e('Importer les Villes', 'osmose-ads'); ?>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Import par Région -->
-                <div class="osmose-subtab-content" id="subtab-region">
-                    <form id="import-region-form">
-                        <table class="form-table">
-                            <tr>
-                                <th scope="row">
-                                    <label for="region_code"><?php _e('Région', 'osmose-ads'); ?></label>
-                                </th>
-                                <td>
-                                    <select id="region_code" name="region_code" class="regular-text" required>
+                <div class="accordion-item">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRegion" aria-expanded="false" aria-controls="collapseRegion">
+                            <i class="bi bi-map me-2"></i>
+                            <?php _e('Import par Région', 'osmose-ads'); ?>
+                        </button>
+                    </h3>
+                    <div id="collapseRegion" class="accordion-collapse collapse" data-bs-parent="#importMethodsAccordion">
+                        <div class="accordion-body">
+                            <form id="import-region-form">
+                                <div class="mb-3">
+                                    <label for="region_code" class="form-label"><?php _e('Région', 'osmose-ads'); ?></label>
+                                    <select id="region_code" name="region_code" class="form-select" required>
                                         <option value=""><?php _e('Chargement...', 'osmose-ads'); ?></option>
                                     </select>
-                                    <p class="description"><?php _e('Sélectionnez une région pour importer toutes ses communes', 'osmose-ads'); ?></p>
-                                </td>
-                            </tr>
-                        </table>
-                        <p class="submit">
-                            <button type="submit" class="osmose-btn osmose-btn-primary">
-                                <span class="dashicons dashicons-download"></span>
-                                <?php _e('Importer les Villes', 'osmose-ads'); ?>
-                            </button>
-                        </p>
-                    </form>
+                                    <div class="form-text"><?php _e('Sélectionnez une région pour importer toutes ses communes', 'osmose-ads'); ?></div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-download me-2"></i>
+                                    <?php _e('Importer les Villes', 'osmose-ads'); ?>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Import par Rayon -->
-                <div class="osmose-subtab-content" id="subtab-distance">
-                    <form id="import-distance-form">
-                        <table class="form-table">
-                            <tr>
-                                <th scope="row">
-                                    <label for="city_search"><?php _e('Ville de Référence', 'osmose-ads'); ?></label>
-                                </th>
-                                <td>
+                <div class="accordion-item">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDistance" aria-expanded="false" aria-controls="collapseDistance">
+                            <i class="bi bi-geo me-2"></i>
+                            <?php _e('Import par Rayon', 'osmose-ads'); ?>
+                        </button>
+                    </h3>
+                    <div id="collapseDistance" class="accordion-collapse collapse" data-bs-parent="#importMethodsAccordion">
+                        <div class="accordion-body">
+                            <form id="import-distance-form">
+                                <div class="mb-3">
+                                    <label for="city_search" class="form-label"><?php _e('Ville de Référence', 'osmose-ads'); ?></label>
                                     <input type="text" 
                                            id="city_search" 
                                            name="city_search" 
-                                           class="regular-text" 
+                                           class="form-control" 
                                            placeholder="<?php _e('Rechercher une ville...', 'osmose-ads'); ?>"
                                            required>
-                                    <div id="city-search-results" style="margin-top: 10px;"></div>
+                                    <div id="city-search-results" class="mt-2"></div>
                                     <input type="hidden" id="city_code" name="city_code">
-                                    <p class="description"><?php _e('Recherchez une ville pour servir de point de départ', 'osmose-ads'); ?></p>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th scope="row">
-                                    <label for="distance_km"><?php _e('Rayon (km)', 'osmose-ads'); ?></label>
-                                </th>
-                                <td>
+                                    <div class="form-text"><?php _e('Recherchez une ville pour servir de point de départ', 'osmose-ads'); ?></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="distance_km" class="form-label"><?php _e('Rayon (km)', 'osmose-ads'); ?></label>
                                     <input type="number" 
                                            id="distance_km" 
                                            name="distance_km" 
                                            value="10" 
                                            min="1" 
                                            max="100" 
-                                           class="small-text"
+                                           class="form-control"
                                            required>
-                                    <p class="description"><?php _e('Rayon de recherche autour de la ville (1-100 km)', 'osmose-ads'); ?></p>
-                                </td>
-                            </tr>
-                        </table>
-                        <p class="submit">
-                            <button type="submit" class="osmose-btn osmose-btn-primary">
-                                <span class="dashicons dashicons-download"></span>
-                                <?php _e('Importer les Villes', 'osmose-ads'); ?>
-                            </button>
-                        </p>
-                    </form>
+                                    <div class="form-text"><?php _e('Rayon de recherche autour de la ville (1-100 km)', 'osmose-ads'); ?></div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-download me-2"></i>
+                                    <?php _e('Importer les Villes', 'osmose-ads'); ?>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-                
-                <!-- Résultat de l'import -->
-                <div id="import-result" style="margin-top: 20px;"></div>
             </div>
-    </div>
-    
-    <!-- Onglet Ajout Manuel -->
-    <div class="tab-pane fade" id="tab-manual" role="tabpanel">
-            <div class="osmose-ads-card">
-                <h2>
-                    <span class="dashicons dashicons-plus-alt"></span>
-                    <?php _e('Ajouter une Ville Manuellement', 'osmose-ads'); ?>
-                </h2>
-                <form method="post">
-                    <table class="form-table">
-                        <tr>
-                            <th scope="row"><?php _e('Nom de la Ville', 'osmose-ads'); ?></th>
-                            <td><input type="text" name="city_name" class="regular-text" required></td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><?php _e('Code Postal', 'osmose-ads'); ?></th>
-                            <td><input type="text" name="postal_code" class="regular-text"></td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><?php _e('Département', 'osmose-ads'); ?></th>
-                            <td><input type="text" name="department" class="regular-text"></td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><?php _e('Région', 'osmose-ads'); ?></th>
-                            <td><input type="text" name="region" class="regular-text"></td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><?php _e('Population', 'osmose-ads'); ?></th>
-                            <td><input type="number" name="population" class="regular-text"></td>
-                        </tr>
-                    </table>
-                    <?php submit_button(__('Ajouter la Ville', 'osmose-ads'), 'primary', 'add_city', false, array('class' => 'osmose-btn osmose-btn-primary')); ?>
-                </form>
-            </div>
+            
+            <!-- Résultat de l'import -->
+            <div id="import-result" class="mt-4"></div>
         </div>
     </div>
 </div>
-<!-- Fin tab-content -->
 
-<?php
-// Inclure le footer global
-require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
-?>
+<!-- Section 3: Ajout Manuel -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="osmose-ads-card">
+            <h2 class="mb-3">
+                <i class="bi bi-plus-circle me-2"></i>
+                <?php _e('Ajouter une Ville Manuellement', 'osmose-ads'); ?>
+            </h2>
+            <form method="post">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="city_name" class="form-label"><?php _e('Nom de la Ville', 'osmose-ads'); ?> <span class="text-danger">*</span></label>
+                        <input type="text" name="city_name" id="city_name" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="postal_code" class="form-label"><?php _e('Code Postal', 'osmose-ads'); ?></label>
+                        <input type="text" name="postal_code" id="postal_code" class="form-control">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="department" class="form-label"><?php _e('Département', 'osmose-ads'); ?></label>
+                        <input type="text" name="department" id="department" class="form-control">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="region" class="form-label"><?php _e('Région', 'osmose-ads'); ?></label>
+                        <input type="text" name="region" id="region" class="form-control">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="population" class="form-label"><?php _e('Population', 'osmose-ads'); ?></label>
+                        <input type="number" name="population" id="population" class="form-control">
+                    </div>
+                </div>
+                <button type="submit" name="add_city" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    <?php _e('Ajouter la Ville', 'osmose-ads'); ?>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
 
 <style>
-/* Onglets */
-.osmose-ads-tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 25px;
-    border-bottom: 2px solid #e2e8f0;
+/* Scroll personnalisé pour la liste des villes */
+.cities-scroll-container {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 #f1f5f9;
 }
 
-.osmose-tab-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    background: transparent;
-    border: none;
-    border-bottom: 3px solid transparent;
-    color: #64748b;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-    bottom: -2px;
+.cities-scroll-container::-webkit-scrollbar {
+    width: 8px;
 }
 
-.osmose-tab-btn:hover {
-    color: #3b82f6;
-}
-
-.osmose-tab-btn.active {
-    color: #3b82f6;
-    border-bottom-color: #3b82f6;
-}
-
-.osmose-tab-btn .badge {
-    background: #3b82f6;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-/* Bootstrap tabs override */
-.tab-pane {
-    display: none;
-}
-
-.tab-pane.active,
-.tab-pane.show {
-    display: block;
-}
-
-/* Sous-onglets */
-.osmose-ads-subtabs {
-    display: flex;
-    gap: 5px;
-    margin: 20px 0;
-    padding: 10px;
-    background: #f8fafc;
+.cities-scroll-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
     border-radius: 8px;
 }
 
-.osmose-subtab-btn {
-    padding: 8px 16px;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    color: #64748b;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.osmose-subtab-btn:hover {
-    border-color: #3b82f6;
-    color: #3b82f6;
-}
-
-.osmose-subtab-btn.active {
+.cities-scroll-container::-webkit-scrollbar-thumb {
     background: #3b82f6;
-    border-color: #3b82f6;
-    color: white;
+    border-radius: 8px;
 }
 
-.osmose-subtab-content {
-    display: none;
+.cities-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #2563eb;
 }
 
-.osmose-subtab-content.active {
-    display: block;
+/* Sticky header dans le scroll */
+.cities-scroll-container thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: white;
+}
+
+/* Styles pour les cartes */
+.osmose-ads-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 30px;
+    border: 1px solid #e2e8f0;
+}
+
+.osmose-ads-card h2 {
+    color: #1e3a5f;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #3b82f6;
+    display: flex;
+    align-items: center;
 }
 
 /* Résultats de recherche ville */
@@ -401,6 +331,7 @@ require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
     padding: 10px;
     cursor: pointer;
     border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s;
 }
 
 .city-search-item:hover {
@@ -424,34 +355,6 @@ require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
 
 <script>
 jQuery(document).ready(function($) {
-        // Gestion des onglets
-        $('.osmose-tab-btn').on('click', function(e) {
-            e.preventDefault();
-            var tab = $(this).data('tab');
-            
-            if (!tab) return;
-            
-            $('.osmose-tab-btn').removeClass('active');
-            $(this).addClass('active');
-            
-            $('.osmose-tab-content').removeClass('active').hide();
-            var targetTab = $('#tab-' + tab);
-            if (targetTab.length) {
-                targetTab.addClass('active').show();
-            }
-        });
-    
-    // Gestion des sous-onglets
-    $('.osmose-subtab-btn').on('click', function() {
-        var subtab = $(this).data('subtab');
-        
-        $('.osmose-subtab-btn').removeClass('active');
-        $(this).addClass('active');
-        
-        $('.osmose-subtab-content').removeClass('active');
-        $('#subtab-' + subtab).addClass('active');
-    });
-    
     // Charger les départements
     $.ajax({
         url: osmoseAds.ajax_url,
@@ -573,8 +476,8 @@ jQuery(document).ready(function($) {
     function importCities(type, data) {
         var resultDiv = $('#import-result');
         resultDiv.html(
-            '<div class="import-info">' +
-            '<span class="osmose-loading"></span> ' +
+            '<div class="alert alert-info">' +
+            '<div class="spinner-border spinner-border-sm me-2" role="status"></div>' +
             '<?php _e('Import en cours, veuillez patienter...', 'osmose-ads'); ?>' +
             '</div>'
         );
@@ -585,7 +488,7 @@ jQuery(document).ready(function($) {
         $.ajax({
             url: osmoseAds.ajax_url,
             type: 'POST',
-            timeout: 300000, // 5 minutes pour les gros imports
+            timeout: 300000,
             data: {
                 action: 'osmose_ads_import_cities',
                 nonce: osmoseAds.nonce,
@@ -601,16 +504,12 @@ jQuery(document).ready(function($) {
                     var total = response.data.total || 0;
                     
                     resultDiv.html(
-                        '<div class="import-success">' +
-                        '<p style="margin: 0 0 10px 0; font-weight: 600; font-size: 16px;">' +
-                        '<span class="dashicons dashicons-yes-alt"></span> ' +
-                        response.data.message +
-                        '</p>' +
-                        '<p style="margin: 0; font-size: 13px; color: #047857;">' +
-                        'Total trouvé: ' + total + ' | ' +
+                        '<div class="alert alert-success">' +
+                        '<i class="bi bi-check-circle me-2"></i>' +
+                        '<strong>' + response.data.message + '</strong><br>' +
+                        '<small>Total trouvé: ' + total + ' | ' +
                         'Importées: ' + imported + ' | ' +
-                        'Ignorées (déjà existantes): ' + skipped +
-                        '</p>' +
+                        'Ignorées (déjà existantes): ' + skipped + '</small>' +
                         '</div>'
                     );
                     
@@ -619,11 +518,9 @@ jQuery(document).ready(function($) {
                     }, 3000);
                 } else {
                     resultDiv.html(
-                        '<div class="import-error">' +
-                        '<p style="margin: 0; font-weight: 600;">' +
-                        '<span class="dashicons dashicons-dismiss"></span> ' +
+                        '<div class="alert alert-danger">' +
+                        '<i class="bi bi-exclamation-triangle me-2"></i>' +
                         (response.data && response.data.message ? response.data.message : '<?php _e('Erreur lors de l\'import', 'osmose-ads'); ?>') +
-                        '</p>' +
                         '</div>'
                     );
                 }
@@ -637,11 +534,9 @@ jQuery(document).ready(function($) {
                 }
                 
                 resultDiv.html(
-                    '<div class="import-error">' +
-                    '<p style="margin: 0; font-weight: 600;">' +
-                    '<span class="dashicons dashicons-dismiss"></span> ' +
+                    '<div class="alert alert-danger">' +
+                    '<i class="bi bi-exclamation-triangle me-2"></i>' +
                     errorMsg +
-                    '</p>' +
                     '</div>'
                 );
             }
@@ -649,3 +544,8 @@ jQuery(document).ready(function($) {
     }
 });
 </script>
+
+<?php
+// Inclure le footer global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
+?>
