@@ -16,6 +16,9 @@ function osmose_ads_handle_create_template() {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-ai-service.php';
     }
     
+    require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/preset-services.php';
+    
+    $creation_mode = sanitize_text_field($_POST['creation_mode'] ?? 'custom');
     $service_name = sanitize_text_field($_POST['service_name'] ?? '');
     $service_slug = sanitize_title($service_name);
     $prompt = sanitize_textarea_field($_POST['ai_prompt'] ?? '');
@@ -23,6 +26,27 @@ function osmose_ads_handle_create_template() {
     $realization_images = isset($_POST['realization_images']) && is_array($_POST['realization_images']) 
         ? array_map('intval', $_POST['realization_images']) 
         : array();
+    
+    // Gestion des services préconfigurés
+    $service_keywords = '';
+    $service_description = '';
+    $service_sections = array();
+    
+    if ($creation_mode === 'preset' && !empty($_POST['preset_service'])) {
+        $preset_key = sanitize_text_field($_POST['preset_service']);
+        $preset_services = osmose_ads_get_preset_services();
+        
+        if (isset($preset_services[$preset_key])) {
+            $preset = $preset_services[$preset_key];
+            $service_name = $preset['name'];
+            $service_keywords = $preset['keywords'];
+            $service_description = $preset['description'];
+            $service_sections = $preset['sections'] ?? array();
+        }
+    } else {
+        $service_keywords = sanitize_text_field($_POST['service_keywords'] ?? '');
+        $service_description = sanitize_textarea_field($_POST['service_description'] ?? '');
+    }
     
     if (empty($service_name)) {
         wp_send_json_error(array('message' => __('Le nom du service est requis', 'osmose-ads')));
@@ -38,23 +62,77 @@ function osmose_ads_handle_create_template() {
     $ai_service = new AI_Service();
     
     if (empty($prompt)) {
+        // Construire un prompt de haute qualité selon le mode
         $images_info = '';
         if ($featured_image_id) {
-            $images_info .= "\n- Une image mise en avant est fournie pour illustrer le service.";
+            $images_info .= "\n- Une image mise en avant professionnelle est disponible pour illustrer le service.";
         }
         if (!empty($realization_images)) {
-            $images_info .= "\n- Des photos de réalisations sont disponibles pour illustrer des exemples concrets.";
+            $images_info .= "\n- Des photos de réalisations concrètes sont disponibles pour enrichir le contenu.";
         }
         
-        $prompt = "Crée un contenu HTML complet et optimisé SEO pour le service : $service_name. $images_info\n\nLe contenu doit inclure :\n- Des sections H2, H3 structurées\n- Des listes à puces\n- Une FAQ pertinente\n- Du contenu optimisé pour le référencement local\n- Utilise [VILLE], [DÉPARTEMENT], [RÉGION] comme placeholders pour la géolocalisation\n- Intègre naturellement les images disponibles si mentionnées";
+        $sections_info = '';
+        if (!empty($service_sections)) {
+            $sections_info = "\n\nSECTIONS À INCLURE (dans l'ordre) :\n";
+            foreach ($service_sections as $section_key => $section_title) {
+                $sections_info .= "- $section_title : Contenu détaillé et informatif\n";
+            }
+        } else {
+            $sections_info = "\n\nSECTIONS STANDARD À INCLURE :\n";
+            $sections_info .= "- Introduction engageante avec le service\n";
+            $sections_info .= "- Pourquoi faire appel à nos services (avantages, expertise)\n";
+            $sections_info .= "- Types d'interventions et services proposés (liste détaillée)\n";
+            $sections_info .= "- Zone d'intervention et disponibilité\n";
+            $sections_info .= "- Processus de travail et engagement qualité\n";
+            $sections_info .= "- FAQ avec 5-8 questions pertinentes et réponses détaillées\n";
+            $sections_info .= "- Appel à l'action pour demande de devis\n";
+        }
+        
+        $keywords_info = '';
+        if (!empty($service_keywords)) {
+            $keywords_info = "\n\nMOTS-CLÉS À UTILISER NATURELLEMENT (sans sur-optimisation) :\n" . $service_keywords;
+        }
+        
+        $description_info = '';
+        if (!empty($service_description)) {
+            $description_info = "\n\nCONTEXTE ET DESCRIPTION DU SERVICE :\n" . $service_description;
+        }
+        
+        $prompt = "Tu es un rédacteur web professionnel expert en SEO local et création de contenu de qualité supérieure pour WordPress.\n\n";
+        $prompt .= "TÂCHE : Créer un article/annonce HTML de haute qualité pour le service : \"$service_name\"\n\n";
+        $prompt .= "CONTEXTE : Ce contenu sera utilisé pour créer des pages géolocalisées optimisées SEO. Utilise [VILLE], [DÉPARTEMENT], [RÉGION] comme placeholders.\n";
+        $prompt .= $description_info;
+        $prompt .= $keywords_info;
+        $prompt .= $images_info;
+        $prompt .= $sections_info;
+        
+        $prompt .= "\n\nEXIGENCES DE QUALITÉ (CRITIQUES) :\n";
+        $prompt .= "1. HTML SÉMANTIQUE ET PROPRE : Utilise uniquement les balises HTML5 valides (h2, h3, p, ul, ol, li, strong, em, a, blockquote, figure, img, etc.)\n";
+        $prompt .= "2. STRUCTURE PROFESSIONNELLE : Hiérarchie claire des titres (H2 pour sections principales, H3 pour sous-sections)\n";
+        $prompt .= "3. CONTENU RICHE ET INFORMATIF : Chaque section doit contenir 150-300 mots de contenu utile et bien rédigé\n";
+        $prompt .= "4. OPTIMISATION SEO NATURELLE : Intégration naturelle des mots-clés, pas de bourrage\n";
+        $prompt .= "5. TON PROFESSIONNEL ET ENGAGEANT : Langage clair, rassurant, orienté client\n";
+        $prompt .= "6. FORMAT WORDPRESS : Code HTML prêt à être collé dans l'éditeur WordPress (pas de balises style inline, pas de doctype/html/head/body)\n";
+        $prompt .= "7. LONGUEUR : Article complet de 1500-2500 mots au total\n";
+        $prompt .= "8. FAQ DÉTAILLÉE : Questions pertinentes avec réponses complètes (100-150 mots par réponse)\n";
+        $prompt .= "9. APPEL À L'ACTION : Section finale avec CTA clair pour demande de devis\n";
+        $prompt .= "10. LISIBILITÉ : Paragraphes courts (3-4 lignes max), listes à puces pour faciliter la lecture\n\n";
+        
+        $prompt .= "FORMAT DE SORTIE :\n";
+        $prompt .= "- Du HTML pur, valide, sans commentaires\n";
+        $prompt .= "- Pas de balises <html>, <head>, <body>\n";
+        $prompt .= "- Structure prête pour WordPress (utiliser wp_kses_post sans problème)\n";
+        $prompt .= "- Images : Utilise <figure> et <img> avec attributs alt descriptifs si nécessaire (mais pas d'URLs réelles)\n\n";
+        
+        $prompt .= "Génère maintenant un contenu HTML de qualité professionnelle répondant à toutes ces exigences.";
     }
     
-    $system_message = 'Tu es un expert en rédaction web SEO. Tu génères du contenu HTML complet, structuré et optimisé pour le référencement local. Tu crées également des métadonnées SEO (meta title, meta description, keywords) optimisées.';
+    $system_message = 'Tu es un expert rédacteur web professionnel spécialisé en création de contenu HTML de haute qualité pour WordPress. Tu maîtrises le SEO local, la rédaction web optimisée et la création de contenu engageant et informatif. Tu génères du HTML sémantique, propre et prêt pour WordPress, avec un contenu riche, structuré et de qualité supérieure.';
     
-    // Générer le contenu principal
+    // Générer le contenu principal avec plus de tokens pour un contenu de qualité
     $ai_response = $ai_service->call_ai($prompt, $system_message, array(
-        'temperature' => 0.8,
-        'max_tokens' => 3000,
+        'temperature' => 0.75, // Légèrement réduit pour plus de cohérence
+        'max_tokens' => 4000, // Augmenté pour permettre un contenu plus long et détaillé
     ));
     
     if (is_wp_error($ai_response)) {

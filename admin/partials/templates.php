@@ -84,16 +84,83 @@ $templates = get_posts(array(
     </div>
 </div>
     
-    <div id="create-template-modal" class="card" style="display: none; max-width: 800px; margin: 20px auto;">
+    <div id="create-template-modal" class="card" style="display: none; max-width: 900px; margin: 20px auto;">
         <div class="card-header">
             <h2 class="mb-0"><?php _e('Créer un Template depuis un Service', 'osmose-ads'); ?></h2>
         </div>
         <div class="card-body">
+            <!-- Onglets -->
+            <ul class="nav nav-tabs mb-4" id="template-creation-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="preset-tab" data-bs-toggle="tab" data-bs-target="#preset-panel" type="button" role="tab">
+                        <i class="bi bi-star me-1"></i><?php _e('Service préconfiguré', 'osmose-ads'); ?>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom-panel" type="button" role="tab">
+                        <i class="bi bi-pencil me-1"></i><?php _e('Mots-clés personnalisés', 'osmose-ads'); ?>
+                    </button>
+                </li>
+            </ul>
+            
             <form id="create-template-form">
-                <div class="mb-3">
-                    <label class="form-label"><?php _e('Nom du Service', 'osmose-ads'); ?> <span class="text-danger">*</span></label>
-                    <input type="text" name="service_name" class="form-control" required>
-                    <small class="form-text text-muted"><?php _e('Ex: Dépannage et réparation de fuites d\'eau', 'osmose-ads'); ?></small>
+                <!-- Panel Services préconfigurés -->
+                <div class="tab-content" id="template-creation-content">
+                    <div class="tab-pane fade show active" id="preset-panel" role="tabpanel">
+                        <div class="mb-3">
+                            <label class="form-label"><?php _e('Sélectionner un service préconfiguré', 'osmose-ads'); ?> <span class="text-danger">*</span></label>
+                            <select name="preset_service" id="preset-service" class="form-select">
+                                <option value=""><?php _e('-- Choisir un service --', 'osmose-ads'); ?></option>
+                                <?php
+                                require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/preset-services.php';
+                                $preset_services = osmose_ads_get_preset_services();
+                                foreach ($preset_services as $key => $service):
+                                ?>
+                                    <option value="<?php echo esc_attr($key); ?>" 
+                                            data-name="<?php echo esc_attr($service['name']); ?>"
+                                            data-keywords="<?php echo esc_attr($service['keywords']); ?>"
+                                            data-description="<?php echo esc_attr($service['description']); ?>"
+                                            data-sections='<?php echo json_encode($service['sections']); ?>'>
+                                        <?php echo esc_html($service['category'] . ' - ' . $service['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="form-text text-muted"><?php _e('Choisissez un service préconfiguré pour générer automatiquement un contenu de qualité', 'osmose-ads'); ?></small>
+                        </div>
+                        
+                        <div id="preset-service-details" class="alert alert-info" style="display: none;">
+                            <h6 class="alert-heading"><?php _e('Service sélectionné:', 'osmose-ads'); ?> <span id="preset-service-name"></span></h6>
+                            <p class="mb-2"><strong><?php _e('Description:', 'osmose-ads'); ?></strong> <span id="preset-service-description"></span></p>
+                            <p class="mb-2"><strong><?php _e('Mots-clés:', 'osmose-ads'); ?></strong> <span id="preset-service-keywords"></span></p>
+                            <div id="preset-service-sections"></div>
+                        </div>
+                        
+                        <input type="hidden" name="creation_mode" value="preset" id="creation-mode-preset">
+                        <input type="hidden" name="service_name" id="preset-service-name-input" value="">
+                    </div>
+                    
+                    <!-- Panel Mots-clés personnalisés -->
+                    <div class="tab-pane fade" id="custom-panel" role="tabpanel">
+                        <div class="mb-3">
+                            <label class="form-label"><?php _e('Nom du Service', 'osmose-ads'); ?> <span class="text-danger">*</span></label>
+                            <input type="text" name="service_name" id="custom-service-name" class="form-control" placeholder="<?php _e('Ex: Dépannage et réparation de fuites d\'eau', 'osmose-ads'); ?>">
+                            <small class="form-text text-muted"><?php _e('Nom complet du service que vous proposez', 'osmose-ads'); ?></small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><?php _e('Mots-clés principaux', 'osmose-ads'); ?> <span class="text-danger">*</span></label>
+                            <input type="text" name="service_keywords" id="custom-service-keywords" class="form-control" placeholder="<?php _e('Ex: fuite eau, plomberie, réparation, dépannage urgence', 'osmose-ads'); ?>">
+                            <small class="form-text text-muted"><?php _e('Séparez les mots-clés par des virgules. Ces mots-clés seront utilisés pour générer un contenu optimisé SEO', 'osmose-ads'); ?></small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><?php _e('Description du service', 'osmose-ads'); ?></label>
+                            <textarea name="service_description" id="custom-service-description" class="form-control" rows="3" placeholder="<?php _e('Décrivez brièvement votre service...', 'osmose-ads'); ?>"></textarea>
+                            <small class="form-text text-muted"><?php _e('Description courte qui sera utilisée pour améliorer la qualité du contenu généré', 'osmose-ads'); ?></small>
+                        </div>
+                        
+                        <input type="hidden" name="creation_mode" value="custom" id="creation-mode-custom">
+                    </div>
                 </div>
                 
                 <div class="mb-3">
@@ -289,7 +356,50 @@ jQuery(document).ready(function($) {
         $(this).closest('[data-image-id]').remove();
     });
     
-    $('#create-template-form').on('submit', function(e) {
+        // Gestion du changement d'onglet
+        $('#preset-service').on('change', function() {
+            var selected = $(this).find(':selected');
+            if (selected.val()) {
+                $('#preset-service-name-input').val(selected.data('name'));
+                $('#preset-service-name').text(selected.data('name'));
+                $('#preset-service-description').text(selected.data('description'));
+                $('#preset-service-keywords').text(selected.data('keywords'));
+                
+                // Afficher les sections
+                var sections = selected.data('sections');
+                if (sections && Object.keys(sections).length > 0) {
+                    var sectionsHtml = '<strong><?php _e('Sections:', 'osmose-ads'); ?></strong><ul class="mb-0 mt-2">';
+                    $.each(sections, function(key, title) {
+                        sectionsHtml += '<li>' + title + '</li>';
+                    });
+                    sectionsHtml += '</ul>';
+                    $('#preset-service-sections').html(sectionsHtml);
+                }
+                
+                $('#preset-service-details').show();
+            } else {
+                $('#preset-service-details').hide();
+                $('#preset-service-name-input').val('');
+            }
+        });
+        
+        // Gestion du changement d'onglet
+        $('#preset-tab, #custom-tab').on('click', function() {
+            var targetId = $(this).data('bs-target');
+            if (targetId === '#preset-panel') {
+                $('#creation-mode-preset').val('preset');
+                $('#creation-mode-custom').val('');
+                $('#custom-service-name').prop('required', false);
+                $('#preset-service').prop('required', true);
+            } else {
+                $('#creation-mode-custom').val('custom');
+                $('#creation-mode-preset').val('');
+                $('#preset-service').prop('required', false);
+                $('#custom-service-name').prop('required', true);
+            }
+        });
+        
+        $('#create-template-form').on('submit', function(e) {
         e.preventDefault();
         
         var realizationImages = [];
@@ -297,10 +407,16 @@ jQuery(document).ready(function($) {
             realizationImages.push($(this).val());
         });
         
+        // Déterminer le mode de création
+        var creationMode = $('.nav-link.active').data('bs-target') === '#preset-panel' ? 'preset' : 'custom';
         var formData = {
             action: 'osmose_ads_create_template',
             nonce: osmoseAds.nonce,
-            service_name: $('input[name="service_name"]').val(),
+            creation_mode: creationMode,
+            preset_service: $('#preset-service').val(),
+            service_name: creationMode === 'preset' ? $('#preset-service-name-input').val() : $('#custom-service-name').val(),
+            service_keywords: $('#custom-service-keywords').val(),
+            service_description: $('#custom-service-description').val(),
             ai_prompt: $('textarea[name="ai_prompt"]').val(),
             featured_image_id: $('#create_featured_image_id').val(),
             realization_images: realizationImages,
