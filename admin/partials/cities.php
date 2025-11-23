@@ -385,28 +385,57 @@ $cities = get_posts(array(
 </style>
 
 <script>
-jQuery(document).ready(function($) {
+(function($) {
+    'use strict';
+    
     // Fonction pour s'assurer que osmoseAds est disponible
     function ensureOsmoseAds() {
         if (typeof osmoseAds === 'undefined') {
             window.osmoseAds = {
                 ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
-                nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>'
+                nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>',
+                plugin_url: '<?php echo esc_url(OSMOSE_ADS_PLUGIN_URL); ?>'
             };
-            console.log('Osmose ADS: Created osmoseAds object', window.osmoseAds);
+            console.log('Osmose ADS: Created osmoseAds object fallback', window.osmoseAds);
+        } else {
+            console.log('Osmose ADS: Using existing osmoseAds object', window.osmoseAds);
         }
         return window.osmoseAds;
     }
     
-    // Attendre que tout soit prêt
-    var osmoseAds = ensureOsmoseAds();
-    console.log('Osmose ADS: Starting to load departments and regions...', osmoseAds);
+    // Attendre que jQuery et le DOM soient prêts
+    $(document).ready(function() {
+        console.log('Osmose ADS: Document ready, initializing...');
+        
+        // Attendre un peu pour que wp_localize_script ait le temps de s'exécuter
+        setTimeout(function() {
+            var osmoseAds = ensureOsmoseAds();
+            console.log('Osmose ADS: osmoseAds object:', osmoseAds);
+            
+            // Vérifier que nous avons bien les valeurs nécessaires
+            if (!osmoseAds.ajax_url || !osmoseAds.nonce) {
+                console.error('Osmose ADS: Missing required values in osmoseAds object!', osmoseAds);
+                alert('Erreur: Configuration AJAX manquante. Rechargez la page.');
+                return;
+            }
+            
+            console.log('Osmose ADS: Starting to load departments and regions...');
     
     // Charger les départements
     function loadDepartments() {
+        var osmoseAds = ensureOsmoseAds();
         var select = $('#department_code');
+        
+        if (!select.length) {
+            console.error('Osmose ADS: Department select not found!');
+            return;
+        }
+        
         select.prop('disabled', true);
         select.html('<option value=""><?php _e('Chargement...', 'osmose-ads'); ?></option>');
+        
+        console.log('Osmose ADS: Loading departments from:', osmoseAds.ajax_url);
+        console.log('Osmose ADS: Nonce:', osmoseAds.nonce);
         
         $.ajax({
             url: osmoseAds.ajax_url,
@@ -417,8 +446,11 @@ jQuery(document).ready(function($) {
                 action: 'osmose_ads_get_departments',
                 nonce: osmoseAds.nonce
             },
+            beforeSend: function() {
+                console.log('Osmose ADS: Sending departments request...');
+            },
             success: function(response) {
-                console.log('Departments response:', response);
+                console.log('Osmose ADS: Departments response received:', response);
                 select.prop('disabled', false);
                 
                 if (response && response.success && Array.isArray(response.data) && response.data.length > 0) {
@@ -430,14 +462,15 @@ jQuery(document).ready(function($) {
                             select.append(option);
                         }
                     });
-                    console.log('Departments loaded successfully:', response.data.length, 'items');
+                    console.log('Osmose ADS: Departments loaded successfully:', response.data.length, 'items');
                 } else {
-                    console.error('Departments error - invalid response:', response);
-                    select.html('<option value=""><?php _e('Erreur lors du chargement des départements', 'osmose-ads'); ?></option>');
+                    console.error('Osmose ADS: Departments error - invalid response:', response);
+                    var errorMsg = response && response.data && response.data.message ? response.data.message : '<?php _e('Erreur lors du chargement des départements', 'osmose-ads'); ?>';
+                    select.html('<option value="">' + errorMsg + '</option>');
                 }
             },
             error: function(xhr, status, error) {
-                console.error('AJAX error loading departments:', {
+                console.error('Osmose ADS: AJAX error loading departments:', {
                     status: status,
                     error: error,
                     responseText: xhr.responseText,
@@ -445,16 +478,37 @@ jQuery(document).ready(function($) {
                     readyState: xhr.readyState
                 });
                 select.prop('disabled', false);
-                select.html('<option value=""><?php _e('Erreur de connexion - Vérifiez la console', 'osmose-ads'); ?></option>');
+                
+                // Essayer de parser la réponse d'erreur
+                var errorMsg = '<?php _e('Erreur de connexion', 'osmose-ads'); ?>';
+                try {
+                    var errorResponse = JSON.parse(xhr.responseText);
+                    if (errorResponse && errorResponse.data && errorResponse.data.message) {
+                        errorMsg = errorResponse.data.message;
+                    }
+                } catch (e) {
+                    // Pas de JSON valide, utiliser le message par défaut
+                }
+                
+                select.html('<option value="">' + errorMsg + '</option>');
             }
         });
     }
     
     // Charger les régions
     function loadRegions() {
+        var osmoseAds = ensureOsmoseAds();
         var select = $('#region_code');
+        
+        if (!select.length) {
+            console.error('Osmose ADS: Region select not found!');
+            return;
+        }
+        
         select.prop('disabled', true);
         select.html('<option value=""><?php _e('Chargement...', 'osmose-ads'); ?></option>');
+        
+        console.log('Osmose ADS: Loading regions from:', osmoseAds.ajax_url);
         
         $.ajax({
             url: osmoseAds.ajax_url,
@@ -465,8 +519,11 @@ jQuery(document).ready(function($) {
                 action: 'osmose_ads_get_regions',
                 nonce: osmoseAds.nonce
             },
+            beforeSend: function() {
+                console.log('Osmose ADS: Sending regions request...');
+            },
             success: function(response) {
-                console.log('Regions response:', response);
+                console.log('Osmose ADS: Regions response received:', response);
                 select.prop('disabled', false);
                 
                 if (response && response.success && Array.isArray(response.data) && response.data.length > 0) {
@@ -478,14 +535,15 @@ jQuery(document).ready(function($) {
                             select.append(option);
                         }
                     });
-                    console.log('Regions loaded successfully:', response.data.length, 'items');
+                    console.log('Osmose ADS: Regions loaded successfully:', response.data.length, 'items');
                 } else {
-                    console.error('Regions error - invalid response:', response);
-                    select.html('<option value=""><?php _e('Erreur lors du chargement des régions', 'osmose-ads'); ?></option>');
+                    console.error('Osmose ADS: Regions error - invalid response:', response);
+                    var errorMsg = response && response.data && response.data.message ? response.data.message : '<?php _e('Erreur lors du chargement des régions', 'osmose-ads'); ?>';
+                    select.html('<option value="">' + errorMsg + '</option>');
                 }
             },
             error: function(xhr, status, error) {
-                console.error('AJAX error loading regions:', {
+                console.error('Osmose ADS: AJAX error loading regions:', {
                     status: status,
                     error: error,
                     responseText: xhr.responseText,
@@ -493,7 +551,19 @@ jQuery(document).ready(function($) {
                     readyState: xhr.readyState
                 });
                 select.prop('disabled', false);
-                select.html('<option value=""><?php _e('Erreur de connexion - Vérifiez la console', 'osmose-ads'); ?></option>');
+                
+                // Essayer de parser la réponse d'erreur
+                var errorMsg = '<?php _e('Erreur de connexion', 'osmose-ads'); ?>';
+                try {
+                    var errorResponse = JSON.parse(xhr.responseText);
+                    if (errorResponse && errorResponse.data && errorResponse.data.message) {
+                        errorMsg = errorResponse.data.message;
+                    }
+                } catch (e) {
+                    // Pas de JSON valide, utiliser le message par défaut
+                }
+                
+                select.html('<option value="">' + errorMsg + '</option>');
             }
         });
     }
@@ -582,6 +652,7 @@ jQuery(document).ready(function($) {
     // Import par département
     $('#import-department-form').on('submit', function(e) {
         e.preventDefault();
+        var osmoseAds = ensureOsmoseAds();
         var deptCode = $('#department_code').val();
         if (!deptCode) {
             alert('<?php _e('Veuillez sélectionner un département', 'osmose-ads'); ?>');
@@ -595,6 +666,7 @@ jQuery(document).ready(function($) {
     // Import par région
     $('#import-region-form').on('submit', function(e) {
         e.preventDefault();
+        var osmoseAds = ensureOsmoseAds();
         var regionCode = $('#region_code').val();
         if (!regionCode) {
             alert('<?php _e('Veuillez sélectionner une région', 'osmose-ads'); ?>');
@@ -608,6 +680,7 @@ jQuery(document).ready(function($) {
     // Import par rayon
     $('#import-distance-form').on('submit', function(e) {
         e.preventDefault();
+        var osmoseAds = ensureOsmoseAds();
         var cityCode = $('#city_code').val();
         var distance = $('#distance_km').val();
         
@@ -628,6 +701,7 @@ jQuery(document).ready(function($) {
     });
     
     function importCities(type, data) {
+        var osmoseAds = ensureOsmoseAds();
         var resultDiv = $('#import-result');
         resultDiv.html(
             '<div class="alert alert-info">' +
