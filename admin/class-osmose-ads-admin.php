@@ -49,6 +49,23 @@ class Osmose_Ads_Admin {
             true
         );
         
+        // Charger le script d'import direct depuis l'API sur la page des villes
+        if ($hook === 'osmose-ads_page_osmose-ads-cities') {
+            wp_enqueue_script(
+                'osmose-ads-cities-direct',
+                OSMOSE_ADS_PLUGIN_URL . 'admin/js/cities-direct-api.js',
+                array('jquery'),
+                OSMOSE_ADS_VERSION,
+                true
+            );
+            
+            // Localiser le script pour que osmoseAds soit disponible
+            wp_localize_script('osmose-ads-cities-direct', 'osmoseAds', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('osmose_ads_nonce'),
+            ));
+        }
+        
         // Créer le nonce et localiser le script
         wp_localize_script('osmose-ads-admin', 'osmoseAds', array(
             'ajax_url' => admin_url('admin-ajax.php'),

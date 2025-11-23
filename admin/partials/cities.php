@@ -8,33 +8,15 @@ if (!defined('OSMOSE_ADS_PLUGIN_DIR')) {
     wp_die(__('Erreur: Les constantes du plugin ne sont pas définies. Veuillez réactiver le plugin.', 'osmose-ads'));
 }
 
-// Nettoyer l'URL si des paramètres GET non désirés sont présents (empêche les pages blanches)
-$has_unwanted_params = false;
-$clean_params = array();
+// Nettoyer l'URL si des paramètres GET non désirés sont présents
 if (isset($_GET['city_search']) || isset($_GET['city_code']) || isset($_GET['distance_km'])) {
-    $has_unwanted_params = true;
-}
-
-// Conserver uniquement le paramètre 'page'
-if (isset($_GET['page'])) {
-    $clean_params['page'] = sanitize_text_field($_GET['page']);
-}
-
-// Rediriger vers l'URL propre si nécessaire
-if ($has_unwanted_params) {
-    wp_safe_redirect(admin_url('admin.php?' . http_build_query($clean_params)));
+    wp_safe_redirect(admin_url('admin.php?page=osmose-ads-cities'));
     exit;
 }
 
-// Inclure le header global seulement si pas déjà inclus
+// Inclure le header global
 if (!defined('OSMOSE_ADS_HEADER_LOADED')) {
-    $header_path = OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
-    if (file_exists($header_path)) {
-        require_once $header_path;
-    } else {
-        // Header introuvable, afficher un message d'erreur
-        wp_die(sprintf(__('Erreur: Le fichier header.php est introuvable à: %s', 'osmose-ads'), $header_path));
-    }
+    require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
 }
 
 // Traitement formulaire simple
@@ -104,21 +86,17 @@ $cities = get_posts(array(
                         </thead>
                         <tbody>
                             <?php foreach ($cities as $city): 
-                                $name = get_post_meta($city->ID, 'name', true) ?: $city->post_title;
-                                $postal_code = get_post_meta($city->ID, 'postal_code', true);
-                                $department = get_post_meta($city->ID, 'department_name', true) ?: get_post_meta($city->ID, 'department', true);
-                                $region = get_post_meta($city->ID, 'region_name', true) ?: get_post_meta($city->ID, 'region', true);
-                                $population = get_post_meta($city->ID, 'population', true);
+                                $city_meta = get_post_meta($city->ID);
                             ?>
                                 <tr>
-                                    <td><strong><?php echo esc_html($name); ?></strong></td>
-                                    <td><?php echo esc_html($postal_code); ?></td>
-                                    <td><?php echo esc_html($department); ?></td>
-                                    <td><?php echo esc_html($region); ?></td>
-                                    <td><?php echo $population ? number_format_i18n($population) : '—'; ?></td>
+                                    <td><?php echo esc_html($city->post_title); ?></td>
+                                    <td><?php echo esc_html($city_meta['postal_code'][0] ?? '-'); ?></td>
+                                    <td><?php echo esc_html($city_meta['department'][0] ?? '-'); ?></td>
+                                    <td><?php echo esc_html($city_meta['region'][0] ?? '-'); ?></td>
+                                    <td><?php echo esc_html($city_meta['population'][0] ?? '-'); ?></td>
                                     <td>
-                                        <a href="<?php echo get_edit_post_link($city->ID); ?>" class="btn btn-sm btn-outline-primary">
-                                            <?php _e('Modifier', 'osmose-ads'); ?>
+                                        <a href="<?php echo get_delete_post_link($city->ID); ?>" class="btn btn-sm btn-danger" onclick="return confirm('<?php _e('Êtes-vous sûr de vouloir supprimer cette ville ?', 'osmose-ads'); ?>');">
+                                            <i class="bi bi-trash"></i>
                                         </a>
                                     </td>
                                 </tr>
@@ -126,9 +104,8 @@ $cities = get_posts(array(
                         </tbody>
                     </table>
                 <?php else: ?>
-                    <div class="alert alert-info m-3" role="alert">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <?php _e('Aucune ville trouvée. Utilisez la section "Import en Masse" pour importer des villes via l\'API officielle française.', 'osmose-ads'); ?>
+                    <div class="p-4 text-center text-muted">
+                        <?php _e('Aucune ville importée pour le moment.', 'osmose-ads'); ?>
                     </div>
                 <?php endif; ?>
             </div>
@@ -142,7 +119,7 @@ $cities = get_posts(array(
         <div class="osmose-ads-card">
             <h2 class="mb-3">
                 <i class="bi bi-download me-2"></i>
-                <?php _e('Import en Masse via API Officielle', 'osmose-ads'); ?>
+                <?php _e('Import en Masse', 'osmose-ads'); ?>
             </h2>
             <p class="text-muted mb-4">
                 <?php _e('Importez des villes depuis l\'API géographique officielle de la France (geo.api.gouv.fr)', 'osmose-ads'); ?>
@@ -267,106 +244,46 @@ $cities = get_posts(array(
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="city_name" class="form-label"><?php _e('Nom de la Ville', 'osmose-ads'); ?> <span class="text-danger">*</span></label>
-                        <input type="text" name="city_name" id="city_name" class="form-control" required>
+                        <input type="text" id="city_name" name="city_name" class="form-control" required>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label for="postal_code" class="form-label"><?php _e('Code Postal', 'osmose-ads'); ?></label>
-                        <input type="text" name="postal_code" id="postal_code" class="form-control">
+                        <input type="text" id="postal_code" name="postal_code" class="form-control">
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label for="department" class="form-label"><?php _e('Département', 'osmose-ads'); ?></label>
-                        <input type="text" name="department" id="department" class="form-control">
+                        <input type="text" id="department" name="department" class="form-control">
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label for="region" class="form-label"><?php _e('Région', 'osmose-ads'); ?></label>
-                        <input type="text" name="region" id="region" class="form-control">
+                        <input type="text" id="region" name="region" class="form-control">
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label for="population" class="form-label"><?php _e('Population', 'osmose-ads'); ?></label>
-                        <input type="number" name="population" id="population" class="form-control">
+                        <input type="number" id="population" name="population" class="form-control" min="0">
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" name="add_city" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            <?php _e('Ajouter la Ville', 'osmose-ads'); ?>
+                        </button>
                     </div>
                 </div>
-                <button type="submit" name="add_city" class="btn btn-primary">
-                    <i class="bi bi-plus-circle me-2"></i>
-                    <?php _e('Ajouter la Ville', 'osmose-ads'); ?>
-                </button>
             </form>
         </div>
     </div>
 </div>
 
 <style>
-/* Scroll personnalisé pour la liste des villes */
-.cities-scroll-container {
-    scrollbar-width: thin;
-    scrollbar-color: #3b82f6 #f1f5f9;
-}
-
-.cities-scroll-container::-webkit-scrollbar {
-    width: 8px;
-}
-
-.cities-scroll-container::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 8px;
-}
-
-.cities-scroll-container::-webkit-scrollbar-thumb {
-    background: #3b82f6;
-    border-radius: 8px;
-}
-
-.cities-scroll-container::-webkit-scrollbar-thumb:hover {
-    background: #2563eb;
-}
-
-/* Sticky header dans le scroll */
-.cities-scroll-container thead {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: white;
-}
-
-/* Styles pour les cartes */
-.osmose-ads-card {
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    padding: 30px;
-    border: 1px solid #e2e8f0;
-}
-
-.osmose-ads-card h2 {
-    color: #1e3a5f;
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid #3b82f6;
-    display: flex;
-    align-items: center;
-}
-
-/* Résultats de recherche ville */
-#city-search-results {
-    max-height: 200px;
-    overflow-y: auto;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    background: white;
-    display: none;
-}
-
 .city-search-item {
     padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
     cursor: pointer;
-    border-bottom: 1px solid #f1f5f9;
-    transition: background 0.2s;
+    transition: background-color 0.2s;
 }
 
 .city-search-item:hover {
-    background: #f8fafc;
+    background-color: #f8f9fa;
 }
 
 .city-search-item:last-child {
@@ -382,443 +299,18 @@ $cities = get_posts(array(
     display: block;
     margin-top: 4px;
 }
-</style>
 
-<script>
-(function($) {
-    'use strict';
-    
-    // Fonction pour s'assurer que osmoseAds est disponible
-    function ensureOsmoseAds() {
-        if (typeof osmoseAds === 'undefined') {
-            window.osmoseAds = {
-                ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
-                nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>',
-                plugin_url: '<?php echo esc_url(OSMOSE_ADS_PLUGIN_URL); ?>'
-            };
-            console.log('Osmose ADS: Created osmoseAds object fallback', window.osmoseAds);
-        } else {
-            console.log('Osmose ADS: Using existing osmoseAds object', window.osmoseAds);
-        }
-        return window.osmoseAds;
-    }
-    
-    // Attendre que jQuery et le DOM soient prêts
-    $(document).ready(function() {
-        console.log('Osmose ADS: Document ready, initializing...');
-        
-        // Attendre un peu pour que wp_localize_script ait le temps de s'exécuter
-        setTimeout(function() {
-            var osmoseAds = ensureOsmoseAds();
-            console.log('Osmose ADS: osmoseAds object:', osmoseAds);
-            
-            // Vérifier que nous avons bien les valeurs nécessaires
-            if (!osmoseAds.ajax_url || !osmoseAds.nonce) {
-                console.error('Osmose ADS: Missing required values in osmoseAds object!', osmoseAds);
-                alert('Erreur: Configuration AJAX manquante. Rechargez la page.');
-                return;
-            }
-            
-            console.log('Osmose ADS: Starting to load departments and regions...');
-    
-    // Charger les départements
-    function loadDepartments() {
-        var osmoseAds = ensureOsmoseAds();
-        var select = $('#department_code');
-        
-        if (!select.length) {
-            console.error('Osmose ADS: Department select not found!');
-            return;
-        }
-        
-        select.prop('disabled', true);
-        select.html('<option value=""><?php _e('Chargement...', 'osmose-ads'); ?></option>');
-        
-        console.log('Osmose ADS: Loading departments from:', osmoseAds.ajax_url);
-        console.log('Osmose ADS: Nonce:', osmoseAds.nonce);
-        
-        $.ajax({
-            url: osmoseAds.ajax_url,
-            type: 'POST',
-            dataType: 'json',
-            timeout: 30000,
-            data: {
-                action: 'osmose_ads_get_departments',
-                nonce: osmoseAds.nonce
-            },
-            beforeSend: function() {
-                console.log('Osmose ADS: Sending departments request...');
-            },
-            success: function(response) {
-                console.log('Osmose ADS: Departments response received:', response);
-                select.prop('disabled', false);
-                
-                if (response && response.success && Array.isArray(response.data) && response.data.length > 0) {
-                    select.empty();
-                    select.append('<option value=""><?php _e('-- Sélectionner un département --', 'osmose-ads'); ?></option>');
-                    $.each(response.data, function(i, dept) {
-                        if (dept && dept.code && dept.nom) {
-                            var option = $('<option>').attr('value', dept.code).text(dept.nom + ' (' + dept.code + ')');
-                            select.append(option);
-                        }
-                    });
-                    console.log('Osmose ADS: Departments loaded successfully:', response.data.length, 'items');
-                } else {
-                    console.error('Osmose ADS: Departments error - invalid response:', response);
-                    var errorMsg = response && response.data && response.data.message ? response.data.message : '<?php _e('Erreur lors du chargement des départements', 'osmose-ads'); ?>';
-                    select.html('<option value="">' + errorMsg + '</option>');
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Osmose ADS: AJAX error loading departments:', {
-                    status: status,
-                    error: error,
-                    responseText: xhr.responseText,
-                    statusCode: xhr.status,
-                    readyState: xhr.readyState
-                });
-                select.prop('disabled', false);
-                
-                // Essayer de parser la réponse d'erreur
-                var errorMsg = '<?php _e('Erreur de connexion', 'osmose-ads'); ?>';
-                try {
-                    var errorResponse = JSON.parse(xhr.responseText);
-                    if (errorResponse && errorResponse.data && errorResponse.data.message) {
-                        errorMsg = errorResponse.data.message;
-                    }
-                } catch (e) {
-                    // Pas de JSON valide, utiliser le message par défaut
-                }
-                
-                select.html('<option value="">' + errorMsg + '</option>');
-            }
-        });
-    }
-    
-    // Charger les régions
-    function loadRegions() {
-        var osmoseAds = ensureOsmoseAds();
-        var select = $('#region_code');
-        
-        if (!select.length) {
-            console.error('Osmose ADS: Region select not found!');
-            return;
-        }
-        
-        select.prop('disabled', true);
-        select.html('<option value=""><?php _e('Chargement...', 'osmose-ads'); ?></option>');
-        
-        console.log('Osmose ADS: Loading regions from:', osmoseAds.ajax_url);
-        
-        $.ajax({
-            url: osmoseAds.ajax_url,
-            type: 'POST',
-            dataType: 'json',
-            timeout: 30000,
-            data: {
-                action: 'osmose_ads_get_regions',
-                nonce: osmoseAds.nonce
-            },
-            beforeSend: function() {
-                console.log('Osmose ADS: Sending regions request...');
-            },
-            success: function(response) {
-                console.log('Osmose ADS: Regions response received:', response);
-                select.prop('disabled', false);
-                
-                if (response && response.success && Array.isArray(response.data) && response.data.length > 0) {
-                    select.empty();
-                    select.append('<option value=""><?php _e('-- Sélectionner une région --', 'osmose-ads'); ?></option>');
-                    $.each(response.data, function(i, region) {
-                        if (region && region.code && region.nom) {
-                            var option = $('<option>').attr('value', region.code).text(region.nom);
-                            select.append(option);
-                        }
-                    });
-                    console.log('Osmose ADS: Regions loaded successfully:', response.data.length, 'items');
-                } else {
-                    console.error('Osmose ADS: Regions error - invalid response:', response);
-                    var errorMsg = response && response.data && response.data.message ? response.data.message : '<?php _e('Erreur lors du chargement des régions', 'osmose-ads'); ?>';
-                    select.html('<option value="">' + errorMsg + '</option>');
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Osmose ADS: AJAX error loading regions:', {
-                    status: status,
-                    error: error,
-                    responseText: xhr.responseText,
-                    statusCode: xhr.status,
-                    readyState: xhr.readyState
-                });
-                select.prop('disabled', false);
-                
-                // Essayer de parser la réponse d'erreur
-                var errorMsg = '<?php _e('Erreur de connexion', 'osmose-ads'); ?>';
-                try {
-                    var errorResponse = JSON.parse(xhr.responseText);
-                    if (errorResponse && errorResponse.data && errorResponse.data.message) {
-                        errorMsg = errorResponse.data.message;
-                    }
-                } catch (e) {
-                    // Pas de JSON valide, utiliser le message par défaut
-                }
-                
-                select.html('<option value="">' + errorMsg + '</option>');
-            }
-        });
-    }
-    
-    // Charger les données immédiatement au chargement de la page
-    // Double vérification : d'abord après un court délai pour le DOM, puis avec un délai plus long si nécessaire
-    function initSelects() {
-        if ($('#department_code').length && $('#department_code option').length <= 1) {
-            console.log('Loading departments...');
-            loadDepartments();
-        }
-        
-        if ($('#region_code').length && $('#region_code option').length <= 1) {
-            console.log('Loading regions...');
-            loadRegions();
-        }
-    }
-    
-    // Charger immédiatement si le DOM est prêt
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(initSelects, 100);
-    } else {
-        $(window).on('load', function() {
-            setTimeout(initSelects, 100);
-        });
-    }
-    
-    // Double vérification après 500ms au cas où
-    setTimeout(initSelects, 500);
-    
-    // Recherche de ville
-    var searchTimeout;
-    $('#city_search').on('input', function() {
-        clearTimeout(searchTimeout);
-        var search = $(this).val();
-        
-        if (search.length < 3) {
-            $('#city-search-results').hide().empty();
-            return;
-        }
-        
-        searchTimeout = setTimeout(function() {
-            $.ajax({
-                url: osmoseAds.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'osmose_ads_search_city',
-                    nonce: osmoseAds.nonce,
-                    search: search
-                },
-                success: function(response) {
-                    if (response.success && response.data.length > 0) {
-                        var results = $('#city-search-results');
-                        results.empty();
-                        
-                        $.each(response.data.slice(0, 5), function(i, city) {
-                            var postalCode = city.codesPostaux ? city.codesPostaux[0] : '';
-                            var dept = city.codeDepartement || '';
-                            results.append(
-                                '<div class="city-search-item" data-code="' + city.code + '">' +
-                                '<strong>' + city.nom + '</strong>' +
-                                '<small>' + postalCode + ' - ' + dept + '</small>' +
-                                '</div>'
-                            );
-                        });
-                        
-                        results.show();
-                    } else {
-                        $('#city-search-results').hide().empty();
-                    }
-                }
-            });
-        }, 500);
-    });
-    
-    // Sélection d'une ville dans les résultats
-    $(document).on('click', '.city-search-item', function() {
-        var code = $(this).data('code');
-        var name = $(this).find('strong').text();
-        
-        $('#city_code').val(code);
-        $('#city_search').val(name);
-        $('#city-search-results').hide();
-    });
-    
-    // Import par département
-    $('#import-department-form').on('submit', function(e) {
-        e.preventDefault();
-        var osmoseAds = ensureOsmoseAds();
-        var deptCode = $('#department_code').val();
-        if (!deptCode) {
-            alert('<?php _e('Veuillez sélectionner un département', 'osmose-ads'); ?>');
-            return;
-        }
-        importCities('department', {
-            department_code: deptCode
-        });
-    });
-    
-    // Import par région
-    $('#import-region-form').on('submit', function(e) {
-        e.preventDefault();
-        var osmoseAds = ensureOsmoseAds();
-        var regionCode = $('#region_code').val();
-        if (!regionCode) {
-            alert('<?php _e('Veuillez sélectionner une région', 'osmose-ads'); ?>');
-            return;
-        }
-        importCities('region', {
-            region_code: regionCode
-        });
-    });
-    
-    // Import par rayon
-    $('#import-distance-form').on('submit', function(e) {
-        e.preventDefault();
-        var osmoseAds = ensureOsmoseAds();
-        var cityCode = $('#city_code').val();
-        var distance = $('#distance_km').val();
-        
-        if (!cityCode) {
-            alert('<?php _e('Veuillez sélectionner une ville de référence', 'osmose-ads'); ?>');
-            return;
-        }
-        
-        if (!distance || distance < 1) {
-            alert('<?php _e('Veuillez entrer un rayon valide (minimum 1 km)', 'osmose-ads'); ?>');
-            return;
-        }
-        
-        importCities('distance', {
-            city_code: cityCode,
-            distance: distance
-        });
-    });
-    
-    function importCities(type, data) {
-        var osmoseAds = ensureOsmoseAds();
-        var resultDiv = $('#import-result');
-        resultDiv.html(
-            '<div class="alert alert-info">' +
-            '<div class="spinner-border spinner-border-sm me-2" role="status"></div>' +
-            '<?php _e('Import en cours, veuillez patienter...', 'osmose-ads'); ?>' +
-            '</div>'
-        );
-        
-        // Désactiver le bouton pendant l'import
-        $('button[type="submit"]').prop('disabled', true);
-        
-        // Préparer les données (compatible avec tous les navigateurs)
-        var ajaxData = {
-            action: 'osmose_ads_import_cities',
-            nonce: osmoseAds.nonce,
-            import_type: type
-        };
-        // Fusionner les données additionnelles
-        $.extend(ajaxData, data);
-        
-        $.ajax({
-            url: osmoseAds.ajax_url,
-            type: 'POST',
-            timeout: 300000,
-            data: ajaxData,
-            success: function(response) {
-                $('button[type="submit"]').prop('disabled', false);
-                
-                if (response.success) {
-                    var imported = response.data.imported || 0;
-                    var skipped = response.data.skipped || 0;
-                    var total = response.data.total || 0;
-                    
-                    resultDiv.html(
-                        '<div class="alert alert-success">' +
-                        '<i class="bi bi-check-circle me-2"></i>' +
-                        '<strong>' + response.data.message + '</strong><br>' +
-                        '<small>Total trouvé: ' + total + ' | ' +
-                        'Importées: ' + imported + ' | ' +
-                        'Ignorées (déjà existantes): ' + skipped + '</small><br>' +
-                        '<small class="text-muted">Rechargement de la page dans <span id="countdown">3</span> secondes...</small>' +
-                        '</div>'
-                    );
-                    
-                    // Compte à rebours avant rechargement
-                    var countdown = 3;
-                    var countdownInterval = setInterval(function() {
-                        countdown--;
-                        $('#countdown').text(countdown);
-                        if (countdown <= 0) {
-                            clearInterval(countdownInterval);
-                            location.reload();
-                        }
-                    }, 1000);
-                } else {
-                    resultDiv.html(
-                        '<div class="alert alert-danger">' +
-                        '<i class="bi bi-exclamation-triangle me-2"></i>' +
-                        (response.data && response.data.message ? response.data.message : '<?php _e('Erreur lors de l\'import', 'osmose-ads'); ?>') +
-                        '</div>'
-                    );
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX Error:', {
-                    status: status,
-                    error: error,
-                    statusCode: xhr.status,
-                    responseText: xhr.responseText,
-                    readyState: xhr.readyState
-                });
-                
-                $('button[type="submit"]').prop('disabled', false);
-                
-                var errorMsg = '<?php _e('Erreur lors de l\'import', 'osmose-ads'); ?>';
-                var errorDetails = '';
-                
-                // Analyser la réponse pour obtenir plus de détails
-                try {
-                    var response = JSON.parse(xhr.responseText);
-                    if (response && response.data && response.data.message) {
-                        errorDetails = response.data.message;
-                    }
-                } catch (e) {
-                    // Pas de JSON valide
-                }
-                
-                if (status === 'timeout') {
-                    errorMsg = '<?php _e('Le délai d\'import a été dépassé. L\'import peut continuer en arrière-plan.', 'osmose-ads'); ?>';
-                } else if (xhr.status === 0) {
-                    errorMsg = '<?php _e('Erreur de connexion. Vérifiez votre connexion Internet et réessayez.', 'osmose-ads'); ?>';
-                } else if (xhr.status === 403) {
-                    errorMsg = '<?php _e('Accès refusé. Vérifiez vos permissions.', 'osmose-ads'); ?>';
-                } else if (xhr.status === 500) {
-                    errorMsg = '<?php _e('Erreur serveur. Vérifiez les logs WordPress (debug.log).', 'osmose-ads'); ?>';
-                }
-                
-                if (errorDetails) {
-                    errorMsg += '<br><small>' + errorDetails + '</small>';
-                }
-                
-                errorMsg += '<br><small class="text-muted">Code HTTP: ' + xhr.status + ' | Status: ' + status + '</small>';
-                
-                resultDiv.html(
-                    '<div class="alert alert-danger">' +
-                    '<i class="bi bi-exclamation-triangle me-2"></i>' +
-                    '<strong>Erreur</strong><br>' +
-                    errorMsg +
-                    '</div>'
-                );
-            }
-        });
-    }
-});
-</script>
+#city-search-results {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    max-height: 300px;
+    overflow-y: auto;
+}
+</style>
 
 <?php
 // Inclure le footer global
 require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
 ?>
+
