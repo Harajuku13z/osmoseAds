@@ -6,6 +6,62 @@ if (!defined('ABSPATH')) {
 // Inclure le header global
 require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
 
+// Gérer l'affichage/édition d'un template spécifique
+if (isset($_GET['template_id']) && !empty($_GET['template_id'])) {
+    $template_id = intval($_GET['template_id']);
+    $template = get_post($template_id);
+    
+    if ($template && $template->post_type === 'ad_template') {
+        // Afficher la page de visualisation/édition du template
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/template-view.php';
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
+        return;
+    }
+}
+
+// Traitement de la sauvegarde du template
+if (isset($_POST['save_template']) && isset($_POST['template_id'])) {
+    check_admin_referer('osmose_ads_save_template_' . $_POST['template_id']);
+    
+    $template_id = intval($_POST['template_id']);
+    
+    if (current_user_can('edit_post', $template_id)) {
+        // Mettre à jour le contenu
+        wp_update_post(array(
+            'ID' => $template_id,
+            'post_content' => wp_kses_post($_POST['template_content'] ?? ''),
+            'post_title' => sanitize_text_field($_POST['template_title'] ?? ''),
+        ));
+        
+        // Mettre à jour les meta
+        $meta_fields = array(
+            'featured_image_id', 'realization_images', 'meta_title', 'meta_description',
+            'meta_keywords', 'og_title', 'og_description', 'twitter_title',
+            'twitter_description', 'short_description', 'is_active'
+        );
+        
+        foreach ($meta_fields as $field) {
+            if (isset($_POST[$field])) {
+                update_post_meta($template_id, $field, sanitize_text_field($_POST[$field]));
+            }
+        }
+        
+        // Gérer l'image mise en avant
+        if (isset($_POST['featured_image_id'])) {
+            set_post_thumbnail($template_id, intval($_POST['featured_image_id']));
+        }
+        
+        // Gérer les images de réalisations (array)
+        if (isset($_POST['realization_images'])) {
+            $images = array_map('intval', $_POST['realization_images']);
+            update_post_meta($template_id, 'realization_images', $images);
+        }
+        
+        $save_message = __('Template mis à jour avec succès', 'osmose-ads');
+        $save_success = true;
+    }
+}
+
 $templates = get_posts(array(
     'post_type' => 'ad_template',
     'posts_per_page' => -1,
@@ -28,31 +84,57 @@ $templates = get_posts(array(
     </div>
 </div>
     
-    <div id="create-template-modal" style="display: none;">
-        <h2><?php _e('Créer un Template depuis un Service', 'osmose-ads'); ?></h2>
-        <form id="create-template-form">
-            <table class="form-table">
-                <tr>
-                    <th scope="row"><?php _e('Nom du Service', 'osmose-ads'); ?></th>
-                    <td>
-                        <input type="text" name="service_name" class="regular-text" required>
-                        <p class="description"><?php _e('Ex: Dépannage et réparation de fuites d\'eau', 'osmose-ads'); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php _e('Prompt IA (Optionnel)', 'osmose-ads'); ?></th>
-                    <td>
-                        <textarea name="ai_prompt" rows="5" class="large-text"></textarea>
-                        <p class="description"><?php _e('Si vide, un prompt par défaut sera utilisé', 'osmose-ads'); ?></p>
-                    </td>
-                </tr>
-            </table>
-            <p class="submit">
-                <button type="submit" class="button button-primary"><?php _e('Générer le Template', 'osmose-ads'); ?></button>
-                <button type="button" class="button cancel-modal"><?php _e('Annuler', 'osmose-ads'); ?></button>
-            </p>
-        </form>
-        <div id="template-result"></div>
+    <div id="create-template-modal" class="card" style="display: none; max-width: 800px; margin: 20px auto;">
+        <div class="card-header">
+            <h2 class="mb-0"><?php _e('Créer un Template depuis un Service', 'osmose-ads'); ?></h2>
+        </div>
+        <div class="card-body">
+            <form id="create-template-form">
+                <div class="mb-3">
+                    <label class="form-label"><?php _e('Nom du Service', 'osmose-ads'); ?> <span class="text-danger">*</span></label>
+                    <input type="text" name="service_name" class="form-control" required>
+                    <small class="form-text text-muted"><?php _e('Ex: Dépannage et réparation de fuites d\'eau', 'osmose-ads'); ?></small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><?php _e('Image mise en avant', 'osmose-ads'); ?></label>
+                    <div id="create-featured-image-preview" class="mb-2" style="min-height: 150px; border: 2px dashed #ddd; display: flex; align-items: center; justify-content: center;">
+                        <p class="text-muted mb-0"><?php _e('Aucune image sélectionnée', 'osmose-ads'); ?></p>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" id="create-set-featured-image">
+                        <i class="bi bi-image me-1"></i><?php _e('Choisir une image', 'osmose-ads'); ?>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="create-remove-featured-image" style="display: none;">
+                        <i class="bi bi-x me-1"></i><?php _e('Retirer', 'osmose-ads'); ?>
+                    </button>
+                    <input type="hidden" name="featured_image_id" id="create_featured_image_id" value="">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><?php _e('Photos des réalisations', 'osmose-ads'); ?></label>
+                    <div id="create-realization-images-container" class="d-flex flex-wrap gap-2 mb-2"></div>
+                    <button type="button" class="btn btn-primary btn-sm" id="create-add-realization-images">
+                        <i class="bi bi-images me-1"></i><?php _e('Ajouter des photos', 'osmose-ads'); ?>
+                    </button>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><?php _e('Prompt IA (Optionnel)', 'osmose-ads'); ?></label>
+                    <textarea name="ai_prompt" rows="5" class="form-control"></textarea>
+                    <small class="form-text text-muted"><?php _e('Si vide, un prompt par défaut sera utilisé', 'osmose-ads'); ?></small>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-magic me-1"></i><?php _e('Générer le Template', 'osmose-ads'); ?>
+                    </button>
+                    <button type="button" class="btn btn-secondary cancel-modal">
+                        <?php _e('Annuler', 'osmose-ads'); ?>
+                    </button>
+                </div>
+            </form>
+            <div id="template-result" class="mt-3"></div>
+        </div>
     </div>
     
     <table class="wp-list-table widefat fixed striped">
@@ -100,26 +182,131 @@ $templates = get_posts(array(
 
 <script>
 jQuery(document).ready(function($) {
+    // Enqueue WordPress Media si disponible
+    if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
+        console.warn('WordPress Media Library non disponible');
+    }
+    
     $('#create-template-btn').on('click', function(e) {
         e.preventDefault();
         $('#create-template-modal').show();
+        // Enqueue media si nécessaire
+        if (typeof wp !== 'undefined' && typeof wp.media !== 'undefined') {
+            // Media déjà chargé
+        }
     });
     
     $('.cancel-modal').on('click', function() {
         $('#create-template-modal').hide();
     });
     
+    // Media Library pour l'image mise en avant (création)
+    var createFeaturedImageFrame;
+    $('#create-set-featured-image').on('click', function(e) {
+        e.preventDefault();
+        
+        if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
+            alert('<?php _e('La bibliothèque média WordPress n\'est pas disponible. Veuillez recharger la page.', 'osmose-ads'); ?>');
+            return;
+        }
+        
+        if (createFeaturedImageFrame) {
+            createFeaturedImageFrame.open();
+            return;
+        }
+        
+        createFeaturedImageFrame = wp.media({
+            title: '<?php _e('Choisir l\'image mise en avant', 'osmose-ads'); ?>',
+            button: {
+                text: '<?php _e('Utiliser cette image', 'osmose-ads'); ?>'
+            },
+            multiple: false
+        });
+        
+        createFeaturedImageFrame.on('select', function() {
+            var attachment = createFeaturedImageFrame.state().get('selection').first().toJSON();
+            $('#create_featured_image_id').val(attachment.id);
+            $('#create-featured-image-preview').html('<img src="' + attachment.url + '" class="img-fluid" style="max-width: 100%; height: auto; max-height: 200px;">');
+            $('#create-set-featured-image').text('<?php _e('Changer l\'image', 'osmose-ads'); ?>');
+            $('#create-remove-featured-image').show();
+        });
+        
+        createFeaturedImageFrame.open();
+    });
+    
+    $('#create-remove-featured-image').on('click', function(e) {
+        e.preventDefault();
+        $('#create_featured_image_id').val('');
+        $('#create-featured-image-preview').html('<p class="text-muted mb-0"><?php _e('Aucune image sélectionnée', 'osmose-ads'); ?></p>');
+        $('#create-set-featured-image').text('<?php _e('Choisir une image', 'osmose-ads'); ?>');
+        $(this).hide();
+    });
+    
+    // Media Library pour les images de réalisations (création)
+    var createRealizationImageFrame;
+    $('#create-add-realization-images').on('click', function(e) {
+        e.preventDefault();
+        
+        if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
+            alert('<?php _e('La bibliothèque média WordPress n\'est pas disponible. Veuillez recharger la page.', 'osmose-ads'); ?>');
+            return;
+        }
+        
+        if (createRealizationImageFrame) {
+            createRealizationImageFrame.open();
+            return;
+        }
+        
+        createRealizationImageFrame = wp.media({
+            title: '<?php _e('Ajouter des photos de réalisations', 'osmose-ads'); ?>',
+            button: {
+                text: '<?php _e('Ajouter les images', 'osmose-ads'); ?>'
+            },
+            multiple: true
+        });
+        
+        createRealizationImageFrame.on('select', function() {
+            var attachments = createRealizationImageFrame.state().get('selection').toJSON();
+            
+            attachments.forEach(function(attachment) {
+                var imageId = attachment.id;
+                if ($('#create-realization-images-container').find('[data-image-id="' + imageId + '"]').length === 0) {
+                    var thumbUrl = attachment.sizes && attachment.sizes.thumbnail ? attachment.sizes.thumbnail.url : attachment.url;
+                    var imageHtml = '<div class="position-relative" data-image-id="' + imageId + '" style="display: inline-block;">' +
+                        '<img src="' + thumbUrl + '" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">' +
+                        '<button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 create-remove-image" style="margin: 2px; padding: 2px 6px;"><i class="bi bi-x"></i></button>' +
+                        '<input type="hidden" name="realization_images[]" value="' + imageId + '">' +
+                        '</div>';
+                    $('#create-realization-images-container').append(imageHtml);
+                }
+            });
+        });
+        
+        createRealizationImageFrame.open();
+    });
+    
+    $(document).on('click', '.create-remove-image', function() {
+        $(this).closest('[data-image-id]').remove();
+    });
+    
     $('#create-template-form').on('submit', function(e) {
         e.preventDefault();
+        
+        var realizationImages = [];
+        $('input[name="realization_images[]"]').each(function() {
+            realizationImages.push($(this).val());
+        });
         
         var formData = {
             action: 'osmose_ads_create_template',
             nonce: osmoseAds.nonce,
             service_name: $('input[name="service_name"]').val(),
             ai_prompt: $('textarea[name="ai_prompt"]').val(),
+            featured_image_id: $('#create_featured_image_id').val(),
+            realization_images: realizationImages,
         };
         
-        $('#template-result').html('<p><?php _e('Création en cours...', 'osmose-ads'); ?></p>');
+        $('#template-result').html('<div class="alert alert-info"><i class="bi bi-hourglass-split me-2"></i><?php _e('Création en cours...', 'osmose-ads'); ?></div>');
         
         $.ajax({
             url: osmoseAds.ajax_url,
@@ -128,26 +315,35 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 if (response.success) {
                     $('#template-result').html(
-                        '<div class="notice notice-success"><p>' + response.data.message + '</p></div>'
+                        '<div class="alert alert-success"><i class="bi bi-check-circle me-2"></i>' + response.data.message + '</div>'
                     );
                     setTimeout(function() {
-                        location.reload();
+                        if (response.data.template_id) {
+                            window.location.href = '<?php echo admin_url('admin.php?page=osmose-ads-templates&template_id='); ?>' + response.data.template_id;
+                        } else {
+                            location.reload();
+                        }
                     }, 2000);
                 } else {
                     $('#template-result').html(
-                        '<div class="notice notice-error"><p>' + response.data.message + '</p></div>'
+                        '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>' + response.data.message + '</div>'
                     );
                 }
             },
             error: function() {
                 $('#template-result').html(
-                    '<div class="notice notice-error"><p><?php _e('Erreur lors de la création', 'osmose-ads'); ?></p></div>'
+                    '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i><?php _e('Erreur lors de la création', 'osmose-ads'); ?></div>'
                 );
             }
         });
     });
 });
 </script>
+<?php
+// Enqueue WordPress Media scripts sur cette page
+wp_enqueue_media();
+?>
+
 
 <?php
 // Inclure le footer global

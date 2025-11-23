@@ -49,6 +49,11 @@ class Osmose_Ads_Admin {
             true
         );
         
+        // Charger WordPress Media Library sur les pages de templates
+        if (strpos($hook, 'osmose-ads-templates') !== false) {
+            wp_enqueue_media();
+        }
+        
         // Charger le script d'import direct depuis l'API sur la page des villes
         if (strpos($hook, 'osmose-ads-cities') !== false) {
             wp_enqueue_script(
