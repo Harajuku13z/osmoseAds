@@ -71,6 +71,7 @@ $templates = get_posts(array(
 ));
 ?>
 
+<div class="osmose-templates-page">
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4" style="margin-top: 20px;">
     <div>
