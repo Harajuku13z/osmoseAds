@@ -103,6 +103,7 @@ $nav_items = array(
     </div>
 </nav>
 
-<div class="osmose-ads-page container-fluid py-4">
-    <div class="container-xxl">
+<div class="osmose-ads-page">
+    <div class="container-fluid py-4">
+        <div class="container-xxl">
 

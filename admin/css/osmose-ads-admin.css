@@ -15,28 +15,43 @@ body[class*="osmose"] .updated,
     display: none !important;
 }
 
+/* Empêcher le scroll horizontal global */
+body.osmose-ads-page,
+body[class*="osmose-ads"] {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+}
+
 /* Style global pour les pages Osmose ADS */
 .osmose-ads-page {
     background: #f0f4f8;
     min-height: calc(100vh - 32px);
-    margin: 0 -20px 0 -2px;
+    margin: 0;
     padding: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
 .osmose-ads-page .wrap {
     margin: 0;
     padding: 0;
     background: transparent;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
-/* Header personnalisé avec logo */
+/* Header personnalisé avec logo - DEPRECATED (on utilise maintenant le header Bootstrap) */
 .osmose-ads-header {
     background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 50%, #3b82f6 100%);
     padding: 30px 40px;
-    margin: 0 -20px 30px -2px;
+    margin: 0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     position: relative;
     overflow: hidden;
+    width: 100%;
+    max-width: 100%;
 }
 
 .osmose-ads-header::before {
@@ -95,9 +110,12 @@ body[class*="osmose"] .updated,
 
 /* Container principal */
 .osmose-ads-container {
-    max-width: 1400px;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 0 40px 40px;
+    padding: 0 20px 40px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 /* Cards modernes */
