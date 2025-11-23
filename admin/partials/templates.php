@@ -86,7 +86,7 @@ $templates = get_posts(array(
     </div>
 </div>
     
-    <div id="create-template-modal" class="card" style="display: none; max-width: 900px; margin: 20px auto;">
+    <div id="create-template-modal" class="card osmose-template-modal" style="display: none; max-width: 900px; margin: 20px auto; position: relative; z-index: 10000;">
         <div class="card-header">
             <h2 class="mb-0"><?php _e('Créer un Template depuis un Service', 'osmose-ads'); ?></h2>
         </div>
@@ -307,18 +307,24 @@ jQuery(document).ready(function($) {
                 $modal.show();
             }
         } else {
-            // Fallback : affichage simple
-            $modal.css({
-                'display': 'block',
-                'position': 'fixed',
-                'top': '50%',
-                'left': '50%',
-                'transform': 'translate(-50%, -50%)',
-                'z-index': '9999',
-                'background': 'white',
-                'box-shadow': '0 4px 20px rgba(0,0,0,0.3)'
+            // Fallback : affichage simple avec styles inline
+            $modal.addClass('show').css({
+                'display': 'block !important',
+                'position': 'fixed !important',
+                'top': '50% !important',
+                'left': '50% !important',
+                'transform': 'translate(-50%, -50%) !important',
+                'z-index': '99999 !important',
+                'background': 'white !important',
+                'box-shadow': '0 10px 40px rgba(0,0,0,0.3) !important',
+                'max-height': '90vh !important',
+                'overflow-y': 'auto !important'
             });
-            $('body').append('<div id="modal-backdrop" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;"></div>');
+            
+            // Ajouter le backdrop
+            if ($('#modal-backdrop').length === 0) {
+                $('body').append('<div id="modal-backdrop" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99998;"></div>');
+            }
         }
         
         // Enqueue media si nécessaire
