@@ -58,8 +58,28 @@ class Osmose_Ads_Activator {
             KEY idx_service_name (service_name)
         ) $charset_collate;";
         
+        // Table pour tracker les appels téléphoniques
+        $table_calls = $wpdb->prefix . 'osmose_ads_call_tracking';
+        
+        $sql_calls = "CREATE TABLE IF NOT EXISTS $table_calls (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            ad_id bigint(20) UNSIGNED,
+            ad_slug varchar(255),
+            page_url varchar(500),
+            phone_number varchar(50),
+            user_ip varchar(45),
+            user_agent text,
+            referrer varchar(500),
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_ad_id (ad_id),
+            KEY idx_created_at (created_at),
+            KEY idx_page_url (page_url(255))
+        ) $charset_collate;";
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql_templates);
+        dbDelta($sql_calls);
     }
 
     private static function set_default_options() {

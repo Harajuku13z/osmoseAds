@@ -435,6 +435,78 @@ function osmose_ads_handle_create_template() {
     ));
 }
 
+/**
+ * Handler AJAX pour tracker les appels téléphoniques (accessible publiquement)
+ */
+function osmose_ads_track_call() {
+    // Vérifier le nonce
+    if (!check_ajax_referer('osmose_ads_track_call', 'nonce', false)) {
+        wp_send_json_error(array('message' => __('Erreur de sécurité', 'osmose-ads')));
+        return;
+    }
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'osmose_ads_call_tracking';
+    
+    // Vérifier que la table existe
+    if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+        // Créer la table si elle n'existe pas
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        $charset_collate = $wpdb->get_charset_collate();
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            ad_id bigint(20) UNSIGNED,
+            ad_slug varchar(255),
+            page_url varchar(500),
+            phone_number varchar(50),
+            user_ip varchar(45),
+            user_agent text,
+            referrer varchar(500),
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_ad_id (ad_id),
+            KEY idx_created_at (created_at),
+            KEY idx_page_url (page_url(255))
+        ) $charset_collate;";
+        dbDelta($sql);
+    }
+    
+    // Récupérer les données
+    $ad_id = intval($_POST['ad_id'] ?? 0);
+    $ad_slug = sanitize_text_field($_POST['ad_slug'] ?? '');
+    $page_url = esc_url_raw($_POST['page_url'] ?? '');
+    $phone = sanitize_text_field($_POST['phone'] ?? '');
+    
+    // Récupérer les informations de l'utilisateur
+    $user_ip = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
+    $user_agent = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
+    $referrer = esc_url_raw($_SERVER['HTTP_REFERER'] ?? '');
+    
+    // Enregistrer l'appel
+    $result = $wpdb->insert(
+        $table_name,
+        array(
+            'ad_id' => $ad_id ?: null,
+            'ad_slug' => $ad_slug,
+            'page_url' => $page_url,
+            'phone_number' => $phone,
+            'user_ip' => $user_ip,
+            'user_agent' => $user_agent,
+            'referrer' => $referrer,
+            'created_at' => current_time('mysql')
+        ),
+        array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error(array('message' => __('Erreur lors de l\'enregistrement', 'osmose-ads')));
+    } else {
+        wp_send_json_success(array('message' => __('Appel enregistré', 'osmose-ads')));
+    }
+}
+add_action('wp_ajax_osmose_ads_track_call', 'osmose_ads_track_call');
+add_action('wp_ajax_nopriv_osmose_ads_track_call', 'osmose_ads_track_call'); // Accessible publiquement
+
 function osmose_ads_handle_bulk_generate() {
     // Vérifier que les classes existent
     if (!class_exists('Ad_Template')) {

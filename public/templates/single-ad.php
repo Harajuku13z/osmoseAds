@@ -42,6 +42,11 @@ $content = $ad->get_content();
 $meta = $ad->get_meta();
 $related_ads = $ad->get_related_ads(5);
 
+// Récupérer les informations pour le tracking
+$ad_id = $ad->post_id;
+$ad_slug_for_tracking = $ad->post_name;
+$current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+
 // Métadonnées SEO
 $page_title = $meta['meta_title'] ?? get_the_title();
 $page_description = $meta['meta_description'] ?? '';
@@ -79,78 +84,143 @@ add_action('wp_head', function() use ($page_description, $meta_keywords, $meta) 
     }
 }, 1);
 
+// Récupérer le téléphone
+$phone = get_option('osmose_ads_company_phone', '');
+$phone_raw = get_option('osmose_ads_company_phone_raw', '');
+
 // Headers
 get_header();
 ?>
 
-<div class="osmose-ads-single">
-    <article class="ad-content">
-        <!-- Hero Section -->
-        <header class="ad-header">
-            <h1 class="ad-title"><?php echo esc_html(get_the_title()); ?></h1>
-            <?php if ($city): ?>
-                <p class="ad-location">
-                    <?php echo esc_html($city->post_title); ?>
-                    <?php 
-                    $department = get_post_meta($city->ID, 'department', true);
-                    if ($department) {
-                        echo ' (' . esc_html($department) . ')';
-                    }
-                    ?>
-                </p>
-            <?php endif; ?>
+<!-- Bootstrap Icons pour les icônes -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+
+
+<div class="osmose-ads-single-wrapper">
+    <div class="osmose-ads-single">
+        <article class="ad-content">
+            <!-- Hero Section -->
+            <header class="ad-hero">
+                <div class="ad-hero-content">
+                    <div class="ad-badge-location">
+                        <i class="bi bi-geo-alt-fill"></i>
+                        <?php if ($city): ?>
+                            <span><?php echo esc_html($city->post_title); ?></span>
+                            <?php 
+                            $department = get_post_meta($city->ID, 'department', true);
+                            if ($department) {
+                                echo ' <span class="ad-department">(' . esc_html($department) . ')</span>';
+                            }
+                            ?>
+                        <?php endif; ?>
+                    </div>
+                    <h1 class="ad-title"><?php echo esc_html(get_the_title()); ?></h1>
+                    
+                    <div class="ad-hero-cta">
+                        <?php if ($phone_raw): ?>
+                            <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="btn-call osmose-track-call" 
+                               data-ad-id="<?php echo esc_attr($ad_id); ?>"
+                               data-ad-slug="<?php echo esc_attr($ad_slug_for_tracking); ?>"
+                               data-page-url="<?php echo esc_attr($current_url); ?>"
+                               data-phone="<?php echo esc_attr($phone_raw); ?>">
+                                <i class="bi bi-telephone-fill"></i>
+                                <?php echo esc_html($phone ?: $phone_raw); ?>
+                            </a>
+                        <?php endif; ?>
+                        <a href="<?php echo esc_url(home_url('/devis')); ?>" class="btn-devis">
+                            <i class="bi bi-envelope-fill"></i>
+                            <?php _e('Demander un Devis', 'osmose-ads'); ?>
+                        </a>
+                    </div>
+                </div>
+            </header>
             
-            <div class="ad-cta">
-                <a href="<?php echo esc_url(home_url('/devis')); ?>" class="button button-primary">
-                    <?php _e('Demander un Devis', 'osmose-ads'); ?>
-                </a>
+            <!-- Contenu Principal -->
+            <div class="ad-body">
                 <?php 
-                $phone = get_option('osmose_ads_company_phone_raw', '');
-                if ($phone): 
+                if ($content) {
+                    echo wp_kses_post($content);
+                } else {
+                    echo '<p>' . __('Contenu non disponible', 'osmose-ads') . '</p>';
+                }
                 ?>
-                    <a href="tel:<?php echo esc_attr($phone); ?>" class="button">
-                        <?php _e('Appeler', 'osmose-ads'); ?>
-                    </a>
-                <?php endif; ?>
             </div>
-        </header>
-        
-        <!-- Contenu Principal -->
-        <div class="ad-body">
-            <?php 
-            if ($content) {
-                echo wp_kses_post($content);
-            } else {
-                echo '<p>' . __('Contenu non disponible', 'osmose-ads') . '</p>';
-            }
-            ?>
-        </div>
-        
-        <!-- Section CTA -->
-        <div class="ad-cta-section">
-            <h2><?php _e('Besoin de ce service ?', 'osmose-ads'); ?></h2>
-            <p><?php _e('Contactez-nous pour obtenir un devis personnalisé', 'osmose-ads'); ?></p>
-            <a href="<?php echo esc_url(home_url('/devis')); ?>" class="button button-primary">
-                <?php _e('Demander un Devis Gratuit', 'osmose-ads'); ?>
-            </a>
-        </div>
-        
-        <!-- Annonces Similaires -->
-        <?php if (!empty($related_ads)): ?>
-            <div class="ad-related">
-                <h2><?php _e('Autres Services', 'osmose-ads'); ?></h2>
-                <div class="related-ads-grid">
-                    <?php foreach ($related_ads as $related_ad): ?>
-                        <div class="related-ad-item">
-                            <h3><a href="<?php echo get_permalink($related_ad->ID); ?>"><?php echo esc_html($related_ad->post_title); ?></a></h3>
-                        </div>
-                    <?php endforeach; ?>
+            
+            <!-- Section CTA Fixe -->
+            <div class="ad-cta-floating">
+                <div class="ad-cta-floating-content">
+                    <div class="ad-cta-floating-text">
+                        <strong><?php _e('Besoin de ce service ?', 'osmose-ads'); ?></strong>
+                        <span><?php _e('Contactez-nous maintenant', 'osmose-ads'); ?></span>
+                    </div>
+                    <div class="ad-cta-floating-buttons">
+                        <?php if ($phone_raw): ?>
+                            <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="btn-call-small osmose-track-call"
+                               data-ad-id="<?php echo esc_attr($ad_id); ?>"
+                               data-ad-slug="<?php echo esc_attr($ad_slug_for_tracking); ?>"
+                               data-page-url="<?php echo esc_attr($current_url); ?>"
+                               data-phone="<?php echo esc_attr($phone_raw); ?>">
+                                <i class="bi bi-telephone-fill"></i>
+                            </a>
+                        <?php endif; ?>
+                        <a href="<?php echo esc_url(home_url('/devis')); ?>" class="btn-devis-small">
+                            <i class="bi bi-envelope-fill"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
-        <?php endif; ?>
-    </article>
+            
+            <!-- Section CTA -->
+            <div class="ad-cta-section">
+                <div class="ad-cta-section-content">
+                    <h2><?php _e('Contactez-nous pour votre projet', 'osmose-ads'); ?></h2>
+                    <p><?php _e('Obtenez un devis personnalisé et gratuit pour votre projet', 'osmose-ads'); ?></p>
+                    <div class="ad-cta-section-buttons">
+                        <?php if ($phone_raw): ?>
+                            <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="btn-call osmose-track-call"
+                               data-ad-id="<?php echo esc_attr($ad_id); ?>"
+                               data-ad-slug="<?php echo esc_attr($ad_slug_for_tracking); ?>"
+                               data-page-url="<?php echo esc_attr($current_url); ?>"
+                               data-phone="<?php echo esc_attr($phone_raw); ?>">
+                                <i class="bi bi-telephone-fill"></i>
+                                <?php _e('Appeler', 'osmose-ads'); ?>
+                            </a>
+                        <?php endif; ?>
+                        <a href="<?php echo esc_url(home_url('/devis')); ?>" class="btn-devis">
+                            <i class="bi bi-envelope-fill"></i>
+                            <?php _e('Demander un Devis Gratuit', 'osmose-ads'); ?>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Annonces Similaires -->
+            <?php if (!empty($related_ads)): ?>
+                <div class="ad-related">
+                    <h2><?php _e('Autres Services dans la Même Zone', 'osmose-ads'); ?></h2>
+                    <div class="related-ads-grid">
+                        <?php foreach ($related_ads as $related_ad): ?>
+                            <div class="related-ad-item">
+                                <h3><a href="<?php echo get_permalink($related_ad->ID); ?>"><?php echo esc_html($related_ad->post_title); ?></a></h3>
+                                <a href="<?php echo get_permalink($related_ad->ID); ?>" class="related-ad-link">
+                                    <?php _e('Voir le service', 'osmose-ads'); ?> <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </article>
+    </div>
 </div>
+
+<script>
+// Variables pour le tracking
+window.osmoseAdsTracking = {
+    ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
+    nonce: '<?php echo wp_create_nonce('osmose_ads_track_call'); ?>'
+};
+</script>
 
 <?php
 get_footer();
-
