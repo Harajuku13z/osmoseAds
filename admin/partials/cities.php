@@ -667,13 +667,21 @@ jQuery(document).ready(function($) {
                         '<strong>' + response.data.message + '</strong><br>' +
                         '<small>Total trouvé: ' + total + ' | ' +
                         'Importées: ' + imported + ' | ' +
-                        'Ignorées (déjà existantes): ' + skipped + '</small>' +
+                        'Ignorées (déjà existantes): ' + skipped + '</small><br>' +
+                        '<small class="text-muted">Rechargement de la page dans <span id="countdown">3</span> secondes...</small>' +
                         '</div>'
                     );
                     
-                    setTimeout(function() {
-                        location.reload();
-                    }, 3000);
+                    // Compte à rebours avant rechargement
+                    var countdown = 3;
+                    var countdownInterval = setInterval(function() {
+                        countdown--;
+                        $('#countdown').text(countdown);
+                        if (countdown <= 0) {
+                            clearInterval(countdownInterval);
+                            location.reload();
+                        }
+                    }, 1000);
                 } else {
                     resultDiv.html(
                         '<div class="alert alert-danger">' +
