@@ -480,6 +480,15 @@ body[class*="osmose-ads"] {
     font-weight: 600;
 }
 
+/* S'assurer que le bouton de création de template est visible */
+#create-template-btn {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .osmose-ads-header {
@@ -506,5 +515,10 @@ body[class*="osmose-ads"] {
     .osmose-btn-large {
         width: 100%;
         justify-content: center;
+    }
+    
+    #create-template-btn {
+        width: 100%;
+        margin-top: 10px;
     }
 }
