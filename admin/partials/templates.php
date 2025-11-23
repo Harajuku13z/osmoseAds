@@ -361,7 +361,7 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         
         if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
-            alert('<?php _e('La bibliothèque média WordPress n\'est pas disponible. Veuillez recharger la page.', 'osmose-ads'); ?>');
+            alert(<?php echo wp_json_encode(__('La bibliothèque média WordPress n\'est pas disponible. Veuillez recharger la page.', 'osmose-ads')); ?>);
             return;
         }
         
@@ -382,7 +382,7 @@ jQuery(document).ready(function($) {
             var attachment = createFeaturedImageFrame.state().get('selection').first().toJSON();
             $('#create_featured_image_id').val(attachment.id);
             $('#create-featured-image-preview').html('<img src="' + attachment.url + '" class="img-fluid" style="max-width: 100%; height: auto; max-height: 200px;">');
-            $('#create-set-featured-image').text('<?php _e('Changer l\'image', 'osmose-ads'); ?>');
+            $('#create-set-featured-image').text(<?php echo wp_json_encode(__('Changer l\'image', 'osmose-ads')); ?>);
             $('#create-remove-featured-image').show();
         });
         
@@ -392,8 +392,8 @@ jQuery(document).ready(function($) {
     $('#create-remove-featured-image').on('click', function(e) {
         e.preventDefault();
         $('#create_featured_image_id').val('');
-        $('#create-featured-image-preview').html('<p class="text-muted mb-0"><?php _e('Aucune image sélectionnée', 'osmose-ads'); ?></p>');
-        $('#create-set-featured-image').text('<?php _e('Choisir une image', 'osmose-ads'); ?>');
+        $('#create-featured-image-preview').html('<p class="text-muted mb-0"><?php echo esc_js(__('Aucune image sélectionnée', 'osmose-ads')); ?></p>');
+        $('#create-set-featured-image').text(<?php echo wp_json_encode(__('Choisir une image', 'osmose-ads')); ?>);
         $(this).hide();
     });
     
@@ -403,7 +403,7 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         
         if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
-            alert('<?php _e('La bibliothèque média WordPress n\'est pas disponible. Veuillez recharger la page.', 'osmose-ads'); ?>');
+            alert(<?php echo wp_json_encode(__('La bibliothèque média WordPress n\'est pas disponible. Veuillez recharger la page.', 'osmose-ads')); ?>);
             return;
         }
         
@@ -413,9 +413,9 @@ jQuery(document).ready(function($) {
         }
         
         createRealizationImageFrame = wp.media({
-            title: '<?php _e('Ajouter des photos de réalisations', 'osmose-ads'); ?>',
+            title: <?php echo wp_json_encode(__('Ajouter des photos de réalisations', 'osmose-ads')); ?>,
             button: {
-                text: '<?php _e('Ajouter les images', 'osmose-ads'); ?>'
+                text: <?php echo wp_json_encode(__('Ajouter les images', 'osmose-ads')); ?>
             },
             multiple: true
         });
@@ -456,7 +456,7 @@ jQuery(document).ready(function($) {
                 // Afficher les sections
                 var sections = selected.data('sections');
                 if (sections && Object.keys(sections).length > 0) {
-                    var sectionsHtml = '<strong><?php _e('Sections:', 'osmose-ads'); ?></strong><ul class="mb-0 mt-2">';
+                    var sectionsHtml = '<strong><?php echo esc_js(__('Sections:', 'osmose-ads')); ?></strong><ul class="mb-0 mt-2">';
                     $.each(sections, function(key, title) {
                         sectionsHtml += '<li>' + title + '</li>';
                     });
@@ -510,7 +510,7 @@ jQuery(document).ready(function($) {
             realization_images: realizationImages,
         };
         
-        $('#template-result').html('<div class="alert alert-info"><i class="bi bi-hourglass-split me-2"></i><?php _e('Création en cours...', 'osmose-ads'); ?></div>');
+        $('#template-result').html('<div class="alert alert-info"><i class="bi bi-hourglass-split me-2"></i><?php echo esc_js(__('Création en cours...', 'osmose-ads')); ?></div>');
         
         $.ajax({
             url: osmoseAds.ajax_url,
@@ -536,7 +536,7 @@ jQuery(document).ready(function($) {
             },
             error: function() {
                 $('#template-result').html(
-                    '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i><?php _e('Erreur lors de la création', 'osmose-ads'); ?></div>'
+                    '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i><?php echo esc_js(__('Erreur lors de la création', 'osmose-ads')); ?></div>'
                 );
             }
         });
