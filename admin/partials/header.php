@@ -53,7 +53,6 @@ if (!function_exists('osmose_ads_get_logo_url')) {
         }
         return false;
     }
-    }
 }
 
 $logo_url = osmose_ads_get_logo_url();
