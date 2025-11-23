@@ -34,7 +34,20 @@ body[class*="osmose"] .updated,
     background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 50%, #3b82f6 100%);
     padding: 30px 40px;
     margin: 0 -20px 30px -2px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.osmose-ads-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+    opacity: 0.3;
 }
 
 .osmose-ads-header-content {
@@ -43,12 +56,27 @@ body[class*="osmose"] .updated,
     display: flex;
     align-items: center;
     gap: 25px;
+    position: relative;
+    z-index: 1;
 }
 
 .osmose-ads-logo {
-    height: 50px;
+    height: 60px;
     width: auto;
-    filter: brightness(0) invert(1);
+    max-width: 200px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.osmose-ads-logo-placeholder {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .osmose-ads-header h1 {
@@ -329,6 +357,74 @@ body[class*="osmose"] .updated,
 
 .osmose-ads-cities .add-city-form {
     max-width: 600px;
+}
+
+/* Badges et indicateurs */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #3b82f6;
+    color: #ffffff;
+    margin-left: 8px;
+}
+
+/* Messages de statut améliorés */
+.import-success {
+    background: #d1fae5;
+    border-left: 4px solid #10b981;
+    color: #065f46;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.import-error {
+    background: #fee2e2;
+    border-left: 4px solid #ef4444;
+    color: #991b1b;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.import-info {
+    background: #dbeafe;
+    border-left: 4px solid #3b82f6;
+    color: #1e40af;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+/* Loading spinner */
+.osmose-loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(59, 130, 246, 0.3);
+    border-radius: 50%;
+    border-top-color: #3b82f6;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Amélioration de l'affichage des villes */
+.osmose-ads-card .wp-list-table tbody td {
+    padding: 12px 15px;
+    vertical-align: middle;
+}
+
+.osmose-ads-card .wp-list-table tbody td strong {
+    color: #1e3a5f;
+    font-weight: 600;
 }
 
 /* Responsive */

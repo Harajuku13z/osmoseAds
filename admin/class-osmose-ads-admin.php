@@ -56,14 +56,28 @@ class Osmose_Ads_Admin {
     }
 
     public function add_admin_menu() {
-        // Utiliser une icône dashicons (plus compatible)
+        // Chercher le logo pour l'icône du menu
+        $logo_paths = array(
+            OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.jpg',
+            OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.png',
+        );
+        
+        $menu_icon = 'dashicons-megaphone';
+        foreach ($logo_paths as $path) {
+            if (file_exists($path)) {
+                $menu_icon = OSMOSE_ADS_PLUGIN_URL . 'admin/img/' . basename($path);
+                break;
+            }
+        }
+        
+        // Utiliser le logo comme icône si disponible
         add_menu_page(
             __('Osmose ADS', 'osmose-ads'),
             __('Osmose ADS', 'osmose-ads'),
             'manage_options',
             'osmose-ads',
             array($this, 'display_dashboard'),
-            'dashicons-megaphone',
+            $menu_icon,
             30
         );
         
@@ -328,6 +342,12 @@ class Osmose_Ads_Admin {
                 continue;
             }
             
+            // Vérifier les données minimales
+            if (empty($normalized['name']) || empty($normalized['code'])) {
+                $skipped++;
+                continue;
+            }
+            
             // Créer la ville
             $city_id = wp_insert_post(array(
                 'post_title' => $normalized['name'],
@@ -339,11 +359,19 @@ class Osmose_Ads_Admin {
                 update_post_meta($city_id, 'name', $normalized['name']);
                 update_post_meta($city_id, 'insee_code', $normalized['code']);
                 update_post_meta($city_id, 'postal_code', $normalized['postal_code']);
+                update_post_meta($city_id, 'all_postal_codes', $normalized['all_postal_codes'] ?? $normalized['postal_code']);
                 update_post_meta($city_id, 'department', $normalized['department']);
                 update_post_meta($city_id, 'department_name', $normalized['department_name'] ?? '');
                 update_post_meta($city_id, 'region', $normalized['region']);
                 update_post_meta($city_id, 'region_name', $normalized['region_name'] ?? '');
                 update_post_meta($city_id, 'population', $normalized['population']);
+                update_post_meta($city_id, 'surface', $normalized['surface'] ?? 0);
+                if (isset($normalized['latitude'])) {
+                    update_post_meta($city_id, 'latitude', $normalized['latitude']);
+                }
+                if (isset($normalized['longitude'])) {
+                    update_post_meta($city_id, 'longitude', $normalized['longitude']);
+                }
                 $imported++;
             }
         }

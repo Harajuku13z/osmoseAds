@@ -604,11 +604,21 @@ jQuery(document).ready(function($) {
     });
     
     function importCities(type, data) {
-        $('#import-result').html('<p><?php _e('Import en cours...', 'osmose-ads'); ?></p>');
+        var resultDiv = $('#import-result');
+        resultDiv.html(
+            '<div class="import-info">' +
+            '<span class="osmose-loading"></span> ' +
+            '<?php _e('Import en cours, veuillez patienter...', 'osmose-ads'); ?>' +
+            '</div>'
+        );
+        
+        // Désactiver le bouton pendant l'import
+        $('button[type="submit"]').prop('disabled', true);
         
         $.ajax({
             url: osmoseAds.ajax_url,
             type: 'POST',
+            timeout: 300000, // 5 minutes pour les gros imports
             data: {
                 action: 'osmose_ads_import_cities',
                 nonce: osmoseAds.nonce,
@@ -616,33 +626,55 @@ jQuery(document).ready(function($) {
                 ...data
             },
             success: function(response) {
+                $('button[type="submit"]').prop('disabled', false);
+                
                 if (response.success) {
-                    $('#import-result').html(
-                        '<div class="osmose-ads-card" style="border-left: 4px solid #10b981;">' +
-                        '<p style="color: #10b981; font-weight: 600;">' +
+                    var imported = response.data.imported || 0;
+                    var skipped = response.data.skipped || 0;
+                    var total = response.data.total || 0;
+                    
+                    resultDiv.html(
+                        '<div class="import-success">' +
+                        '<p style="margin: 0 0 10px 0; font-weight: 600; font-size: 16px;">' +
                         '<span class="dashicons dashicons-yes-alt"></span> ' +
                         response.data.message +
                         '</p>' +
+                        '<p style="margin: 0; font-size: 13px; color: #047857;">' +
+                        'Total trouvé: ' + total + ' | ' +
+                        'Importées: ' + imported + ' | ' +
+                        'Ignorées (déjà existantes): ' + skipped +
+                        '</p>' +
                         '</div>'
                     );
+                    
                     setTimeout(function() {
                         location.reload();
-                    }, 2000);
+                    }, 3000);
                 } else {
-                    $('#import-result').html(
-                        '<div class="osmose-ads-card" style="border-left: 4px solid #ef4444;">' +
-                        '<p style="color: #ef4444; font-weight: 600;">' +
+                    resultDiv.html(
+                        '<div class="import-error">' +
+                        '<p style="margin: 0; font-weight: 600;">' +
                         '<span class="dashicons dashicons-dismiss"></span> ' +
-                        response.data.message +
+                        (response.data && response.data.message ? response.data.message : '<?php _e('Erreur lors de l\'import', 'osmose-ads'); ?>') +
                         '</p>' +
                         '</div>'
                     );
                 }
             },
-            error: function() {
-                $('#import-result').html(
-                    '<div class="osmose-ads-card" style="border-left: 4px solid #ef4444;">' +
-                    '<p style="color: #ef4444; font-weight: 600;"><?php _e('Erreur lors de l\'import', 'osmose-ads'); ?></p>' +
+            error: function(xhr, status, error) {
+                $('button[type="submit"]').prop('disabled', false);
+                
+                var errorMsg = '<?php _e('Erreur lors de l\'import', 'osmose-ads'); ?>';
+                if (status === 'timeout') {
+                    errorMsg = '<?php _e('Le délai d\'import a été dépassé. L\'import peut continuer en arrière-plan.', 'osmose-ads'); ?>';
+                }
+                
+                resultDiv.html(
+                    '<div class="import-error">' +
+                    '<p style="margin: 0; font-weight: 600;">' +
+                    '<span class="dashicons dashicons-dismiss"></span> ' +
+                    errorMsg +
+                    '</p>' +
                     '</div>'
                 );
             }

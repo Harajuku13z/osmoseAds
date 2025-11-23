@@ -16,10 +16,15 @@ class France_Geo_API {
      * Récupérer toutes les communes d'un département
      */
     public function get_communes_by_department($department_code) {
-        $url = $this->api_base_url . '/departements/' . $department_code . '/communes';
+        // Utiliser l'endpoint officiel selon la documentation
+        // GET /departements/{code}/communes
+        $url = $this->api_base_url . '/departements/' . urlencode($department_code) . '/communes';
+        
+        // Ajouter les paramètres pour obtenir toutes les informations nécessaires
+        $url .= '?fields=nom,code,codeDepartement,codeRegion,centre,population,codesPostaux,surface';
         
         $response = wp_remote_get($url, array(
-            'timeout' => 30,
+            'timeout' => 60,
             'headers' => array(
                 'Accept' => 'application/json',
             ),
@@ -27,6 +32,11 @@ class France_Geo_API {
         
         if (is_wp_error($response)) {
             return $response;
+        }
+        
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code !== 200) {
+            return new WP_Error('api_error', sprintf(__('Erreur API : code %d', 'osmose-ads'), $code));
         }
         
         $body = wp_remote_retrieve_body($response);
@@ -43,9 +53,13 @@ class France_Geo_API {
      * Récupérer toutes les communes d'une région
      */
     public function get_communes_by_region($region_code) {
-        $url = $this->api_base_url . '/regions/' . $region_code . '/communes';
+        // Utiliser l'endpoint officiel selon la documentation
+        // Les régions n'ont pas d'endpoint direct, on doit récupérer via les départements
+        // GET /regions/{code}/departements puis pour chaque département GET /departements/{code}/communes
         
-        $response = wp_remote_get($url, array(
+        $departments_url = $this->api_base_url . '/regions/' . urlencode($region_code) . '/departements';
+        
+        $response = wp_remote_get($departments_url, array(
             'timeout' => 30,
             'headers' => array(
                 'Accept' => 'application/json',
@@ -57,13 +71,25 @@ class France_Geo_API {
         }
         
         $body = wp_remote_retrieve_body($response);
-        $communes = json_decode($body, true);
+        $departments = json_decode($body, true);
         
-        if (!is_array($communes)) {
-            return new WP_Error('invalid_response', __('Réponse invalide de l\'API', 'osmose-ads'));
+        if (!is_array($departments)) {
+            return new WP_Error('invalid_response', __('Réponse invalide de l\'API pour les départements', 'osmose-ads'));
         }
         
-        return $communes;
+        // Récupérer toutes les communes de tous les départements de la région
+        $all_communes = array();
+        foreach ($departments as $department) {
+            $dept_code = $department['code'] ?? '';
+            if (!empty($dept_code)) {
+                $communes = $this->get_communes_by_department($dept_code);
+                if (!is_wp_error($communes) && is_array($communes)) {
+                    $all_communes = array_merge($all_communes, $communes);
+                }
+            }
+        }
+        
+        return $all_communes;
     }
     
     /**
@@ -205,10 +231,48 @@ class France_Geo_API {
     
     /**
      * Rechercher une commune par nom
+     * Utilise l'endpoint GET /communes?nom={nom}
      */
-    public function search_commune($name) {
+    public function search_commune($name, $limit = 5) {
+        if (empty($name) || strlen($name) < 2) {
+            return array();
+        }
+        
         $url = $this->api_base_url . '/communes';
-        $url .= '?nom=' . urlencode($name) . '&fields=nom,code,codeDepartement,codeRegion,centre,population,codesPostaux';
+        $url .= '?nom=' . urlencode($name);
+        $url .= '&fields=nom,code,codeDepartement,codeRegion,centre,population,codesPostaux';
+        $url .= '&boost=population'; // Prioriser les villes les plus peuplées
+        $url .= '&limit=' . intval($limit);
+        
+        $response = wp_remote_get($url, array(
+            'timeout' => 30,
+            'headers' => array(
+                'Accept' => 'application/json',
+            ),
+        ));
+        
+        if (is_wp_error($response)) {
+            return array();
+        }
+        
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code !== 200) {
+            return array();
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $communes = json_decode($body, true);
+        
+        return is_array($communes) ? $communes : array();
+    }
+    
+    /**
+     * Récupérer les informations d'une commune par son code INSEE
+     * Utilise l'endpoint GET /communes/{code}
+     */
+    public function get_commune_by_code($code) {
+        $url = $this->api_base_url . '/communes/' . urlencode($code);
+        $url .= '?fields=nom,code,codeDepartement,codeRegion,centre,population,codesPostaux,surface';
         
         $response = wp_remote_get($url, array(
             'timeout' => 30,
@@ -221,10 +285,15 @@ class France_Geo_API {
             return $response;
         }
         
-        $body = wp_remote_retrieve_body($response);
-        $communes = json_decode($body, true);
+        $code_response = wp_remote_retrieve_response_code($response);
+        if ($code_response !== 200) {
+            return new WP_Error('not_found', __('Commune non trouvée', 'osmose-ads'));
+        }
         
-        return is_array($communes) ? $communes : array();
+        $body = wp_remote_retrieve_body($response);
+        $commune = json_decode($body, true);
+        
+        return is_array($commune) ? $commune : new WP_Error('invalid_response', __('Réponse invalide', 'osmose-ads'));
     }
     
     /**
@@ -249,14 +318,29 @@ class France_Geo_API {
      * Normaliser les données d'une commune pour l'insertion
      */
     public function normalize_commune_data($commune) {
+        // Récupérer le code postal principal (le premier dans le tableau)
+        $postal_codes = $commune['codesPostaux'] ?? array();
+        $postal_code = is_array($postal_codes) && !empty($postal_codes) ? $postal_codes[0] : '';
+        
+        // Si plusieurs codes postaux, les joindre avec des virgules
+        $all_postal_codes = is_array($postal_codes) ? implode(', ', $postal_codes) : $postal_code;
+        
         $data = array(
             'name' => $commune['nom'] ?? '',
             'code' => $commune['code'] ?? '',
-            'postal_code' => $commune['codesPostaux'][0] ?? '',
+            'postal_code' => $postal_code,
+            'all_postal_codes' => $all_postal_codes,
             'department' => $commune['codeDepartement'] ?? '',
             'region' => $commune['codeRegion'] ?? '',
-            'population' => $commune['population'] ?? 0,
+            'population' => isset($commune['population']) ? intval($commune['population']) : 0,
+            'surface' => isset($commune['surface']) ? floatval($commune['surface']) : 0,
         );
+        
+        // Récupérer les coordonnées si disponibles
+        if (isset($commune['centre']['coordinates']) && is_array($commune['centre']['coordinates'])) {
+            $data['longitude'] = $commune['centre']['coordinates'][0] ?? 0;
+            $data['latitude'] = $commune['centre']['coordinates'][1] ?? 0;
+        }
         
         // Récupérer le nom du département
         if (!empty($data['department'])) {
