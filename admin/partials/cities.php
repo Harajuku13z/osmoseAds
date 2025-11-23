@@ -163,7 +163,7 @@ $cities = get_posts(array(
                             <form id="import-department-form">
                                 <div class="mb-3">
                                     <label for="department_code" class="form-label"><?php _e('Département', 'osmose-ads'); ?></label>
-                                    <select id="department_code" name="department_code" class="form-select" required>
+                                    <select id="department_code" name="department_code" class="form-select" required disabled>
                                         <option value=""><?php _e('Chargement...', 'osmose-ads'); ?></option>
                                     </select>
                                     <div class="form-text"><?php _e('Sélectionnez un département pour importer toutes ses communes', 'osmose-ads'); ?></div>
@@ -190,7 +190,7 @@ $cities = get_posts(array(
                             <form id="import-region-form">
                                 <div class="mb-3">
                                     <label for="region_code" class="form-label"><?php _e('Région', 'osmose-ads'); ?></label>
-                                    <select id="region_code" name="region_code" class="form-select" required>
+                                    <select id="region_code" name="region_code" class="form-select" required disabled>
                                         <option value=""><?php _e('Chargement...', 'osmose-ads'); ?></option>
                                     </select>
                                     <div class="form-text"><?php _e('Sélectionnez une région pour importer toutes ses communes', 'osmose-ads'); ?></div>
@@ -404,24 +404,30 @@ jQuery(document).ready(function($) {
     
     // Charger les départements
     function loadDepartments() {
+        var select = $('#department_code');
+        select.prop('disabled', true);
+        select.html('<option value=""><?php _e('Chargement...', 'osmose-ads'); ?></option>');
+        
         $.ajax({
             url: osmoseAds.ajax_url,
             type: 'POST',
             dataType: 'json',
+            timeout: 30000,
             data: {
                 action: 'osmose_ads_get_departments',
                 nonce: osmoseAds.nonce
             },
             success: function(response) {
                 console.log('Departments response:', response);
-                var select = $('#department_code');
+                select.prop('disabled', false);
                 
                 if (response && response.success && Array.isArray(response.data) && response.data.length > 0) {
                     select.empty();
                     select.append('<option value=""><?php _e('-- Sélectionner un département --', 'osmose-ads'); ?></option>');
                     $.each(response.data, function(i, dept) {
                         if (dept && dept.code && dept.nom) {
-                            select.append('<option value="' + dept.code + '">' + dept.nom + ' (' + dept.code + ')</option>');
+                            var option = $('<option>').attr('value', dept.code).text(dept.nom + ' (' + dept.code + ')');
+                            select.append(option);
                         }
                     });
                     console.log('Departments loaded successfully:', response.data.length, 'items');
@@ -438,31 +444,38 @@ jQuery(document).ready(function($) {
                     statusCode: xhr.status,
                     readyState: xhr.readyState
                 });
-                $('#department_code').html('<option value=""><?php _e('Erreur de connexion - Vérifiez la console', 'osmose-ads'); ?></option>');
+                select.prop('disabled', false);
+                select.html('<option value=""><?php _e('Erreur de connexion - Vérifiez la console', 'osmose-ads'); ?></option>');
             }
         });
     }
     
     // Charger les régions
     function loadRegions() {
+        var select = $('#region_code');
+        select.prop('disabled', true);
+        select.html('<option value=""><?php _e('Chargement...', 'osmose-ads'); ?></option>');
+        
         $.ajax({
             url: osmoseAds.ajax_url,
             type: 'POST',
             dataType: 'json',
+            timeout: 30000,
             data: {
                 action: 'osmose_ads_get_regions',
                 nonce: osmoseAds.nonce
             },
             success: function(response) {
                 console.log('Regions response:', response);
-                var select = $('#region_code');
+                select.prop('disabled', false);
                 
                 if (response && response.success && Array.isArray(response.data) && response.data.length > 0) {
                     select.empty();
                     select.append('<option value=""><?php _e('-- Sélectionner une région --', 'osmose-ads'); ?></option>');
                     $.each(response.data, function(i, region) {
                         if (region && region.code && region.nom) {
-                            select.append('<option value="' + region.code + '">' + region.nom + '</option>');
+                            var option = $('<option>').attr('value', region.code).text(region.nom);
+                            select.append(option);
                         }
                     });
                     console.log('Regions loaded successfully:', response.data.length, 'items');
@@ -479,25 +492,37 @@ jQuery(document).ready(function($) {
                     statusCode: xhr.status,
                     readyState: xhr.readyState
                 });
-                $('#region_code').html('<option value=""><?php _e('Erreur de connexion - Vérifiez la console', 'osmose-ads'); ?></option>');
+                select.prop('disabled', false);
+                select.html('<option value=""><?php _e('Erreur de connexion - Vérifiez la console', 'osmose-ads'); ?></option>');
             }
         });
     }
     
-    // Charger les données avec un délai pour s'assurer que les selects existent
-    setTimeout(function() {
-        if ($('#department_code').length) {
+    // Charger les données immédiatement au chargement de la page
+    // Double vérification : d'abord après un court délai pour le DOM, puis avec un délai plus long si nécessaire
+    function initSelects() {
+        if ($('#department_code').length && $('#department_code option').length <= 1) {
+            console.log('Loading departments...');
             loadDepartments();
-        } else {
-            console.error('Department select not found!');
         }
         
-        if ($('#region_code').length) {
+        if ($('#region_code').length && $('#region_code option').length <= 1) {
+            console.log('Loading regions...');
             loadRegions();
-        } else {
-            console.error('Region select not found!');
         }
-    }, 200);
+    }
+    
+    // Charger immédiatement si le DOM est prêt
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(initSelects, 100);
+    } else {
+        $(window).on('load', function() {
+            setTimeout(initSelects, 100);
+        });
+    }
+    
+    // Double vérification après 500ms au cas où
+    setTimeout(initSelects, 500);
     
     // Recherche de ville
     var searchTimeout;
@@ -557,25 +582,48 @@ jQuery(document).ready(function($) {
     // Import par département
     $('#import-department-form').on('submit', function(e) {
         e.preventDefault();
+        var deptCode = $('#department_code').val();
+        if (!deptCode) {
+            alert('<?php _e('Veuillez sélectionner un département', 'osmose-ads'); ?>');
+            return;
+        }
         importCities('department', {
-            department_code: $('#department_code').val()
+            department_code: deptCode
         });
     });
     
     // Import par région
     $('#import-region-form').on('submit', function(e) {
         e.preventDefault();
+        var regionCode = $('#region_code').val();
+        if (!regionCode) {
+            alert('<?php _e('Veuillez sélectionner une région', 'osmose-ads'); ?>');
+            return;
+        }
         importCities('region', {
-            region_code: $('#region_code').val()
+            region_code: regionCode
         });
     });
     
     // Import par rayon
     $('#import-distance-form').on('submit', function(e) {
         e.preventDefault();
+        var cityCode = $('#city_code').val();
+        var distance = $('#distance_km').val();
+        
+        if (!cityCode) {
+            alert('<?php _e('Veuillez sélectionner une ville de référence', 'osmose-ads'); ?>');
+            return;
+        }
+        
+        if (!distance || distance < 1) {
+            alert('<?php _e('Veuillez entrer un rayon valide (minimum 1 km)', 'osmose-ads'); ?>');
+            return;
+        }
+        
         importCities('distance', {
-            city_code: $('#city_code').val(),
-            distance: $('#distance_km').val()
+            city_code: cityCode,
+            distance: distance
         });
     });
     
@@ -591,16 +639,20 @@ jQuery(document).ready(function($) {
         // Désactiver le bouton pendant l'import
         $('button[type="submit"]').prop('disabled', true);
         
+        // Préparer les données (compatible avec tous les navigateurs)
+        var ajaxData = {
+            action: 'osmose_ads_import_cities',
+            nonce: osmoseAds.nonce,
+            import_type: type
+        };
+        // Fusionner les données additionnelles
+        $.extend(ajaxData, data);
+        
         $.ajax({
             url: osmoseAds.ajax_url,
             type: 'POST',
             timeout: 300000,
-            data: {
-                action: 'osmose_ads_import_cities',
-                nonce: osmoseAds.nonce,
-                import_type: type,
-                ...data
-            },
+            data: ajaxData,
             success: function(response) {
                 $('button[type="submit"]').prop('disabled', false);
                 
