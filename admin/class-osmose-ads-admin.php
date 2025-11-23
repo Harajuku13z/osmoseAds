@@ -49,10 +49,29 @@ class Osmose_Ads_Admin {
             true
         );
         
+        // Créer le nonce et localiser le script
         wp_localize_script('osmose-ads-admin', 'osmoseAds', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('osmose_ads_nonce'),
+            'plugin_url' => OSMOSE_ADS_PLUGIN_URL,
         ));
+        
+        // S'assurer que la variable est disponible même pour les scripts inline
+        add_action('admin_footer', function() use ($hook) {
+            if (strpos($hook, 'osmose-ads') !== false) {
+                ?>
+                <script>
+                if (typeof osmoseAds === 'undefined') {
+                    var osmoseAds = {
+                        ajax_url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                        nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>',
+                        plugin_url: '<?php echo OSMOSE_ADS_PLUGIN_URL; ?>'
+                    };
+                }
+                </script>
+                <?php
+            }
+        }, 5);
     }
 
     public function add_admin_menu() {
