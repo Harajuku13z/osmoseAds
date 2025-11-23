@@ -1,88 +1,54 @@
-# Dépannage - Osmose ADS
+# Guide de résolution de problèmes - Import de villes
 
-## Problème : Liste des villes n'apparaît pas
+## Problème : Les départements et régions ne se chargent pas
 
-### Solution 1 : Vérifier les onglets
+### Étape 1 : Vérifier la console JavaScript
 
-1. Sur la page Villes, vérifiez que l'onglet **"Liste des Villes"** est actif (bleu)
-2. Si non, cliquez dessus pour l'activer
-3. La liste devrait apparaître
+1. Ouvrez la page des villes dans WordPress : `wp-admin/admin.php?page=osmose-ads-cities`
+2. Appuyez sur **F12** pour ouvrir les outils de développement
+3. Allez dans l'onglet **Console**
+4. Rechargez la page
 
-### Solution 2 : Vérifier les villes existantes
+Vous devriez voir des messages qui commencent par `Osmose ADS:`. Notez tous les messages d'erreur.
 
-1. Allez dans **WordPress Admin > Articles > Tous les articles**
-2. Filtrez par type "Ville"
-3. Vérifiez qu'il y a bien des villes publiées
+### Étape 2 : Vérifier que l'objet osmoseAds existe
 
-### Solution 3 : Vérifier JavaScript
-
-1. Ouvrez la console du navigateur (F12)
-2. Vérifiez s'il y a des erreurs JavaScript
-3. Si oui, notez-les et contactez le support
-
-### Solution 4 : Recharger la page
-
-1. Faites un Ctrl+F5 (ou Cmd+Shift+R sur Mac) pour forcer le rechargement
-2. Videz le cache du navigateur si nécessaire
-
-## Problème : Logo ne s'affiche pas
-
-### Solution 1 : Placer le logo au bon endroit
-
-Le logo doit être placé dans un de ces emplacements :
-
-1. **`/wp-content/plugins/osmose-ads/admin/img/logo.jpg`** (recommandé)
-2. **`/wp-content/plugins/osmose-ads/admin/img/logo.png`**
-3. **`/wp-content/plugins/osmose-ads/../logo.jpg`** (racine du projet)
-4. **Racine WordPress : `/logo.jpg`**
-
-### Solution 2 : Créer le dossier img
-
-Si le dossier n'existe pas :
-
-```bash
-mkdir -p /wp-content/plugins/osmose-ads/admin/img
+Dans la console JavaScript, tapez :
+```javascript
+console.log(window.osmoseAds);
 ```
 
-Puis placez votre logo `logo.jpg` ou `logo.png` dans ce dossier.
-
-### Solution 3 : Vérifier les permissions
-
-Le logo doit être lisible :
-- Permissions : 644
-- Propriétaire : www-data (ou l'utilisateur du serveur web)
-
-### Solution 4 : Vérifier le format
-
-Le logo doit être :
-- Format : JPG ou PNG
-- Taille : 200-400px de largeur recommandé
-- Nom : `logo.jpg` ou `logo.png` (minuscules)
-
-### Solution 5 : Tester l'URL du logo
-
-Dans votre navigateur, essayez d'accéder directement à :
-```
-https://votre-site.com/wp-content/plugins/osmose-ads/admin/img/logo.jpg
+Si vous voyez `undefined`, c'est que l'objet n'a pas été créé. Vous devriez voir :
+```javascript
+{
+  ajax_url: "...",
+  nonce: "...",
+  plugin_url: "..."
+}
 ```
 
-Si vous obtenez une erreur 404, le logo n'est pas au bon endroit.
+### Étape 3 : Tester un appel AJAX manuellement
 
-## Problème : Interface ne se charge pas
+Dans la console JavaScript, testez :
+```javascript
+jQuery.ajax({
+    url: window.osmoseAds.ajax_url,
+    type: 'POST',
+    dataType: 'json',
+    data: {
+        action: 'osmose_ads_get_departments',
+        nonce: window.osmoseAds.nonce
+    },
+    success: function(response) {
+        console.log('Réponse:', response);
+    },
+    error: function(xhr, status, error) {
+        console.error('Erreur:', status, error, xhr.responseText);
+    }
+});
+```
 
-### Solution 1 : Vérifier les permissions
-
-Les fichiers doivent avoir les bonnes permissions :
-- Fichiers : 644
-- Dossiers : 755
-
-### Solution 2 : Vider le cache
-
-1. Videz le cache WordPress (si plugin de cache installé)
-2. Videz le cache du navigateur
-3. Videz le cache opcode PHP si activé
-
-### Solution 3 : Vérifier les erreurs
+### Étape 4 : Vérifier les logs WordPress
 
 1. Activez le mode debug dans `wp-config.php` :
 ```php
@@ -91,61 +57,89 @@ define('WP_DEBUG_LOG', true);
 define('WP_DEBUG_DISPLAY', false);
 ```
 
-2. Vérifiez le fichier `/wp-content/debug.log` pour les erreurs
+2. Vérifiez le fichier `/wp-content/debug.log`
+3. Cherchez les lignes qui commencent par `Osmose ADS:`
 
-## Problème : Import de villes ne fonctionne pas
+### Étape 5 : Vérifier que les handlers AJAX sont enregistrés
 
-### Solution 1 : Vérifier la connexion internet
-
-L'API GeoAPI nécessite une connexion internet. Vérifiez que :
-- Le serveur a accès à internet
-- Aucun firewall ne bloque `https://geo.api.gouv.fr`
-
-### Solution 2 : Tester l'API manuellement
-
-Testez dans votre navigateur :
+Dans `debug.log`, vous devriez voir :
 ```
-https://geo.api.gouv.fr/departements
+Osmose ADS: AJAX handlers registered for cities
 ```
 
-Vous devriez voir une liste JSON de départements.
+Si vous ne voyez pas ce message, les handlers ne sont pas enregistrés.
 
-### Solution 3 : Vérifier les logs
+### Solutions courantes
 
-Consultez les logs WordPress pour voir les erreurs d'API.
+#### Solution 1 : Les handlers AJAX ne sont pas enregistrés
 
-## Problème : Styles CSS ne s'appliquent pas
+**Cause** : Les handlers AJAX sont enregistrés trop tard.
 
-### Solution 1 : Vider le cache
+**Solution** : Videz le cache WordPress et rechargez la page.
 
-1. Videz le cache du navigateur (Ctrl+F5)
-2. Videz le cache WordPress
+#### Solution 2 : Le nonce est invalide
 
-### Solution 2 : Vérifier que les CSS sont chargés
+**Cause** : Le nonce a expiré ou n'est pas correct.
 
-1. Faites clic droit > Inspecter l'élément
-2. Vérifiez dans l'onglet "Network" que `osmose-ads-admin.css` est chargé
-3. Si non, vérifiez les permissions du fichier
+**Solution** : Rechargez simplement la page pour obtenir un nouveau nonce.
 
-## Problème : JavaScript ne fonctionne pas
+#### Solution 3 : Problème de permissions
 
-### Solution 1 : Vérifier jQuery
+**Cause** : L'utilisateur n'a pas les droits nécessaires.
 
-1. Ouvrez la console (F12)
-2. Tapez : `typeof jQuery`
-3. Si ça retourne "undefined", jQuery n'est pas chargé
+**Solution** : Connectez-vous avec un compte administrateur.
 
-### Solution 2 : Vérifier les erreurs
+#### Solution 4 : Problème de connexion à l'API
 
-1. Console > Onglet "Console"
-2. Vérifiez s'il y a des erreurs rouges
-3. Notez-les pour le support
+**Cause** : Le serveur ne peut pas se connecter à l'API externe.
 
-## Contact Support
+**Solution** : 
+- Vérifiez que votre serveur peut faire des requêtes HTTPS externes
+- Vérifiez les logs WordPress pour voir les erreurs d'API
+- Contactez votre hébergeur si nécessaire
 
-Si le problème persiste :
-1. Notez les erreurs de la console
-2. Vérifiez les logs WordPress
-3. Notez votre version WordPress et PHP
-4. Contactez le support avec ces informations
+#### Solution 5 : Le script JavaScript ne se charge pas
 
+**Cause** : Le fichier JavaScript n'est pas chargé ou il y a une erreur JavaScript.
+
+**Solution** :
+1. Vérifiez la console pour les erreurs JavaScript
+2. Vérifiez que jQuery est chargé
+3. Vérifiez que le fichier `admin/js/osmose-ads-admin.js` existe
+
+### Test rapide
+
+Pour tester rapidement si tout fonctionne, ouvrez la console et exécutez :
+
+```javascript
+// Vérifier que jQuery est chargé
+console.log('jQuery:', typeof jQuery);
+
+// Vérifier que osmoseAds existe
+console.log('osmoseAds:', window.osmoseAds);
+
+// Tester l'API directement
+if (window.osmoseAds) {
+    jQuery.ajax({
+        url: window.osmoseAds.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'osmose_ads_get_departments',
+            nonce: window.osmoseAds.nonce
+        },
+        success: function(r) {
+            console.log('✅ SUCCÈS:', r);
+        },
+        error: function(xhr) {
+            console.error('❌ ERREUR:', xhr.status, xhr.responseText);
+        }
+    });
+}
+```
+
+### Contacter le support
+
+Si le problème persiste après avoir suivi ces étapes :
+1. Copiez tous les messages de la console JavaScript
+2. Copiez les erreurs du fichier `debug.log`
+3. Fournissez ces informations pour diagnostic
