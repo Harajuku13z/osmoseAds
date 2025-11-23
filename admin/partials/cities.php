@@ -5,18 +5,18 @@ if (!defined('ABSPATH')) {
 
 // Vérifier que les constantes sont définies
 if (!defined('OSMOSE_ADS_PLUGIN_DIR')) {
-    wp_die(__('Erreur: Les constantes du plugin ne sont pas définies.', 'osmose-ads'));
+    wp_die(__('Erreur: Les constantes du plugin ne sont pas définies. Veuillez réactiver le plugin.', 'osmose-ads'));
 }
 
-// Inclure le header global avec gestion d'erreur
-try {
+// Inclure le header global seulement si pas déjà inclus
+if (!defined('OSMOSE_ADS_HEADER_LOADED')) {
     $header_path = OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
-    if (!file_exists($header_path)) {
-        throw new Exception('Header file not found: ' . $header_path);
+    if (file_exists($header_path)) {
+        require_once $header_path;
+    } else {
+        // Header introuvable, afficher un message d'erreur
+        wp_die(sprintf(__('Erreur: Le fichier header.php est introuvable à: %s', 'osmose-ads'), $header_path));
     }
-    require_once $header_path;
-} catch (Exception $e) {
-    wp_die(sprintf(__('Erreur lors du chargement du header: %s', 'osmose-ads'), $e->getMessage()));
 }
 
 // Traitement formulaire simple
