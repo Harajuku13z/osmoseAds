@@ -49,8 +49,8 @@ class Osmose_Ads_Admin {
             true
         );
         
-        // Charger WordPress Media Library sur les pages de templates
-        if (strpos($hook, 'osmose-ads-templates') !== false) {
+        // Charger WordPress Media Library sur les pages de templates et création
+        if (strpos($hook, 'osmose-ads-templates') !== false || strpos($hook, 'osmose-ads-template-create') !== false) {
             wp_enqueue_media();
         }
         
