@@ -3,6 +3,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Inclure le header global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
+
 // Vérifier si la configuration est terminée
 $setup_completed = get_option('osmose_ads_setup_completed', false);
 
@@ -10,43 +13,15 @@ $setup_completed = get_option('osmose_ads_setup_completed', false);
 $templates_count = wp_count_posts('ad_template');
 $ads_count = wp_count_posts('ad');
 $cities_count = wp_count_posts('city');
-
-// Chemin du logo - vérifier plusieurs emplacements possibles
-$logo_paths = array(
-    OSMOSE_ADS_PLUGIN_DIR . '../logo.jpg',
-    OSMOSE_ADS_PLUGIN_DIR . 'img/logo.jpg',
-    ABSPATH . 'logo.jpg'
-);
-
-$logo_url = '';
-foreach ($logo_paths as $path) {
-    if (file_exists($path)) {
-        $logo_url = str_replace(ABSPATH, home_url('/'), $path);
-        break;
-    }
-}
-
-// Si pas trouvé, essayer via URL directe
-if (empty($logo_url)) {
-    $logo_url = OSMOSE_ADS_PLUGIN_URL . '../logo.jpg';
-}
 ?>
 
-<div class="osmose-ads-page">
-    <!-- Header avec logo -->
-    <div class="osmose-ads-header">
-        <div class="osmose-ads-header-content">
-            <?php if ($logo_url): ?>
-                <img src="<?php echo esc_url($logo_url); ?>" alt="Osmose" class="osmose-ads-logo">
-            <?php endif; ?>
-            <div>
-                <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-                <p class="description"><?php _e('Gérez vos annonces géolocalisées en toute simplicité', 'osmose-ads'); ?></p>
-            </div>
-        </div>
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1"><?php echo esc_html(get_admin_page_title()); ?></h1>
+        <p class="text-muted mb-0"><?php _e('Gérez vos annonces géolocalisées en toute simplicité', 'osmose-ads'); ?></p>
     </div>
-    
-    <div class="osmose-ads-container">
+</div>
         <?php if (!$setup_completed): ?>
             <div class="osmose-ads-card" style="border-left: 4px solid #f59e0b;">
                 <h2 style="color: #f59e0b; border-bottom-color: #fbbf24;">
@@ -122,8 +97,9 @@ if (empty($logo_url)) {
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-
+<?php
+// Inclure le footer global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
+?>
 

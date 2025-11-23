@@ -3,6 +3,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Inclure le header global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
+
 // Traitement du formulaire
 if (isset($_POST['osmose_ads_setup_submit']) && check_admin_referer('osmose_ads_setup', 'osmose_ads_setup_nonce')) {
     // Sauvegarder les réglages

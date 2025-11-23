@@ -3,6 +3,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Inclure le header global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
+
 if (isset($_POST['submit'])) {
     update_option('osmose_ads_ai_personalization', isset($_POST['ai_personalization']) ? 1 : 0);
     update_option('osmose_ads_company_phone', sanitize_text_field($_POST['company_phone'] ?? ''));
@@ -15,7 +18,7 @@ if (isset($_POST['submit'])) {
         update_option('osmose_ads_services', $services);
     }
     
-    echo '<div class="notice notice-success"><p>' . __('Réglages sauvegardés', 'osmose-ads') . '</p></div>';
+    echo '<div class="alert alert-success"><p>' . __('Réglages sauvegardés', 'osmose-ads') . '</p></div>';
 }
 
 $ai_personalization = get_option('osmose_ads_ai_personalization', false);
@@ -26,8 +29,12 @@ $ai_provider = get_option('osmose_ads_ai_provider', 'openai');
 $services = get_option('osmose_ads_services', array());
 ?>
 
-<div class="wrap">
-    <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1"><?php echo esc_html(get_admin_page_title()); ?></h1>
+    </div>
+</div>
     
     <form method="post">
         <table class="form-table">
@@ -111,5 +118,8 @@ jQuery(document).ready(function($) {
 });
 </script>
 
-
+<?php
+// Inclure le footer global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
+?>
 

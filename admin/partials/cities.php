@@ -3,41 +3,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Fonction helper pour trouver le logo
-function osmose_ads_find_logo() {
-    $logo_paths = array(
-        OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.jpg',
-        OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.png',
-        OSMOSE_ADS_PLUGIN_DIR . '../logo.jpg',
-        OSMOSE_ADS_PLUGIN_DIR . '../logo.png',
-        ABSPATH . 'logo.jpg',
-        ABSPATH . 'logo.png',
-    );
-    
-    foreach ($logo_paths as $path) {
-        // Normaliser le chemin
-        $path = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $path);
-        $real_path = @realpath($path);
-        
-        if ($real_path && file_exists($real_path)) {
-            // Convertir en URL
-            if (strpos($real_path, ABSPATH) === 0) {
-                $url = str_replace(ABSPATH, home_url('/'), $real_path);
-                $url = str_replace(DIRECTORY_SEPARATOR, '/', $url);
-                return $url;
-            }
-            
-            // Chemin relatif au plugin
-            $relative = str_replace(OSMOSE_ADS_PLUGIN_DIR, '', $real_path);
-            $relative = str_replace(DIRECTORY_SEPARATOR, '/', $relative);
-            return OSMOSE_ADS_PLUGIN_URL . $relative;
-        }
-    }
-    
-    return false;
-}
-
-$logo_url = osmose_ads_find_logo();
+// Inclure le header global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
 
 // Traitement formulaire simple
 if (isset($_POST['add_city'])) {
@@ -73,47 +40,41 @@ $cities = get_posts(array(
 ));
 ?>
 
-<div class="osmose-ads-page">
-    <!-- Header avec logo -->
-    <div class="osmose-ads-header">
-        <div class="osmose-ads-header-content">
-            <?php if ($logo_url): ?>
-                <img src="<?php echo esc_url($logo_url); ?>" alt="Osmose" class="osmose-ads-logo" style="max-height: 50px; width: auto;">
-            <?php else: ?>
-                <div class="osmose-ads-logo-placeholder" style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                    <span class="dashicons dashicons-admin-site" style="color: white; font-size: 24px;"></span>
-                </div>
-            <?php endif; ?>
-            <div>
-                <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-                <p class="description"><?php _e('Gérez vos villes et importez en masse via l\'API officielle française', 'osmose-ads'); ?></p>
-            </div>
-        </div>
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1"><?php echo esc_html(get_admin_page_title()); ?></h1>
+        <p class="text-muted mb-0"><?php _e('Gérez vos villes et importez en masse via l\'API officielle française', 'osmose-ads'); ?></p>
     </div>
-    
-    <div class="osmose-ads-container">
-        
-        <!-- Onglets -->
-        <div class="osmose-ads-tabs">
-            <button class="osmose-tab-btn active" data-tab="list" type="button">
-                <span class="dashicons dashicons-list-view"></span>
-                <?php _e('Liste des Villes', 'osmose-ads'); ?>
-                <span class="badge"><?php echo count($cities); ?></span>
-            </button>
-            <button class="osmose-tab-btn" data-tab="import" type="button">
-                <span class="dashicons dashicons-download"></span>
-                <?php _e('Import en Masse', 'osmose-ads'); ?>
-            </button>
-            <button class="osmose-tab-btn" data-tab="manual" type="button">
-                <span class="dashicons dashicons-plus-alt"></span>
-                <?php _e('Ajout Manuel', 'osmose-ads'); ?>
-            </button>
-        </div>
-        
-        <!-- Contenu des onglets -->
-        
-        <!-- Onglet Liste (actif par défaut) -->
-        <div class="osmose-tab-content active" id="tab-list" style="display: block;">
+</div>
+
+<!-- Onglets Bootstrap -->
+<ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active osmose-tab-btn" data-tab="list" type="button" role="tab">
+            <i class="bi bi-list-ul me-2"></i>
+            <?php _e('Liste des Villes', 'osmose-ads'); ?>
+            <span class="badge bg-primary ms-2"><?php echo count($cities); ?></span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link osmose-tab-btn" data-tab="import" type="button" role="tab">
+            <i class="bi bi-download me-2"></i>
+            <?php _e('Import en Masse', 'osmose-ads'); ?>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link osmose-tab-btn" data-tab="manual" type="button" role="tab">
+            <i class="bi bi-plus-circle me-2"></i>
+            <?php _e('Ajout Manuel', 'osmose-ads'); ?>
+        </button>
+    </li>
+</ul>
+
+<!-- Contenu des onglets -->
+<div class="tab-content">
+    <!-- Onglet Liste (actif par défaut) -->
+    <div class="tab-pane fade show active" id="tab-list" role="tabpanel">
             <div class="osmose-ads-card">
                 <h2>
                     <span class="dashicons dashicons-list-view"></span>
@@ -162,10 +123,10 @@ $cities = get_posts(array(
                     </div>
                 <?php endif; ?>
             </div>
-        </div>
-        
-        <!-- Onglet Import en Masse -->
-        <div class="osmose-tab-content" id="tab-import" style="display: none;">
+    </div>
+    
+    <!-- Onglet Import en Masse -->
+    <div class="tab-pane fade" id="tab-import" role="tabpanel">
             <div class="osmose-ads-card">
                 <h2>
                     <span class="dashicons dashicons-download"></span>
@@ -287,10 +248,10 @@ $cities = get_posts(array(
                 <!-- Résultat de l'import -->
                 <div id="import-result" style="margin-top: 20px;"></div>
             </div>
-        </div>
-        
-        <!-- Onglet Ajout Manuel -->
-        <div class="osmose-tab-content" id="tab-manual" style="display: none;">
+    </div>
+    
+    <!-- Onglet Ajout Manuel -->
+    <div class="tab-pane fade" id="tab-manual" role="tabpanel">
             <div class="osmose-ads-card">
                 <h2>
                     <span class="dashicons dashicons-plus-alt"></span>
@@ -323,10 +284,14 @@ $cities = get_posts(array(
                 </form>
             </div>
         </div>
-        
-        
     </div>
 </div>
+<!-- Fin tab-content -->
+
+<?php
+// Inclure le footer global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
+?>
 
 <style>
 /* Onglets */
@@ -372,12 +337,14 @@ $cities = get_posts(array(
     font-weight: 600;
 }
 
-.osmose-tab-content {
-    display: none !important;
+/* Bootstrap tabs override */
+.tab-pane {
+    display: none;
 }
 
-.osmose-tab-content.active {
-    display: block !important;
+.tab-pane.active,
+.tab-pane.show {
+    display: block;
 }
 
 /* Sous-onglets */

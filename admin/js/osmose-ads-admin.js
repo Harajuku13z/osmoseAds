@@ -15,29 +15,39 @@
     });
     
     /**
-     * Initialiser les onglets sur la page des villes
+     * Initialiser les onglets sur la page des villes (Bootstrap compatible)
      */
     function initCityTabs() {
-        // Gestion des onglets
-        $('.osmose-tab-btn').on('click', function() {
+        // Gestion des onglets principaux avec Bootstrap
+        $('.osmose-tab-btn').on('click', function(e) {
+            e.preventDefault();
             var tab = $(this).data('tab');
             
+            if (!tab) return;
+            
+            // Retirer active de tous les boutons
             $('.osmose-tab-btn').removeClass('active');
+            // Ajouter active au bouton cliqué
             $(this).addClass('active');
             
-            $('.osmose-tab-content').removeClass('active');
-            $('#tab-' + tab).addClass('active');
+            // Masquer tous les panneaux
+            $('.tab-pane').removeClass('show active');
+            // Afficher le panneau correspondant
+            $('#tab-' + tab).addClass('show active');
         });
         
-        // Gestion des sous-onglets
-        $('.osmose-subtab-btn').on('click', function() {
+        // Gestion des sous-onglets (pour les méthodes d'import)
+        $('.osmose-subtab-btn').on('click', function(e) {
+            e.preventDefault();
             var subtab = $(this).data('subtab');
+            
+            if (!subtab) return;
             
             $('.osmose-subtab-btn').removeClass('active');
             $(this).addClass('active');
             
-            $('.osmose-subtab-content').removeClass('active');
-            $('#subtab-' + subtab).addClass('active');
+            $('.osmose-subtab-content').removeClass('active show').hide();
+            $('#subtab-' + subtab).addClass('active show').show();
         });
     }
     

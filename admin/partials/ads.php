@@ -3,6 +3,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Inclure le header global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
+
 $ads = get_posts(array(
     'post_type' => 'ad',
     'posts_per_page' => 50,
@@ -12,8 +15,12 @@ $ads = get_posts(array(
 ));
 ?>
 
-<div class="wrap">
-    <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1"><?php echo esc_html(get_admin_page_title()); ?></h1>
+    </div>
+</div>
     
     <table class="wp-list-table widefat fixed striped">
         <thead>
@@ -68,5 +75,8 @@ $ads = get_posts(array(
     </table>
 </div>
 
-
+<?php
+// Inclure le footer global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
+?>
 

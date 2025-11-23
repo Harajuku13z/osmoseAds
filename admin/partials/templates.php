@@ -3,6 +3,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Inclure le header global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
+
 $templates = get_posts(array(
     'post_type' => 'ad_template',
     'posts_per_page' => -1,
@@ -12,11 +15,18 @@ $templates = get_posts(array(
 ));
 ?>
 
-<div class="wrap">
-    <h1>
-        <?php echo esc_html(get_admin_page_title()); ?>
-        <a href="#" id="create-template-btn" class="page-title-action"><?php _e('Créer depuis un Service', 'osmose-ads'); ?></a>
-    </h1>
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1"><?php echo esc_html(get_admin_page_title()); ?></h1>
+    </div>
+    <div>
+        <a href="#" id="create-template-btn" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>
+            <?php _e('Créer depuis un Service', 'osmose-ads'); ?>
+        </a>
+    </div>
+</div>
     
     <div id="create-template-modal" style="display: none;">
         <h2><?php _e('Créer un Template depuis un Service', 'osmose-ads'); ?></h2>
@@ -139,5 +149,8 @@ jQuery(document).ready(function($) {
 });
 </script>
 
-
+<?php
+// Inclure le footer global
+require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
+?>
 
