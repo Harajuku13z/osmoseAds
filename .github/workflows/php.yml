@@ -1,0 +1,19 @@
+name: PHP Syntax Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  php-syntax:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Check PHP syntax
+      run: |
+        find . -name "*.php" -type f -exec php -l {} \; | grep -v "No syntax errors"
+
