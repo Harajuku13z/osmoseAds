@@ -90,6 +90,11 @@ $nav_items = array(
         'icon' => 'dashicons-admin-settings',
         'url' => admin_url('admin.php?page=osmose-ads-settings'),
     ),
+    'osmose-ads-calls' => array(
+        'title' => __('Statistiques d\'Appels', 'osmose-ads'),
+        'icon' => 'dashicons-phone',
+        'url' => admin_url('admin.php?page=osmose-ads-calls'),
+    ),
 );
 ?>
 
