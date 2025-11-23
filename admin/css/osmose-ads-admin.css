@@ -15,6 +15,28 @@ body[class*="osmose"] .updated,
     display: none !important;
 }
 
+/* Supprimer l'espace entre le header WordPress et notre header */
+#wpbody-content {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+.wrap {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Assurer que notre navbar est collée au header WordPress */
+.osmose-navbar {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* Masquer le titre WordPress par défaut */
+.wrap > h1 {
+    display: none !important;
+}
+
 /* Empêcher le scroll horizontal global */
 body.osmose-ads-page,
 body[class*="osmose-ads"] {
