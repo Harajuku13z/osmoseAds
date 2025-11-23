@@ -465,7 +465,7 @@
     }
     
     /**
-     * Envoyer les communes à WordPress pour l'import
+     * Envoyer les communes à WordPress pour l'import (SANS AJAX - Formulaire POST)
      */
     function sendToWordPressForImport(communes, importType) {
         var resultDiv = $('#import-result');
@@ -476,25 +476,46 @@
             return;
         }
         
-        // Vérifier que osmoseAds est disponible
-        var osmoseAds = ensureOsmoseAds();
+        console.log('Osmose ADS: Preparing to import ' + communes.length + ' communes via form POST');
         
-        if (!osmoseAds || !osmoseAds.ajax_url) {
-            resultDiv.html('<div class="alert alert-danger">Configuration AJAX manquante (ajax_url). Rechargez la page.</div>');
-            $('button[type="submit"]').prop('disabled', false);
-            console.error('Osmose ADS: Missing ajax_url', osmoseAds);
-            return;
-        }
+        // Créer un formulaire POST pour envoyer les données
+        var form = $('<form>')
+            .attr('method', 'POST')
+            .attr('action', window.location.href)
+            .css('display', 'none');
         
-        // Si le nonce n'est pas disponible, essayer de le récupérer via une requête AJAX
-        if (!osmoseAds.nonce || osmoseAds.needs_nonce) {
-            console.warn('Osmose ADS: Nonce not available, attempting to fetch...');
-            // On peut continuer sans nonce pour l'instant, mais il faudra le récupérer
-            if (!osmoseAds.nonce) {
-                osmoseAds.nonce = '';
-            }
-        }
+        // Champ pour les communes (JSON)
+        form.append($('<input>')
+            .attr('type', 'hidden')
+            .attr('name', 'communes_json')
+            .val(JSON.stringify(communes))
+        );
         
+        // Champ pour le type d'import
+        form.append($('<input>')
+            .attr('type', 'hidden')
+            .attr('name', 'import_type')
+            .val(importType)
+        );
+        
+        // Nonce de sécurité
+        form.append($('<input>')
+            .attr('type', 'hidden')
+            .attr('name', 'import_nonce')
+            .val($('#import_nonce').val() || '')
+        );
+        
+        // Champ pour déclencher l'import
+        form.append($('<input>')
+            .attr('type', 'hidden')
+            .attr('name', 'import_communes')
+            .val('1')
+        );
+        
+        // Ajouter le formulaire au body et le soumettre
+        $('body').append(form);
+        
+        // Afficher un message de chargement
         resultDiv.html(
             '<div class="alert alert-info">' +
             '<div class="spinner-border spinner-border-sm me-2" role="status"></div>' +
@@ -502,72 +523,8 @@
             '</div>'
         );
         
-        $.ajax({
-            url: osmoseAds.ajax_url,
-            type: 'POST',
-            dataType: 'json',
-            timeout: 300000,
-            data: {
-                action: 'osmose_ads_import_communes_direct',
-                nonce: osmoseAds.nonce,
-                communes: JSON.stringify(communes),
-                import_type: importType
-            },
-            success: function(response) {
-                $('button[type="submit"]').prop('disabled', false);
-                
-                if (response.success) {
-                    var imported = response.data.imported || 0;
-                    var skipped = response.data.skipped || 0;
-                    
-                    resultDiv.html(
-                        '<div class="alert alert-success">' +
-                        '<i class="bi bi-check-circle me-2"></i>' +
-                        '<strong>' + response.data.message + '</strong><br>' +
-                        '<small>Importées: ' + imported + ' | ' +
-                        'Ignorées (déjà existantes): ' + skipped + '</small><br>' +
-                        '<small class="text-muted">Rechargement dans <span id="countdown">3</span> secondes...</small>' +
-                        '</div>'
-                    );
-                    
-                    var countdown = 3;
-                    var countdownInterval = setInterval(function() {
-                        countdown--;
-                        $('#countdown').text(countdown);
-                        if (countdown <= 0) {
-                            clearInterval(countdownInterval);
-                            location.reload();
-                        }
-                    }, 1000);
-                } else {
-                    resultDiv.html(
-                        '<div class="alert alert-danger">' +
-                        '<i class="bi bi-exclamation-triangle me-2"></i>' +
-                        (response.data && response.data.message ? response.data.message : 'Erreur lors de l\'import') +
-                        '</div>'
-                    );
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Import error:', error);
-                $('button[type="submit"]').prop('disabled', false);
-                
-                var errorMsg = 'Erreur lors de l\'import';
-                try {
-                    var errorResponse = JSON.parse(xhr.responseText);
-                    if (errorResponse && errorResponse.data && errorResponse.data.message) {
-                        errorMsg = errorResponse.data.message;
-                    }
-                } catch (e) {}
-                
-                resultDiv.html(
-                    '<div class="alert alert-danger">' +
-                    '<i class="bi bi-exclamation-triangle me-2"></i>' +
-                    errorMsg +
-                    '</div>'
-                );
-            }
-        });
+        // Soumettre le formulaire
+        form.submit();
     }
     
 })(jQuery);

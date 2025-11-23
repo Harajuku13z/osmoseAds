@@ -57,6 +57,92 @@ if (isset($_POST['add_city'])) {
     }
 }
 
+// Traitement import en masse (sans AJAX)
+if (isset($_POST['import_communes']) && wp_verify_nonce($_POST['import_nonce'], 'osmose_ads_import_communes')) {
+    $communes_json = wp_unslash($_POST['communes_json'] ?? '');
+    $import_type = sanitize_text_field($_POST['import_type'] ?? '');
+    
+    if (!empty($communes_json)) {
+        $communes = json_decode($communes_json, true);
+        
+        if (is_array($communes) && !empty($communes)) {
+            if (!class_exists('France_Geo_API')) {
+                require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-france-geo-api.php';
+            }
+            
+            $geo_api = new France_Geo_API();
+            $imported = 0;
+            $skipped = 0;
+            
+            foreach ($communes as $commune) {
+                $normalized = $geo_api->normalize_commune_data($commune);
+                
+                // Vérifier si la ville existe déjà
+                $existing = get_posts(array(
+                    'post_type' => 'city',
+                    'meta_query' => array(
+                        array(
+                            'key' => 'insee_code',
+                            'value' => $normalized['code'],
+                            'compare' => '='
+                        )
+                    ),
+                    'posts_per_page' => 1,
+                ));
+                
+                if (!empty($existing)) {
+                    $skipped++;
+                    continue;
+                }
+                
+                if (empty($normalized['name']) || empty($normalized['code'])) {
+                    $skipped++;
+                    continue;
+                }
+                
+                $city_id = wp_insert_post(array(
+                    'post_title' => $normalized['name'],
+                    'post_type' => 'city',
+                    'post_status' => 'publish',
+                ));
+                
+                if ($city_id && !is_wp_error($city_id)) {
+                    update_post_meta($city_id, 'name', $normalized['name']);
+                    update_post_meta($city_id, 'insee_code', $normalized['code']);
+                    update_post_meta($city_id, 'postal_code', $normalized['postal_code']);
+                    update_post_meta($city_id, 'all_postal_codes', $normalized['all_postal_codes'] ?? $normalized['postal_code']);
+                    update_post_meta($city_id, 'department', $normalized['department']);
+                    update_post_meta($city_id, 'department_name', $normalized['department_name'] ?? '');
+                    update_post_meta($city_id, 'region', $normalized['region']);
+                    update_post_meta($city_id, 'region_name', $normalized['region_name'] ?? '');
+                    update_post_meta($city_id, 'population', $normalized['population']);
+                    update_post_meta($city_id, 'surface', $normalized['surface'] ?? 0);
+                    if (isset($normalized['latitude'])) {
+                        update_post_meta($city_id, 'latitude', $normalized['latitude']);
+                    }
+                    if (isset($normalized['longitude'])) {
+                        update_post_meta($city_id, 'longitude', $normalized['longitude']);
+                    }
+                    $imported++;
+                }
+            }
+            
+            // Message de succès
+            $import_message = sprintf(
+                __('%d ville(s) importée(s), %d ignorée(s) (déjà existantes)', 'osmose-ads'),
+                $imported,
+                $skipped
+            );
+            $import_success = true;
+        }
+    }
+}
+
+// Afficher le message d'import si présent
+if (isset($import_success) && $import_success) {
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($import_message) . '</p></div>';
+}
+
 $cities = get_posts(array(
     'post_type' => 'city',
     'posts_per_page' => -1,
