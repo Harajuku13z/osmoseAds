@@ -19,6 +19,19 @@ if (!defined('OSMOSE_ADS_HEADER_LOADED')) {
     require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
 }
 
+// Définir osmoseAds IMMÉDIATEMENT après le header, avant tout autre script
+?>
+<script>
+// Définir osmoseAds IMMÉDIATEMENT pour garantir qu'il est disponible
+window.osmoseAds = {
+    ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
+    nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>',
+    plugin_url: '<?php echo esc_url(OSMOSE_ADS_PLUGIN_URL); ?>'
+};
+console.log('Osmose ADS: osmoseAds defined at top of cities.php:', window.osmoseAds);
+</script>
+<?php
+
 // Traitement formulaire simple
 if (isset($_POST['add_city'])) {
     $city_name = sanitize_text_field($_POST['city_name'] ?? '');
