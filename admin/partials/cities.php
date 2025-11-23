@@ -153,7 +153,7 @@ if (isset($_POST['import_communes']) && wp_verify_nonce($_POST['import_nonce'], 
                 ), true); // true = wp_error en cas d'erreur
                     
                     if ($city_id && !is_wp_error($city_id)) {
-                        // Utiliser une seule requête pour toutes les meta
+                        // Préparer les meta
                         $meta_data = array(
                             'name' => $normalized['name'],
                             'insee_code' => $normalized['code'],
@@ -163,22 +163,28 @@ if (isset($_POST['import_communes']) && wp_verify_nonce($_POST['import_nonce'], 
                             'department_name' => $normalized['department_name'] ?? '',
                             'region' => $normalized['region'],
                             'region_name' => $normalized['region_name'] ?? '',
-                            'population' => $normalized['population'],
-                            'surface' => $normalized['surface'] ?? 0,
+                            'population' => intval($normalized['population'] ?? 0),
+                            'surface' => floatval($normalized['surface'] ?? 0),
                         );
                         
                         if (isset($normalized['latitude'])) {
-                            $meta_data['latitude'] = $normalized['latitude'];
+                            $meta_data['latitude'] = floatval($normalized['latitude']);
                         }
                         if (isset($normalized['longitude'])) {
-                            $meta_data['longitude'] = $normalized['longitude'];
+                            $meta_data['longitude'] = floatval($normalized['longitude']);
                         }
                         
-                        // Insérer toutes les meta en une seule fois
+                        // OPTIMISATION : Insérer toutes les meta via SQL direct pour plus de rapidité
+                        $meta_values = array();
                         foreach ($meta_data as $key => $value) {
                             if ($value !== '' && $value !== null) {
-                                update_post_meta($city_id, $key, $value);
+                                $meta_values[] = $wpdb->prepare("(%d, %s, %s)", $city_id, $key, maybe_serialize($value));
                             }
+                        }
+                        
+                        if (!empty($meta_values)) {
+                            $sql = "INSERT INTO {$wpdb->postmeta} (post_id, meta_key, meta_value) VALUES " . implode(', ', $meta_values);
+                            $wpdb->query($sql);
                         }
                         
                         $imported++;
