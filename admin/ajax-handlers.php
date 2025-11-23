@@ -63,11 +63,18 @@ function osmose_ads_handle_create_template() {
         wp_send_json_error(array('message' => __('Un template pour ce service existe déjà', 'osmose-ads')));
     }
     
+    // Récupérer les informations de l'entreprise depuis les options WordPress
+    $company_name = get_bloginfo('name');
+    $company_phone = get_option('osmose_ads_company_phone', '');
+    $company_phone_raw = get_option('osmose_ads_company_phone_raw', $company_phone);
+    $company_email = get_option('admin_email', '');
+    $site_url = get_site_url();
+    
     // Appeler l'IA pour générer le contenu
     $ai_service = new AI_Service();
     
     if (empty($prompt)) {
-        // Construire un prompt de haute qualité selon le mode
+        // Construire le nouveau prompt premium basé sur le modèle fourni
         $images_info = '';
         if ($featured_image_id) {
             $images_info .= "\n- Une image mise en avant professionnelle est disponible pour illustrer le service.";
@@ -76,78 +83,156 @@ function osmose_ads_handle_create_template() {
             $images_info .= "\n- Des photos de réalisations concrètes sont disponibles pour enrichir le contenu.";
         }
         
-        $sections_info = '';
-        if (!empty($service_sections)) {
-            $sections_info = "\n\nSECTIONS À INCLURE (dans l'ordre) :\n";
-            foreach ($service_sections as $section_key => $section_title) {
-                $sections_info .= "- $section_title : Contenu détaillé et informatif\n";
-            }
-        } else {
-            $sections_info = "\n\nSECTIONS STANDARD À INCLURE :\n";
-            $sections_info .= "- Introduction engageante avec le service\n";
-            $sections_info .= "- Pourquoi faire appel à nos services (avantages, expertise)\n";
-            $sections_info .= "- Types d'interventions et services proposés (liste détaillée)\n";
-            $sections_info .= "- Zone d'intervention et disponibilité\n";
-            $sections_info .= "- Processus de travail et engagement qualité\n";
-            $sections_info .= "- FAQ avec 5-8 questions pertinentes et réponses détaillées\n";
-            $sections_info .= "- Appel à l'action pour demande de devis\n";
-        }
-        
-        $keywords_info = '';
+        // Construire la liste des mots-clés pour le prompt
+        $keywords_list = '';
         if (!empty($service_keywords)) {
-            $keywords_info = "\n\nMOTS-CLÉS À UTILISER NATURELLEMENT (sans sur-optimisation) :\n" . $service_keywords;
+            $keywords_array = array_map('trim', explode(',', $service_keywords));
+            $keywords_list = implode(', ', $keywords_array);
         }
         
-        $description_info = '';
+        // Construire le prompt complet selon le nouveau modèle
+        $prompt = "# Prompt de Génération d'Articles SEO Premium\n\n";
+        $prompt .= "## IDENTITÉ ET EXPERTISE\n\n";
+        $prompt .= "Tu es un rédacteur web expert en SEO local pour le secteur du BTP, spécialisé dans la création de contenus premium pour les artisans. Tu maîtrises parfaitement le vocabulaire technique du métier, les enjeux clients et les meilleures pratiques éditoriales WordPress.\n\n";
+        $prompt .= "---\n\n";
+        $prompt .= "## MISSION PRINCIPALE\n\n";
+        $prompt .= "Créer un article HTML complet, géolocalisé et optimisé SEO pour promouvoir les services d'une entreprise artisanale dans une ville spécifique.\n\n";
+        $prompt .= "---\n\n";
+        $prompt .= "## DONNÉES D'ENTRÉE (À FOURNIR)\n\n";
+        $prompt .= "### Informations Entreprise\n\n";
+        $prompt .= "- **Nom de l'entreprise** : " . ($company_name ?: '[NOM_ENTREPRISE]') . "\n";
+        $prompt .= "- **Ville cible** : [VILLE]\n";
+        $prompt .= "- **Département** : [DÉPARTEMENT]\n";
+        $prompt .= "- **Région** : [RÉGION]\n";
+        $prompt .= "- **Téléphone** : " . ($company_phone ?: '[TELEPHONE]') . "\n";
+        $prompt .= "- **Email** : " . ($company_email ?: '[EMAIL]') . "\n\n";
+        $prompt .= "### Informations Services\n\n";
+        $prompt .= "- **Service principal** : " . $service_name . "\n";
+        
         if (!empty($service_description)) {
-            $description_info = "\n\nCONTEXTE ET DESCRIPTION DU SERVICE :\n" . $service_description;
+            $prompt .= "- **Description du service** : " . $service_description . "\n";
         }
         
-        $prompt = "Tu es un rédacteur web professionnel expert en SEO local et création de contenu de qualité supérieure pour WordPress.\n\n";
-        $prompt .= "TÂCHE : Créer un article/annonce HTML de haute qualité pour le service : \"$service_name\"\n\n";
-        $prompt .= "CONTEXTE : Ce contenu sera utilisé pour créer des pages géolocalisées optimisées SEO. Utilise [VILLE], [DÉPARTEMENT], [RÉGION] comme placeholders.\n";
-        $prompt .= $description_info;
-        $prompt .= $keywords_info;
-        $prompt .= $images_info;
-        $prompt .= $sections_info;
+        if (!empty($keywords_list)) {
+            $prompt .= "- **Mots-clés SEO prioritaires** : " . $keywords_list . "\n";
+        }
         
-        $prompt .= "\n\nEXIGENCES DE QUALITÉ (CRITIQUES) :\n";
-        $prompt .= "1. HTML SÉMANTIQUE ET PROPRE : Utilise uniquement les balises HTML5 valides (h2, h3, p, ul, ol, li, strong, em, a, blockquote, figure, img, etc.)\n";
-        $prompt .= "2. STRUCTURE PROFESSIONNELLE : Hiérarchie claire des titres (H2 pour sections principales, H3 pour sous-sections)\n";
-        $prompt .= "3. CONTENU RICHE ET INFORMATIF : Chaque section doit contenir 150-300 mots de contenu utile et bien rédigé\n";
-        $prompt .= "4. OPTIMISATION SEO NATURELLE : Intégration naturelle des mots-clés, pas de bourrage\n";
-        $prompt .= "5. TON PROFESSIONNEL ET ENGAGEANT : Langage clair, rassurant, orienté client\n";
-        $prompt .= "6. FORMAT WORDPRESS : Code HTML prêt à être collé dans l'éditeur WordPress (pas de balises style inline, pas de doctype/html/head/body)\n";
-        $prompt .= "7. LONGUEUR : Article complet de 1500-2500 mots au total\n";
-        $prompt .= "8. FAQ DÉTAILLÉE : Questions pertinentes avec réponses complètes (100-150 mots par réponse)\n";
-        $prompt .= "9. APPEL À L'ACTION : Section finale avec CTA clair pour demande de devis\n";
-        $prompt .= "10. LISIBILITÉ : Paragraphes courts (3-4 lignes max), listes à puces pour faciliter la lecture\n\n";
+        if (!empty($images_info)) {
+            $prompt .= "\n" . $images_info . "\n";
+        }
         
-        $prompt .= "FORMAT DE SORTIE :\n";
-        $prompt .= "- Du HTML pur, valide, sans commentaires\n";
-        $prompt .= "- Pas de balises <html>, <head>, <body>\n";
-        $prompt .= "- Structure prête pour WordPress (utiliser wp_kses_post sans problème)\n";
-        $prompt .= "- Images : Utilise <figure> et <img> avec attributs alt descriptifs si nécessaire (mais pas d'URLs réelles)\n\n";
-        
-        $prompt .= "Génère maintenant un contenu HTML de qualité professionnelle répondant à toutes ces exigences.";
+        $prompt .= "\n---\n\n";
+        $prompt .= "## MÉTHODOLOGIE DE CRÉATION\n\n";
+        $prompt .= "### PHASE 1 : Recherche et Analyse (Mental Map)\n\n";
+        $prompt .= "Avant de rédiger, structure ta réflexion autour de :\n\n";
+        $prompt .= "**Contexte géographique**\n\n";
+        $prompt .= "- Particularités climatiques de [RÉGION]/[DÉPARTEMENT]\n";
+        $prompt .= "- Enjeux architecturaux locaux\n";
+        $prompt .= "- Problématiques spécifiques dans cette zone\n\n";
+        $prompt .= "**Besoins et pain points clients**\n\n";
+        $prompt .= "- Quels problèmes rencontrent les propriétaires ?\n";
+        $prompt .= "- Quelles sont leurs craintes ? (coût, durée, qualité)\n";
+        $prompt .= "- Quelles sont leurs attentes ? (durabilité, esthétique, garanties)\n\n";
+        $prompt .= "### PHASE 2 : Architecture de l'Article\n\n";
+        $prompt .= "Conçois une structure narrative qui suit ce schéma :\n\n";
+        $prompt .= "1. **Accroche contextualisée** (150-200 mots)\n";
+        $prompt .= "   - Interpelle le propriétaire de [VILLE]\n";
+        $prompt .= "   - Évoque les enjeux locaux\n";
+        $prompt .= "   - Présente l'entreprise comme expert de proximité\n\n";
+        $prompt .= "2. **Section Présentation d'Entreprise** (200-250 mots)\n";
+        $prompt .= "   - Légitimité et expertise\n";
+        $prompt .= "   - Spécialités et savoir-faire unique\n";
+        $prompt .= "   - Zone d'intervention (insister sur [VILLE])\n\n";
+        $prompt .= "3. **Sections Techniques par Service** (300-400 mots chacune)\n";
+        $prompt .= "   - Titre H2 engageant et géolocalisé\n";
+        $prompt .= "   - Problématique client\n";
+        $prompt .= "   - Solutions techniques détaillées\n";
+        $prompt .= "   - Bénéfices concrets\n";
+        $prompt .= "   - Sous-sections H3 pour les détails\n\n";
+        $prompt .= "4. **Section Matériaux et Techniques** (250-300 mots)\n";
+        $prompt .= "   - Liste descriptive des matériaux travaillés\n";
+        $prompt .= "   - Avantages de chaque solution\n";
+        $prompt .= "   - Conseils adaptés au climat local\n\n";
+        $prompt .= "5. **Section Protocole/Process** (200-250 mots)\n";
+        $prompt .= "   - Étapes d'intervention détaillées\n";
+        $prompt .= "   - Méthodes professionnelles\n\n";
+        $prompt .= "6. **Services Complémentaires** (200-250 mots)\n";
+        $prompt .= "   - Prestations annexes\n";
+        $prompt .= "   - Vision globale de l'habitat\n\n";
+        $prompt .= "7. **Section Pourquoi Nous Choisir** (200-250 mots)\n";
+        $prompt .= "   - Arguments de différenciation\n";
+        $prompt .= "   - Garanties et engagements\n";
+        $prompt .= "   - Proximité et réactivité\n\n";
+        $prompt .= "8. **FAQ Exhaustive** (6-8 questions)\n";
+        $prompt .= "   - Questions réelles de propriétaires\n";
+        $prompt .= "   - Réponses complètes de 120-180 mots\n";
+        $prompt .= "   - Ton rassurant et pédagogique\n\n";
+        $prompt .= "9. **Call-to-Action Final** (100-150 mots)\n";
+        $prompt .= "   - Récapitulatif de la proposition de valeur\n";
+        $prompt .= "   - Invitation claire à l'action (devis gratuit)\n";
+        $prompt .= "   - Coordonnées complètes formatées\n\n";
+        $prompt .= "---\n\n";
+        $prompt .= "## EXIGENCES RÉDACTIONNELLES CRITIQUES\n\n";
+        $prompt .= "### Style et Ton\n\n";
+        $prompt .= "- **Professionnel mais accessible** : Vocabulaire technique expliqué simplement\n";
+        $prompt .= "- **Rassurant et empathique** : Comprend les préoccupations du propriétaire\n";
+        $prompt .= "- **Orienté bénéfices** : Chaque argument technique = avantage concret\n";
+        $prompt .= "- **Local et personnalisé** : Références fréquentes à [VILLE], [DÉPARTEMENT], climat local\n";
+        $prompt .= "- **Engageant** : Utilise \"vous\", \"votre maison\", \"votre projet\"\n\n";
+        $prompt .= "### Qualité du Contenu\n\n";
+        $prompt .= "- **Densité informationnelle élevée** : Chaque paragraphe apporte de la valeur\n";
+        $prompt .= "- **Zéro remplissage** : Pas de phrases creuses ou génériques\n";
+        $prompt .= "- **Exemples concrets** : Situations réelles, problèmes types, solutions éprouvées\n";
+        $prompt .= "- **Données tangibles** : Épaisseurs, températures, durées de vie, garanties\n";
+        $prompt .= "- **Transparence** : Explique les choix techniques, les matériaux, les méthodes\n\n";
+        $prompt .= "### Optimisation SEO Naturelle\n\n";
+        $prompt .= "- **Intégration fluide des mots-clés** : Contextualisés, jamais forcés\n";
+        $prompt .= "- **Variations sémantiques** : Synonymes, termes connexes du métier\n";
+        $prompt .= "- **Longue traîne** : Questions naturelles, formulations variées\n";
+        $prompt .= "- **Géolocalisation organique** : [VILLE] + service mentionnés 8-12 fois naturellement\n";
+        $prompt .= "- **Richesse lexicale** : Vocabulaire technique varié\n\n";
+        $prompt .= "### Structure HTML Irréprochable\n\n";
+        $prompt .= "Utilise uniquement : `<h2>`, `<h3>`, `<p>`, `<ul>`, `<ol>`, `<li>`, `<strong>`, `<em>`, `<a>`, `<blockquote>`, `<br>` (avec parcimonie)\n\n";
+        $prompt .= "**Interdictions absolues** : Pas de `<h1>`, `<div>`, `<span>`, `<style>`, `<script>`, `<html>`, `<head>`, `<body>`\n\n";
+        $prompt .= "---\n\n";
+        $prompt .= "## LONGUEUR ET STRUCTURE FINALE\n\n";
+        $prompt .= "- **Longueur totale** : 2500-3500 mots\n";
+        $prompt .= "- **Paragraphes courts** : 3-5 lignes maximum\n";
+        $prompt .= "- **Hiérarchie claire** : H2 pour sections principales, H3 pour sous-sections\n";
+        $prompt .= "- **Listes à puces** pour la lisibilité\n\n";
+        $prompt .= "---\n\n";
+        $prompt .= "## FORMAT DE LIVRAISON\n\n";
+        $prompt .= "Du code HTML pur, prêt pour WordPress, commençant directement par le H2 principal.\n";
+        $prompt .= "Aucune balise wrapper. Compatible wp_kses_post.\n\n";
+        $prompt .= "**Génère maintenant un article HTML premium répondant à toutes ces exigences, avec une recherche approfondie des besoins clients et une structure narrative engageante.**\n";
     }
     
-    $system_message = 'Tu es un expert rédacteur web professionnel spécialisé en création de contenu HTML de haute qualité pour WordPress. Tu maîtrises le SEO local, la rédaction web optimisée et la création de contenu engageant et informatif. Tu génères du HTML sémantique, propre et prêt pour WordPress, avec un contenu riche, structuré et de qualité supérieure.';
+    $system_message = 'Tu es un rédacteur web expert en SEO local pour le secteur du BTP, spécialisé dans la création de contenus premium pour les artisans. Tu maîtrises parfaitement le vocabulaire technique du métier, les enjeux clients et les meilleures pratiques éditoriales WordPress.';
     
     // Générer le contenu principal avec plus de tokens pour un contenu de qualité
     $ai_response = $ai_service->call_ai($prompt, $system_message, array(
-        'temperature' => 0.75, // Légèrement réduit pour plus de cohérence
-        'max_tokens' => 4000, // Augmenté pour permettre un contenu plus long et détaillé
+        'temperature' => 0.8,
+        'max_tokens' => 4000,
     ));
     
     if (is_wp_error($ai_response)) {
         wp_send_json_error(array('message' => $ai_response->get_error_message()));
     }
     
-    // Demander à l'IA de générer les meta SEO
-    $meta_prompt = "Pour le service '$service_name', génère des métadonnées SEO optimisées. Réponds UNIQUEMENT au format JSON suivant (sans texte avant ou après) :\n{\n  \"meta_title\": \"titre SEO (50-60 caractères)\",\n  \"meta_description\": \"description SEO (150-160 caractères)\",\n  \"meta_keywords\": \"mot-clé1, mot-clé2, mot-clé3\",\n  \"og_title\": \"titre Open Graph\",\n  \"og_description\": \"description Open Graph\",\n  \"twitter_title\": \"titre Twitter\",\n  \"twitter_description\": \"description Twitter\"\n}";
+    // Demander à l'IA de générer les meta SEO selon les normes All in One SEO
+    $meta_prompt = "Pour le service '$service_name' dans une ville [VILLE] du département [DÉPARTEMENT], génère des métadonnées SEO optimisées selon les normes All in One SEO. Réponds UNIQUEMENT au format JSON suivant (sans texte avant ou après) :\n\n";
+    $meta_prompt .= "{\n";
+    $meta_prompt .= "  \"meta_title\": \"titre SEO optimisé avec mot-clé principal en début (50-60 caractères max), format: [Service] [VILLE] [DÉPARTEMENT] | [Entreprise]\",\n";
+    $meta_prompt .= "  \"meta_description\": \"description SEO engageante (150-160 caractères) incluant [VILLE] et [DÉPARTEMENT], avec bénéfice principal et CTA implicite\",\n";
+    $meta_prompt .= "  \"meta_keywords\": \"mot-clé1, mot-clé2, mot-clé3 (optionnel, peu recommandé)\",\n";
+    $meta_prompt .= "  \"og_title\": \"titre Open Graph (60-90 caractères)\",\n";
+    $meta_prompt .= "  \"og_description\": \"description Open Graph (200-300 caractères) incluant [VILLE] et [DÉPARTEMENT]\",\n";
+    $meta_prompt .= "  \"twitter_title\": \"titre Twitter (70 caractères max)\",\n";
+    $meta_prompt .= "  \"twitter_description\": \"description Twitter (200 caractères max) incluant [VILLE] et [DÉPARTEMENT]\"\n";
+    $meta_prompt .= "}\n\n";
+    $meta_prompt .= "IMPORTANT : Les descriptions DOIVENT inclure [VILLE] et [DÉPARTEMENT] de manière naturelle. Le meta_title doit placer le mot-clé principal en début (poids SEO maximal).";
     
-    $meta_response = $ai_service->call_ai($meta_prompt, 'Tu es un expert SEO. Tu génères des métadonnées optimisées au format JSON strict.', array(
+    $meta_response = $ai_service->call_ai($meta_prompt, 'Tu es un expert SEO spécialisé dans les normes All in One SEO. Tu génères des métadonnées optimisées au format JSON strict, en respectant les longueurs recommandées et en incluant systématiquement la localisation ([VILLE] et [DÉPARTEMENT]) dans les descriptions.', array(
         'temperature' => 0.7,
         'max_tokens' => 500,
     ));
@@ -166,12 +251,12 @@ function osmose_ads_handle_create_template() {
         }
     }
     
-    // Valeurs par défaut si l'IA n'a pas généré de meta
-    $meta_title = $meta_data['meta_title'] ?? $service_name . ' - Service professionnel | [VILLE]';
-    $meta_description = $meta_data['meta_description'] ?? 'Service professionnel ' . strtolower($service_name) . ' à [VILLE]. Intervention rapide et de qualité.';
+    // Valeurs par défaut si l'IA n'a pas généré de meta (avec [VILLE] et [DÉPARTEMENT])
+    $meta_title = $meta_data['meta_title'] ?? $service_name . ' [VILLE] [DÉPARTEMENT] | Service professionnel';
+    $meta_description = $meta_data['meta_description'] ?? 'Service professionnel ' . strtolower($service_name) . ' à [VILLE] ([DÉPARTEMENT]). Intervention rapide et de qualité. Devis gratuit.';
     $meta_keywords = $meta_data['meta_keywords'] ?? strtolower($service_name) . ', [VILLE], [DÉPARTEMENT], service professionnel';
     $og_title = $meta_data['og_title'] ?? $meta_title;
-    $og_description = $meta_data['og_description'] ?? $meta_description;
+    $og_description = $meta_data['og_description'] ?? ($meta_description ?: 'Service professionnel ' . strtolower($service_name) . ' à [VILLE] ([DÉPARTEMENT]). Intervention rapide et de qualité.');
     $twitter_title = $meta_data['twitter_title'] ?? $og_title;
     $twitter_description = $meta_data['twitter_description'] ?? $og_description;
     
@@ -348,4 +433,3 @@ function osmose_ads_handle_bulk_generate() {
         'errors' => $errors,
     ));
 }
-
