@@ -163,9 +163,13 @@ $templates = get_posts(array(
                     </div>
                 </div>
                 
+                <!-- Sections communes (images et prompt) -->
+                <hr class="my-4">
+                <h5 class="mb-3"><?php _e('Enrichissement du contenu', 'osmose-ads'); ?></h5>
+                
                 <div class="mb-3">
                     <label class="form-label"><?php _e('Image mise en avant', 'osmose-ads'); ?></label>
-                    <div id="create-featured-image-preview" class="mb-2" style="min-height: 150px; border: 2px dashed #ddd; display: flex; align-items: center; justify-content: center;">
+                    <div id="create-featured-image-preview" class="mb-2" style="min-height: 150px; border: 2px dashed #ddd; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
                         <p class="text-muted mb-0"><?php _e('Aucune image sélectionnée', 'osmose-ads'); ?></p>
                     </div>
                     <button type="button" class="btn btn-primary btn-sm" id="create-set-featured-image">
@@ -175,20 +179,22 @@ $templates = get_posts(array(
                         <i class="bi bi-x me-1"></i><?php _e('Retirer', 'osmose-ads'); ?>
                     </button>
                     <input type="hidden" name="featured_image_id" id="create_featured_image_id" value="">
+                    <small class="form-text text-muted"><?php _e('Image principale qui illustrera le service', 'osmose-ads'); ?></small>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label"><?php _e('Photos des réalisations', 'osmose-ads'); ?></label>
-                    <div id="create-realization-images-container" class="d-flex flex-wrap gap-2 mb-2"></div>
+                    <div id="create-realization-images-container" class="d-flex flex-wrap gap-2 mb-2" style="min-height: 50px;"></div>
                     <button type="button" class="btn btn-primary btn-sm" id="create-add-realization-images">
                         <i class="bi bi-images me-1"></i><?php _e('Ajouter des photos', 'osmose-ads'); ?>
                     </button>
+                    <small class="form-text text-muted"><?php _e('Photos d\'exemples de réalisations pour enrichir le contenu', 'osmose-ads'); ?></small>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label"><?php _e('Prompt IA (Optionnel)', 'osmose-ads'); ?></label>
-                    <textarea name="ai_prompt" rows="5" class="form-control"></textarea>
-                    <small class="form-text text-muted"><?php _e('Si vide, un prompt par défaut sera utilisé', 'osmose-ads'); ?></small>
+                    <label class="form-label"><?php _e('Prompt IA personnalisé (Optionnel)', 'osmose-ads'); ?></label>
+                    <textarea name="ai_prompt" rows="5" class="form-control" placeholder="<?php _e('Laissez vide pour utiliser le prompt optimisé automatique', 'osmose-ads'); ?>"></textarea>
+                    <small class="form-text text-muted"><?php _e('Si vide, un prompt professionnel optimisé sera généré automatiquement selon vos choix', 'osmose-ads'); ?></small>
                 </div>
                 
                 <div class="d-flex gap-2">
