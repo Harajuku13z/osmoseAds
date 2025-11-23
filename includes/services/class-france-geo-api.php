@@ -271,6 +271,7 @@ class France_Geo_API {
     /**
      * Rechercher une commune par nom
      * Utilise l'endpoint GET /communes?nom={nom}
+     * Selon la doc : https://geo.api.gouv.fr/decoupage-administratif/communes
      */
     public function search_commune($name, $limit = 5) {
         if (empty($name) || strlen($name) < 2) {
@@ -279,30 +280,43 @@ class France_Geo_API {
         
         $url = $this->api_base_url . '/communes';
         $url .= '?nom=' . urlencode($name);
-        $url .= '&fields=nom,code,codeDepartement,codeRegion,centre,population,codesPostaux';
+        $url .= '&fields=nom,code,codeDepartement,codeRegion,centre,population,codesPostaux,siren,codeEpci';
         $url .= '&boost=population'; // Prioriser les villes les plus peuplées
         $url .= '&limit=' . intval($limit);
         
+        error_log('Osmose ADS API: Searching commune: ' . $name);
+        
         $response = wp_remote_get($url, array(
             'timeout' => 30,
+            'sslverify' => true,
             'headers' => array(
                 'Accept' => 'application/json',
+                'User-Agent' => 'WordPress/Osmose-ADS',
             ),
         ));
         
         if (is_wp_error($response)) {
+            error_log('Osmose ADS API: Search error: ' . $response->get_error_message());
             return array();
         }
         
         $code = wp_remote_retrieve_response_code($response);
         if ($code !== 200) {
+            error_log('Osmose ADS API: Search HTTP error: ' . $code);
             return array();
         }
         
         $body = wp_remote_retrieve_body($response);
         $communes = json_decode($body, true);
         
-        return is_array($communes) ? $communes : array();
+        if (!is_array($communes)) {
+            error_log('Osmose ADS API: Search returned invalid format');
+            return array();
+        }
+        
+        error_log('Osmose ADS API: Search found ' . count($communes) . ' communes');
+        
+        return $communes;
     }
     
     /**
@@ -355,52 +369,67 @@ class France_Geo_API {
     
     /**
      * Normaliser les données d'une commune pour l'insertion
+     * Selon la documentation officielle : https://geo.api.gouv.fr/decoupage-administratif/communes
      */
     public function normalize_commune_data($commune) {
-        // Récupérer le code postal principal (le premier dans le tableau)
+        // Récupérer le code postal principal (le premier dans le tableau codesPostaux)
         $postal_codes = $commune['codesPostaux'] ?? array();
         $postal_code = is_array($postal_codes) && !empty($postal_codes) ? $postal_codes[0] : '';
         
         // Si plusieurs codes postaux, les joindre avec des virgules
         $all_postal_codes = is_array($postal_codes) ? implode(', ', $postal_codes) : $postal_code;
         
+        // Structure de base selon la doc officielle
         $data = array(
             'name' => $commune['nom'] ?? '',
-            'code' => $commune['code'] ?? '',
+            'code' => $commune['code'] ?? '', // Code INSEE
             'postal_code' => $postal_code,
             'all_postal_codes' => $all_postal_codes,
             'department' => $commune['codeDepartement'] ?? '',
             'region' => $commune['codeRegion'] ?? '',
             'population' => isset($commune['population']) ? intval($commune['population']) : 0,
             'surface' => isset($commune['surface']) ? floatval($commune['surface']) : 0,
+            'siren' => $commune['siren'] ?? '',
+            'code_epci' => $commune['codeEpci'] ?? '',
         );
         
         // Récupérer les coordonnées si disponibles
-        if (isset($commune['centre']['coordinates']) && is_array($commune['centre']['coordinates'])) {
-            $data['longitude'] = $commune['centre']['coordinates'][0] ?? 0;
-            $data['latitude'] = $commune['centre']['coordinates'][1] ?? 0;
+        // Selon la doc : centre.coordinates est un tableau [longitude, latitude]
+        if (isset($commune['centre']['coordinates']) && is_array($commune['centre']['coordinates']) && count($commune['centre']['coordinates']) >= 2) {
+            // Format GeoJSON : [longitude, latitude]
+            $data['longitude'] = floatval($commune['centre']['coordinates'][0] ?? 0);
+            $data['latitude'] = floatval($commune['centre']['coordinates'][1] ?? 0);
         }
         
-        // Récupérer le nom du département
-        if (!empty($data['department'])) {
+        // Si les noms de département/région sont directement dans la réponse (format enrichi)
+        if (isset($commune['departement']['nom'])) {
+            $data['department_name'] = $commune['departement']['nom'];
+        }
+        
+        if (isset($commune['region']['nom'])) {
+            $data['region_name'] = $commune['region']['nom'];
+        }
+        
+        // Récupérer le nom du département si pas dans la réponse
+        if (empty($data['department_name']) && !empty($data['department'])) {
             $departments = $this->get_departments();
-            if (!is_wp_error($departments)) {
+            if (!is_wp_error($departments) && is_array($departments)) {
                 foreach ($departments as $dept) {
-                    if ($dept['code'] === $data['department']) {
-                        $data['department_name'] = $dept['nom'];
+                    if (isset($dept['code']) && $dept['code'] === $data['department']) {
+                        $data['department_name'] = $dept['nom'] ?? '';
                         break;
                     }
                 }
             }
         }
         
-        // Récupérer le nom de la région
-        if (!empty($data['region'])) {
+        // Récupérer le nom de la région si pas dans la réponse
+        if (empty($data['region_name']) && !empty($data['region'])) {
             $regions = $this->get_regions();
-            if (!is_wp_error($regions)) {
+            if (!is_wp_error($regions) && is_array($regions)) {
                 foreach ($regions as $region) {
-                    if ($region['code'] === $data['region']) {
-                        $data['region_name'] = $region['nom'];
+                    if (isset($region['code']) && $region['code'] === $data['region']) {
+                        $data['region_name'] = $region['nom'] ?? '';
                         break;
                     }
                 }
