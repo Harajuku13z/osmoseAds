@@ -361,67 +361,118 @@ jQuery(document).ready(function($) {
         return;
     }
     
+    // Fonction pour s'assurer que osmoseAds est disponible
+    function ensureOsmoseAds() {
+        if (typeof osmoseAds === 'undefined') {
+            window.osmoseAds = {
+                ajax_url: '<?php echo esc_js(admin_url('admin-ajax.php')); ?>',
+                nonce: '<?php echo esc_js(wp_create_nonce('osmose_ads_nonce')); ?>'
+            };
+            console.log('Osmose ADS: Created osmoseAds object');
+        }
+        return window.osmoseAds;
+    }
+    
+    // Attendre que tout soit prêt
+    var osmoseAds = ensureOsmoseAds();
+    console.log('Osmose ADS: Starting to load departments and regions...', osmoseAds);
+    
     // Charger les départements
-    $.ajax({
-        url: osmoseAds.ajax_url,
-        type: 'POST',
-        data: {
-            action: 'osmose_ads_get_departments',
-            nonce: osmoseAds.nonce
-        },
-        success: function(response) {
-            console.log('Departments response:', response);
-            if (response && response.success && response.data) {
+    function loadDepartments() {
+        $.ajax({
+            url: osmoseAds.ajax_url,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'osmose_ads_get_departments',
+                nonce: osmoseAds.nonce
+            },
+            success: function(response) {
+                console.log('Departments response:', response);
                 var select = $('#department_code');
-                select.html('<option value=""><?php _e('-- Sélectionner un département --', 'osmose-ads'); ?></option>');
-                if (Array.isArray(response.data)) {
+                
+                if (response && response.success && Array.isArray(response.data) && response.data.length > 0) {
+                    select.empty();
+                    select.append('<option value=""><?php _e('-- Sélectionner un département --', 'osmose-ads'); ?></option>');
                     $.each(response.data, function(i, dept) {
                         if (dept && dept.code && dept.nom) {
                             select.append('<option value="' + dept.code + '">' + dept.nom + ' (' + dept.code + ')</option>');
                         }
                     });
+                    console.log('Departments loaded successfully:', response.data.length, 'items');
+                } else {
+                    console.error('Departments error - invalid response:', response);
+                    select.html('<option value=""><?php _e('Erreur lors du chargement des départements', 'osmose-ads'); ?></option>');
                 }
-            } else {
-                console.error('Departments error:', response);
-                $('#department_code').html('<option value=""><?php _e('Erreur lors du chargement', 'osmose-ads'); ?></option>');
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX error loading departments:', {
+                    status: status,
+                    error: error,
+                    responseText: xhr.responseText,
+                    statusCode: xhr.status,
+                    readyState: xhr.readyState
+                });
+                $('#department_code').html('<option value=""><?php _e('Erreur de connexion - Vérifiez la console', 'osmose-ads'); ?></option>');
             }
-        },
-        error: function(xhr, status, error) {
-            console.error('AJAX error loading departments:', error, xhr.responseText);
-            $('#department_code').html('<option value=""><?php _e('Erreur de chargement', 'osmose-ads'); ?></option>');
-        }
-    });
+        });
+    }
     
     // Charger les régions
-    $.ajax({
-        url: osmoseAds.ajax_url,
-        type: 'POST',
-        data: {
-            action: 'osmose_ads_get_regions',
-            nonce: osmoseAds.nonce
-        },
-        success: function(response) {
-            console.log('Regions response:', response);
-            if (response && response.success && response.data) {
+    function loadRegions() {
+        $.ajax({
+            url: osmoseAds.ajax_url,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'osmose_ads_get_regions',
+                nonce: osmoseAds.nonce
+            },
+            success: function(response) {
+                console.log('Regions response:', response);
                 var select = $('#region_code');
-                select.html('<option value=""><?php _e('-- Sélectionner une région --', 'osmose-ads'); ?></option>');
-                if (Array.isArray(response.data)) {
+                
+                if (response && response.success && Array.isArray(response.data) && response.data.length > 0) {
+                    select.empty();
+                    select.append('<option value=""><?php _e('-- Sélectionner une région --', 'osmose-ads'); ?></option>');
                     $.each(response.data, function(i, region) {
                         if (region && region.code && region.nom) {
                             select.append('<option value="' + region.code + '">' + region.nom + '</option>');
                         }
                     });
+                    console.log('Regions loaded successfully:', response.data.length, 'items');
+                } else {
+                    console.error('Regions error - invalid response:', response);
+                    select.html('<option value=""><?php _e('Erreur lors du chargement des régions', 'osmose-ads'); ?></option>');
                 }
-            } else {
-                console.error('Regions error:', response);
-                $('#region_code').html('<option value=""><?php _e('Erreur lors du chargement', 'osmose-ads'); ?></option>');
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX error loading regions:', {
+                    status: status,
+                    error: error,
+                    responseText: xhr.responseText,
+                    statusCode: xhr.status,
+                    readyState: xhr.readyState
+                });
+                $('#region_code').html('<option value=""><?php _e('Erreur de connexion - Vérifiez la console', 'osmose-ads'); ?></option>');
             }
-        },
-        error: function(xhr, status, error) {
-            console.error('AJAX error loading regions:', error, xhr.responseText);
-            $('#region_code').html('<option value=""><?php _e('Erreur de chargement', 'osmose-ads'); ?></option>');
+        });
+    }
+    
+    // Charger les données avec un délai pour s'assurer que les selects existent
+    setTimeout(function() {
+        if ($('#department_code').length) {
+            loadDepartments();
+        } else {
+            console.error('Department select not found!');
         }
-    });
+        
+        if ($('#region_code').length) {
+            loadRegions();
+        } else {
+            console.error('Region select not found!');
+        }
+    }, 200);
     
     // Recherche de ville
     var searchTimeout;
