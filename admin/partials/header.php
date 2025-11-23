@@ -7,42 +7,50 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Fonction helper pour trouver le logo
-function osmose_ads_get_logo_url() {
-    $logo_paths = array(
-        OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.jpg',
-        OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.png',
-        OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.JPG',
-        OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.PNG',
-        OSMOSE_ADS_PLUGIN_DIR . '../logo.jpg',
-        OSMOSE_ADS_PLUGIN_DIR . '../logo.png',
-        ABSPATH . 'logo.jpg',
-    );
-    
-    foreach ($logo_paths as $path) {
-        // Normaliser le chemin
-        $path = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $path);
-        $real_path = @realpath($path);
-        
-        if ($real_path && file_exists($real_path)) {
-            // Convertir en URL
-            if (strpos($real_path, ABSPATH) === 0) {
-                $url = str_replace(ABSPATH, home_url('/'), $real_path);
-                $url = str_replace(DIRECTORY_SEPARATOR, '/', $url);
-                return $url;
-            }
-            
-            // Chemin relatif au plugin
-            $relative = str_replace(OSMOSE_ADS_PLUGIN_DIR, '', $real_path);
-            $relative = str_replace(DIRECTORY_SEPARATOR, '/', $relative);
-            return OSMOSE_ADS_PLUGIN_URL . $relative;
+// Fonction helper pour trouver le logo (éviter les conflits si déjà définie)
+if (!function_exists('osmose_ads_get_logo_url')) {
+    function osmose_ads_get_logo_url() {
+        if (!defined('OSMOSE_ADS_PLUGIN_DIR') || !defined('ABSPATH')) {
+            return false;
         }
+        
+        $logo_paths = array(
+            OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.jpg',
+            OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.png',
+            OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.JPG',
+            OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.PNG',
+            OSMOSE_ADS_PLUGIN_DIR . '../logo.jpg',
+            OSMOSE_ADS_PLUGIN_DIR . '../logo.png',
+            ABSPATH . 'logo.jpg',
+        );
+        
+        foreach ($logo_paths as $path) {
+            // Normaliser le chemin
+            $path = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $path);
+            $real_path = @realpath($path);
+            
+            if ($real_path && file_exists($real_path)) {
+                // Convertir en URL
+                if (strpos($real_path, ABSPATH) === 0) {
+                    $url = str_replace(ABSPATH, home_url('/'), $real_path);
+                    $url = str_replace(DIRECTORY_SEPARATOR, '/', $url);
+                    return $url;
+                }
+                
+                // Chemin relatif au plugin
+                if (defined('OSMOSE_ADS_PLUGIN_DIR') && defined('OSMOSE_ADS_PLUGIN_URL')) {
+                    $relative = str_replace(OSMOSE_ADS_PLUGIN_DIR, '', $real_path);
+                    $relative = str_replace(DIRECTORY_SEPARATOR, '/', $relative);
+                    return OSMOSE_ADS_PLUGIN_URL . $relative;
+                }
+            }
+        }
+        return false;
     }
-    return false;
 }
 
 $logo_url = osmose_ads_get_logo_url();
-$current_page = $_GET['page'] ?? 'osmose-ads';
+$current_page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : 'osmose-ads';
 
 // Navigation pages
 $nav_items = array(

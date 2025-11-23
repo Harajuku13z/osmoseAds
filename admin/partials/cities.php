@@ -3,8 +3,21 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Inclure le header global
-require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
+// Vérifier que les constantes sont définies
+if (!defined('OSMOSE_ADS_PLUGIN_DIR')) {
+    wp_die(__('Erreur: Les constantes du plugin ne sont pas définies.', 'osmose-ads'));
+}
+
+// Inclure le header global avec gestion d'erreur
+try {
+    $header_path = OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
+    if (!file_exists($header_path)) {
+        throw new Exception('Header file not found: ' . $header_path);
+    }
+    require_once $header_path;
+} catch (Exception $e) {
+    wp_die(sprintf(__('Erreur lors du chargement du header: %s', 'osmose-ads'), $e->getMessage()));
+}
 
 // Traitement formulaire simple
 if (isset($_POST['add_city'])) {
@@ -359,8 +372,8 @@ jQuery(document).ready(function($) {
     function ensureOsmoseAds() {
         if (typeof osmoseAds === 'undefined') {
             window.osmoseAds = {
-                ajax_url: '<?php echo esc_js(admin_url('admin-ajax.php')); ?>',
-                nonce: '<?php echo esc_js(wp_create_nonce('osmose_ads_nonce')); ?>'
+                ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
+                nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>'
             };
             console.log('Osmose ADS: Created osmoseAds object', window.osmoseAds);
         }
