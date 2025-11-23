@@ -7,6 +7,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Prévenir les inclusions multiples
+if (defined('OSMOSE_ADS_HEADER_LOADED')) {
+    return;
+}
+define('OSMOSE_ADS_HEADER_LOADED', true);
+
 // Fonction helper pour trouver le logo (éviter les conflits si déjà définie)
 if (!function_exists('osmose_ads_get_logo_url')) {
     function osmose_ads_get_logo_url() {
@@ -46,6 +52,7 @@ if (!function_exists('osmose_ads_get_logo_url')) {
             }
         }
         return false;
+    }
     }
 }
 
