@@ -396,7 +396,17 @@ class Osmose_Ads_Admin {
      * Handler AJAX pour récupérer les départements
      */
     public function ajax_get_departments() {
-        check_ajax_referer('osmose_ads_nonce', 'nonce');
+        // Vérifier le nonce
+        if (!check_ajax_referer('osmose_ads_nonce', 'nonce', false)) {
+            wp_send_json_error(array('message' => __('Erreur de sécurité', 'osmose-ads')));
+            return;
+        }
+        
+        // Vérifier les permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+            return;
+        }
         
         if (!class_exists('France_Geo_API')) {
             require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-france-geo-api.php';
@@ -407,6 +417,12 @@ class Osmose_Ads_Admin {
         
         if (is_wp_error($departments)) {
             wp_send_json_error(array('message' => $departments->get_error_message()));
+            return;
+        }
+        
+        if (!is_array($departments) || empty($departments)) {
+            wp_send_json_error(array('message' => __('Aucun département trouvé', 'osmose-ads')));
+            return;
         }
         
         wp_send_json_success($departments);
@@ -416,7 +432,17 @@ class Osmose_Ads_Admin {
      * Handler AJAX pour récupérer les régions
      */
     public function ajax_get_regions() {
-        check_ajax_referer('osmose_ads_nonce', 'nonce');
+        // Vérifier le nonce
+        if (!check_ajax_referer('osmose_ads_nonce', 'nonce', false)) {
+            wp_send_json_error(array('message' => __('Erreur de sécurité', 'osmose-ads')));
+            return;
+        }
+        
+        // Vérifier les permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+            return;
+        }
         
         if (!class_exists('France_Geo_API')) {
             require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-france-geo-api.php';
@@ -427,6 +453,12 @@ class Osmose_Ads_Admin {
         
         if (is_wp_error($regions)) {
             wp_send_json_error(array('message' => $regions->get_error_message()));
+            return;
+        }
+        
+        if (!is_array($regions) || empty($regions)) {
+            wp_send_json_error(array('message' => __('Aucune région trouvée', 'osmose-ads')));
+            return;
         }
         
         wp_send_json_success($regions);
@@ -436,7 +468,17 @@ class Osmose_Ads_Admin {
      * Handler AJAX pour rechercher une ville
      */
     public function ajax_search_city() {
-        check_ajax_referer('osmose_ads_nonce', 'nonce');
+        // Vérifier le nonce
+        if (!check_ajax_referer('osmose_ads_nonce', 'nonce', false)) {
+            wp_send_json_error(array('message' => __('Erreur de sécurité', 'osmose-ads')));
+            return;
+        }
+        
+        // Vérifier les permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+            return;
+        }
         
         if (!class_exists('France_Geo_API')) {
             require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-france-geo-api.php';
@@ -445,12 +487,18 @@ class Osmose_Ads_Admin {
         $search = sanitize_text_field($_POST['search'] ?? '');
         if (empty($search)) {
             wp_send_json_error(array('message' => __('Terme de recherche requis', 'osmose-ads')));
+            return;
         }
         
         $geo_api = new France_Geo_API();
         $communes = $geo_api->search_commune($search);
         
-        wp_send_json_success($communes);
+        if (is_wp_error($communes)) {
+            wp_send_json_error(array('message' => $communes->get_error_message()));
+            return;
+        }
+        
+        wp_send_json_success(is_array($communes) ? $communes : array());
     }
 }
 

@@ -355,6 +355,12 @@ $cities = get_posts(array(
 
 <script>
 jQuery(document).ready(function($) {
+    // Vérifier que osmoseAds est défini
+    if (typeof osmoseAds === 'undefined') {
+        console.error('Osmose ADS: osmoseAds object is not defined');
+        return;
+    }
+    
     // Charger les départements
     $.ajax({
         url: osmoseAds.ajax_url,
@@ -364,13 +370,25 @@ jQuery(document).ready(function($) {
             nonce: osmoseAds.nonce
         },
         success: function(response) {
-            if (response.success) {
+            console.log('Departments response:', response);
+            if (response && response.success && response.data) {
                 var select = $('#department_code');
                 select.html('<option value=""><?php _e('-- Sélectionner un département --', 'osmose-ads'); ?></option>');
-                $.each(response.data, function(i, dept) {
-                    select.append('<option value="' + dept.code + '">' + dept.nom + ' (' + dept.code + ')</option>');
-                });
+                if (Array.isArray(response.data)) {
+                    $.each(response.data, function(i, dept) {
+                        if (dept && dept.code && dept.nom) {
+                            select.append('<option value="' + dept.code + '">' + dept.nom + ' (' + dept.code + ')</option>');
+                        }
+                    });
+                }
+            } else {
+                console.error('Departments error:', response);
+                $('#department_code').html('<option value=""><?php _e('Erreur lors du chargement', 'osmose-ads'); ?></option>');
             }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX error loading departments:', error, xhr.responseText);
+            $('#department_code').html('<option value=""><?php _e('Erreur de chargement', 'osmose-ads'); ?></option>');
         }
     });
     
@@ -383,13 +401,25 @@ jQuery(document).ready(function($) {
             nonce: osmoseAds.nonce
         },
         success: function(response) {
-            if (response.success) {
+            console.log('Regions response:', response);
+            if (response && response.success && response.data) {
                 var select = $('#region_code');
                 select.html('<option value=""><?php _e('-- Sélectionner une région --', 'osmose-ads'); ?></option>');
-                $.each(response.data, function(i, region) {
-                    select.append('<option value="' + region.code + '">' + region.nom + '</option>');
-                });
+                if (Array.isArray(response.data)) {
+                    $.each(response.data, function(i, region) {
+                        if (region && region.code && region.nom) {
+                            select.append('<option value="' + region.code + '">' + region.nom + '</option>');
+                        }
+                    });
+                }
+            } else {
+                console.error('Regions error:', response);
+                $('#region_code').html('<option value=""><?php _e('Erreur lors du chargement', 'osmose-ads'); ?></option>');
             }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX error loading regions:', error, xhr.responseText);
+            $('#region_code').html('<option value=""><?php _e('Erreur de chargement', 'osmose-ads'); ?></option>');
         }
     });
     
