@@ -309,6 +309,30 @@ $cities = get_posts(array(
 }
 </style>
 
+<!-- S'assurer que osmoseAds est défini AVANT le chargement du script externe -->
+<script>
+// Définir osmoseAds immédiatement dans le template pour garantir qu'il est disponible
+window.osmoseAds = window.osmoseAds || {
+    ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
+    nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>',
+    plugin_url: '<?php echo esc_url(OSMOSE_ADS_PLUGIN_URL); ?>'
+};
+console.log('Osmose ADS: osmoseAds defined in cities.php template:', window.osmoseAds);
+
+// Vérification supplémentaire
+if (!window.osmoseAds.ajax_url) {
+    console.error('Osmose ADS: CRITICAL ERROR - ajax_url is missing!');
+} else {
+    console.log('Osmose ADS: ajax_url is set:', window.osmoseAds.ajax_url);
+}
+
+if (!window.osmoseAds.nonce) {
+    console.warn('Osmose ADS: WARNING - nonce is missing!');
+} else {
+    console.log('Osmose ADS: nonce is set:', window.osmoseAds.nonce.substring(0, 10) + '...');
+}
+</script>
+
 <?php
 // Inclure le footer global
 require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
