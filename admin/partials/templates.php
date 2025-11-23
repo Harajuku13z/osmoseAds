@@ -371,9 +371,9 @@ jQuery(document).ready(function($) {
         }
         
         createFeaturedImageFrame = wp.media({
-            title: '<?php _e('Choisir l\'image mise en avant', 'osmose-ads'); ?>',
+            title: <?php echo wp_json_encode(__('Choisir l\'image mise en avant', 'osmose-ads')); ?>,
             button: {
-                text: '<?php _e('Utiliser cette image', 'osmose-ads'); ?>'
+                text: <?php echo wp_json_encode(__('Utiliser cette image', 'osmose-ads')); ?>
             },
             multiple: false
         });
@@ -392,7 +392,7 @@ jQuery(document).ready(function($) {
     $('#create-remove-featured-image').on('click', function(e) {
         e.preventDefault();
         $('#create_featured_image_id').val('');
-        $('#create-featured-image-preview').html('<p class="text-muted mb-0"><?php echo esc_js(__('Aucune image sélectionnée', 'osmose-ads')); ?></p>');
+        $('#create-featured-image-preview').html('<p class="text-muted mb-0">' + <?php echo wp_json_encode(__('Aucune image sélectionnée', 'osmose-ads')); ?> + '</p>');
         $('#create-set-featured-image').text(<?php echo wp_json_encode(__('Choisir une image', 'osmose-ads')); ?>);
         $(this).hide();
     });
