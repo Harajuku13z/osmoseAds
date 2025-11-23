@@ -135,6 +135,15 @@ class Osmose_Ads_Admin {
         
         add_submenu_page(
             'osmose-ads',
+            __('Créer un Template', 'osmose-ads'),
+            __('Créer un Template', 'osmose-ads'),
+            'manage_options',
+            'osmose-ads-template-create',
+            array($this, 'display_template_create')
+        );
+        
+        add_submenu_page(
+            'osmose-ads',
             __('Annonces', 'osmose-ads'),
             __('Annonces', 'osmose-ads'),
             'manage_options',
@@ -215,6 +224,10 @@ class Osmose_Ads_Admin {
 
     public function display_templates() {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/templates.php';
+    }
+    
+    public function display_template_create() {
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/template-create.php';
     }
 
     public function display_ads() {

@@ -27,6 +27,11 @@ function osmose_ads_handle_create_template() {
         ? array_map('intval', $_POST['realization_images']) 
         : array();
     
+    // Récupérer les mots-clés associés aux images de réalisations
+    $realization_keywords = isset($_POST['realization_keywords']) && is_array($_POST['realization_keywords'])
+        ? array_map('sanitize_text_field', $_POST['realization_keywords'])
+        : array();
+    
     // Gestion des services préconfigurés
     $service_keywords = '';
     $service_description = '';
@@ -188,16 +193,32 @@ function osmose_ads_handle_create_template() {
         update_post_meta($template_id, 'featured_image_id', $featured_image_id);
     }
     
-    // Enregistrer les images de réalisations
+    // Enregistrer les images de réalisations avec leurs mots-clés
     if (!empty($realization_images)) {
         $valid_images = array();
+        $images_with_keywords = array();
+        
         foreach ($realization_images as $img_id) {
             if (wp_attachment_is_image($img_id)) {
                 $valid_images[] = $img_id;
+                
+                // Associer les mots-clés à l'image
+                $img_keywords = isset($realization_keywords[$img_id]) ? $realization_keywords[$img_id] : '';
+                if (!empty($img_keywords)) {
+                    // Mettre à jour les mots-clés de l'image WordPress
+                    update_post_meta($img_id, '_osmose_image_keywords', $img_keywords);
+                }
+                
+                $images_with_keywords[] = array(
+                    'id' => $img_id,
+                    'keywords' => $img_keywords
+                );
             }
         }
+        
         if (!empty($valid_images)) {
             update_post_meta($template_id, 'realization_images', $valid_images);
+            update_post_meta($template_id, 'realization_images_keywords', $images_with_keywords);
         }
     }
     

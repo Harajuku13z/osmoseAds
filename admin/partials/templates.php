@@ -79,10 +79,10 @@ $templates = get_posts(array(
         <p class="text-muted mb-0"><?php _e('Gérez vos templates de services', 'osmose-ads'); ?></p>
     </div>
     <div>
-        <button type="button" id="create-template-btn" class="btn btn-primary" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;">
+        <a href="<?php echo admin_url('admin.php?page=osmose-ads-template-create'); ?>" class="btn btn-primary" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;">
             <i class="bi bi-plus-circle me-2"></i>
             <?php _e('Créer un Template', 'osmose-ads'); ?>
-        </button>
+        </a>
     </div>
 </div>
     
