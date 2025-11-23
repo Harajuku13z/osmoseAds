@@ -8,45 +8,19 @@
     
     const API_BASE_URL = 'https://geo.api.gouv.fr';
     
-    // Fonction pour s'assurer que osmoseAds est disponible
-    function ensureOsmoseAds() {
-        if (typeof osmoseAds === 'undefined' || !osmoseAds.ajax_url || !osmoseAds.nonce) {
-            // Essayer de récupérer depuis window.ajaxurl (WordPress standard)
-            var ajaxUrl = window.ajaxurl || '/wp-admin/admin-ajax.php';
-            var nonce = '';
-            
-            // Essayer de récupérer le nonce depuis un élément caché ou le créer dynamiquement
-            // Si wp_localize_script n'a pas fonctionné, on devra créer le nonce côté serveur
-            console.warn('Osmose ADS: osmoseAds object not properly initialized. Using fallback.');
-            
-            window.osmoseAds = {
-                ajax_url: ajaxUrl,
-                nonce: nonce,
-                needs_nonce: true
-            };
-        }
-        return window.osmoseAds;
-    }
-    
     // Attendre que le DOM soit prêt
     $(document).ready(function() {
         console.log('Osmose ADS: Initializing direct API integration...');
         
-        // Attendre un peu pour que wp_localize_script ait le temps de s'exécuter
-        setTimeout(function() {
-            ensureOsmoseAds();
-            console.log('Osmose ADS: osmoseAds object:', window.osmoseAds);
-            
-            // Charger les départements et régions immédiatement
-            loadDepartmentsDirect();
-            loadRegionsDirect();
-            
-            // Recherche de ville avec autocomplétion
-            initCitySearch();
-            
-            // Gestionnaires de formulaires d'import
-            initImportForms();
-        }, 100);
+        // Charger les départements et régions immédiatement
+        loadDepartmentsDirect();
+        loadRegionsDirect();
+        
+        // Recherche de ville avec autocomplétion
+        initCitySearch();
+        
+        // Gestionnaires de formulaires d'import
+        initImportForms();
     });
     
     /**
@@ -466,22 +440,11 @@
         }
         
         // Vérifier que osmoseAds est disponible
-        var osmoseAds = ensureOsmoseAds();
-        
-        if (!osmoseAds || !osmoseAds.ajax_url) {
-            resultDiv.html('<div class="alert alert-danger">Configuration AJAX manquante (ajax_url). Rechargez la page.</div>');
-            $('button[type="submit"]').prop('disabled', false);
-            console.error('Osmose ADS: Missing ajax_url', osmoseAds);
-            return;
-        }
-        
-        // Si le nonce n'est pas disponible, essayer de le récupérer via une requête AJAX
-        if (!osmoseAds.nonce || osmoseAds.needs_nonce) {
-            console.warn('Osmose ADS: Nonce not available, attempting to fetch...');
-            // On peut continuer sans nonce pour l'instant, mais il faudra le récupérer
-            if (!osmoseAds.nonce) {
-                osmoseAds.nonce = '';
-            }
+        if (typeof osmoseAds === 'undefined') {
+            osmoseAds = {
+                ajax_url: window.ajaxurl || '/wp-admin/admin-ajax.php',
+                nonce: ''
+            };
         }
         
         resultDiv.html(
