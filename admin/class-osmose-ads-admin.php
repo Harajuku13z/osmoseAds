@@ -65,41 +65,8 @@ class Osmose_Ads_Admin {
                 'nonce' => wp_create_nonce('osmose_ads_nonce'),
             ));
             
-            // S'assurer que la variable est disponible même pour les scripts inline (AVANT le script)
-            add_action('admin_head', function() use ($hook) {
-                if (strpos($hook, 'osmose-ads-cities') !== false) {
-                    ?>
-                    <script>
-                    // Définir osmoseAds AVANT le chargement du script
-                    window.osmoseAds = window.osmoseAds || {
-                        ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
-                        nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>',
-                        plugin_url: '<?php echo esc_url(OSMOSE_ADS_PLUGIN_URL); ?>'
-                    };
-                    console.log('Osmose ADS: osmoseAds initialized in admin_head:', window.osmoseAds);
-                    </script>
-                    <?php
-                }
-            }, 1);
-            
-            // Double vérification dans le footer
-            add_action('admin_footer', function() use ($hook) {
-                if (strpos($hook, 'osmose-ads-cities') !== false) {
-                    ?>
-                    <script>
-                    // S'assurer que osmoseAds est toujours défini
-                    if (typeof window.osmoseAds === 'undefined' || !window.osmoseAds.ajax_url) {
-                        window.osmoseAds = {
-                            ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
-                            nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>',
-                            plugin_url: '<?php echo esc_url(OSMOSE_ADS_PLUGIN_URL); ?>'
-                        };
-                        console.log('Osmose ADS: osmoseAds initialized in admin_footer:', window.osmoseAds);
-                    }
-                    </script>
-                    <?php
-                }
-            }, 999);
+            // Note: osmoseAds est maintenant défini directement dans cities.php template
+            // pour garantir qu'il est disponible avant le chargement du script externe
         }
         
         // Créer le nonce et localiser le script
