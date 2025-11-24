@@ -315,6 +315,64 @@
     color: white;
 }
 
+/* Bouton d'appel dans la sidebar */
+.osmose-card-call {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+    color: white;
+    border: none;
+}
+
+.osmose-card-call .osmose-sidebar-subtitle {
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.osmose-card-call .osmose-sidebar-text {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.osmose-btn-call-sidebar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 1rem 1.5rem;
+    background-color: white;
+    color: var(--primary-color);
+    text-align: center;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    font-size: 1.125rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 2px solid white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.osmose-btn-call-sidebar:hover {
+    background-color: var(--accent-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+.osmose-btn-call-sidebar i {
+    font-size: 1.25rem;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
 .osmose-info-list {
     list-style: none;
     padding: 0;
