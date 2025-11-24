@@ -5,34 +5,10 @@
 class Osmose_Ads_Rewrite {
 
     public function add_rewrite_rules() {
-        // Pour que les annonces utilisent la même structure d'URL que les posts,
-        // on doit intercepter les requêtes et vérifier si le slug correspond à une annonce
-        // Avant que WordPress ne cherche un post normal
-        
-        $permalink_structure = get_option('permalink_structure');
-        
-        if (!empty($permalink_structure)) {
-            // Extraire le pattern de la structure de permalink
-            // Exemple: /%year%/%monthnum%/%day%/%postname%/ ou /%postname%/
-            
-            // Ajouter une règle qui intercepte toutes les requêtes de posts
-            // et vérifie si c'est une annonce avant de chercher un post normal
-            // Cette règle doit être en priorité haute pour être évaluée en premier
-            
-            // Si la structure est simple comme /%postname%/
-            if (strpos($permalink_structure, '%postname%') !== false && strpos($permalink_structure, '%year%') === false) {
-                // Pattern simple : juste le slug
-                // On ajoute une règle qui capture le slug et vérifie si c'est une annonce
-                add_rewrite_rule(
-                    '^([^/]+)/?$',
-                    'index.php?post_type=ad&name=$matches[1]',
-                    'top' // Priorité haute pour intercepter avant les posts normaux
-                );
-            }
-            
-            // Ajouter le query var pour 'name' avec post_type
-            add_rewrite_tag('%ad_name%', '([^/]+)', 'post_type=ad&name=');
-        }
+        // Les annonces utilisent maintenant la même structure d'URL que les posts
+        // L'interception se fait dans parse_request et template_loader
+        // Pas besoin de rewrite rules spéciales car WordPress va chercher d'abord dans les posts,
+        // et nous intercepterons dans template_loader si c'est une 404
         
         // Flush rules si nécessaire
         if (get_option('osmose_ads_flush_rewrite_rules')) {
