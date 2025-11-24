@@ -62,6 +62,10 @@ class Osmose_Ads_Post_Types {
             'not_found_in_trash' => __('Aucune annonce dans la corbeille', 'osmose-ads'),
         );
 
+        // Utiliser la même structure d'URL que les posts
+        // Pour cela, on utilise 'rewrite' => false qui désactive les rewrite rules par défaut
+        // et on créera des rewrite rules personnalisées dans class-osmose-ads-rewrite.php
+        
         $args = array(
             'labels'              => $labels,
             'public'              => true,
@@ -73,17 +77,18 @@ class Osmose_Ads_Post_Types {
             'capability_type'     => 'post',
             'has_archive'         => true,
             'hierarchical'        => false,
-            'supports'            => array('title', 'editor', 'custom-fields', 'thumbnail', 'excerpt', 'comments'),
-            'rewrite'             => array('slug' => 'ads'),
-            'query_var'           => true,
+            'supports'            => array('title', 'editor', 'custom-fields', 'thumbnail', 'excerpt', 'comments', 'author', 'trackbacks', 'revisions'),
+            'rewrite'             => false, // On gérera les rewrite rules manuellement
+            'query_var'           => 'post_type=ad',
             'show_in_rest'        => true, // Support Gutenberg
-            'taxonomies'          => array('category'), // Support des catégories WordPress
+            'taxonomies'          => array('category', 'post_tag'), // Support des catégories et tags WordPress
         );
 
         register_post_type('ad', $args);
         
-        // Associer les catégories WordPress au CPT 'ad'
+        // Associer les catégories et tags WordPress au CPT 'ad'
         register_taxonomy_for_object_type('category', 'ad');
+        register_taxonomy_for_object_type('post_tag', 'ad');
     }
 
     /**

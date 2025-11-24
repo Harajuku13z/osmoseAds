@@ -142,6 +142,17 @@ class Osmose_Ads {
         $this->loader->add_filter('query_vars', $rewrite, 'add_query_vars');
         $this->loader->add_filter('template_include', $rewrite, 'template_loader');
         
+        // Intégration avec AIOSEO - S'assurer que les annonces sont reconnues comme des posts
+        // AIOSEO utilise différents hooks selon la version
+        $this->loader->add_filter('aioseo_post_types', $this, 'add_ads_to_aioseo_post_types', 10, 1);
+        $this->loader->add_filter('aioseo_enabled_post_types', $this, 'add_ads_to_aioseo_enabled_types', 10, 1);
+        
+        // S'assurer que AIOSEO peut modifier les annonces
+        $this->loader->add_filter('aioseo_is_valid_post_type', $this, 'aioseo_is_valid_ad_type', 10, 2);
+        
+        // Flush rewrite rules une fois après la modification du CPT
+        $this->loader->add_action('init', $this, 'flush_rewrite_rules_once', 999);
+        
         // Inclure les annonces dans les requêtes principales du blog
         $this->loader->add_action('pre_get_posts', $this, 'include_ads_in_main_query');
         
@@ -311,6 +322,58 @@ class Osmose_Ads {
         return $columns;
     }
 
+    /**
+     * Ajouter les annonces aux post types supportés par AIOSEO
+     */
+    public function add_ads_to_aioseo_post_types($post_types) {
+        if (!is_array($post_types)) {
+            $post_types = array();
+        }
+        
+        // Ajouter 'ad' aux post types supportés par AIOSEO
+        if (!in_array('ad', $post_types)) {
+            $post_types[] = 'ad';
+        }
+        
+        return $post_types;
+    }
+    
+    /**
+     * Ajouter les annonces aux types de posts activés dans AIOSEO
+     */
+    public function add_ads_to_aioseo_enabled_types($post_types) {
+        if (!is_array($post_types)) {
+            $post_types = array();
+        }
+        
+        // Ajouter 'ad' aux post types activés dans AIOSEO
+        if (!in_array('ad', $post_types)) {
+            $post_types[] = 'ad';
+        }
+        
+        return $post_types;
+    }
+    
+    /**
+     * Vérifier que AIOSEO reconnaît les annonces comme un type de post valide
+     */
+    public function aioseo_is_valid_ad_type($is_valid, $post_type) {
+        if ($post_type === 'ad') {
+            return true;
+        }
+        return $is_valid;
+    }
+    
+    /**
+     * Flush rewrite rules une seule fois après la modification du CPT
+     */
+    public function flush_rewrite_rules_once() {
+        if (get_option('osmose_ads_flush_rewrite_rules')) {
+            flush_rewrite_rules(false); // false = hard flush
+            delete_option('osmose_ads_flush_rewrite_rules');
+        }
+    }
+    
     /**
      * Exécuter le loader
      */

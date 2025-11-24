@@ -13,8 +13,11 @@ class Osmose_Ads_Activator {
         $post_types = new Osmose_Ads_Post_Types();
         $post_types->register_post_types();
         
-        // Flush rewrite rules
+        // Flush rewrite rules pour appliquer les nouvelles règles
         flush_rewrite_rules();
+        
+        // Marquer qu'il faut flush les règles au prochain chargement
+        update_option('osmose_ads_flush_rewrite_rules', true);
         
         // Créer les options par défaut
         self::set_default_options();
