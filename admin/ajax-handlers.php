@@ -104,16 +104,21 @@ function osmose_ads_handle_create_template() {
         $prompt .= "⚠️ ATTENTION : N'utilisez JAMAIS de nom de ville en dur. Utilisez TOUJOURS [VILLE] et [DÉPARTEMENT].\n\n\n";
         $prompt .= "---\n\n\n";
         $prompt .= "## 📥 DONNÉES REQUISES\n\n\n";
+        $company_address = get_option('osmose_ads_company_address', '');
+        $services = get_option('osmose_ads_services', array());
+        
         $prompt .= "```\n\n";
         $prompt .= "Entreprise : " . ($company_name ?: '[NOM_ENTREPRISE]') . "\n";
-        $prompt .= "Ville cible : [VILLE]\n";
-        $prompt .= "Code postal : [CODE_POSTAL]\n";
-        $prompt .= "Département : [DÉPARTEMENT] ([NUMÉRO])\n";
-        $prompt .= "Région : [RÉGION]\n";
-        $prompt .= "Ville siège : [VILLE_SIEGE]\n";
-        $prompt .= "Adresse : [ADRESSE_COMPLETE]\n";
+        $prompt .= "Adresse siège : " . ($company_address ?: '[ADRESSE_COMPLETE]') . "\n";
         $prompt .= "Téléphone : " . ($company_phone ?: '[TELEPHONE]') . "\n";
-        $prompt .= "Email : " . ($company_email ?: '[EMAIL]') . "\n\n\n";
+        $prompt .= "Email : " . ($company_email ?: '[EMAIL]') . "\n";
+        if (!empty($services)) {
+            $prompt .= "Services proposés : " . implode(', ', array_slice($services, 0, 5)) . "\n";
+        }
+        $prompt .= "\nVille cible : [VILLE]\n";
+        $prompt .= "Code postal : [CODE_POSTAL]\n";
+        $prompt .= "Département : [DÉPARTEMENT]\n";
+        $prompt .= "Région : [RÉGION]\n\n\n";
         $prompt .= "Services : " . $service_name;
         if (!empty($service_description)) {
             $prompt .= " - " . $service_description;

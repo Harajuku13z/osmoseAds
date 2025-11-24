@@ -11,6 +11,7 @@ if (isset($_POST['submit'])) {
     update_option('osmose_ads_company_phone', sanitize_text_field($_POST['company_phone'] ?? ''));
     update_option('osmose_ads_company_phone_raw', sanitize_text_field($_POST['company_phone_raw'] ?? ''));
     update_option('osmose_ads_company_email', sanitize_email($_POST['company_email'] ?? ''));
+    update_option('osmose_ads_company_address', sanitize_text_field($_POST['company_address'] ?? ''));
     update_option('osmose_ads_devis_url', esc_url_raw($_POST['devis_url'] ?? ''));
     update_option('osmose_ads_openai_api_key', sanitize_text_field($_POST['openai_api_key'] ?? ''));
     update_option('osmose_ads_ai_provider', sanitize_text_field($_POST['ai_provider'] ?? 'openai'));
@@ -92,6 +93,14 @@ $services = get_option('osmose_ads_services', array());
                 <td>
                     <input type="email" name="company_email" value="<?php echo esc_attr($company_email); ?>" class="regular-text" placeholder="contact@example.com">
                     <p class="description"><?php _e('Adresse email affichée sur les pages d\'annonces', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            
+            <tr>
+                <th scope="row"><?php _e('Adresse Entreprise', 'osmose-ads'); ?></th>
+                <td>
+                    <input type="text" name="company_address" value="<?php echo esc_attr(get_option('osmose_ads_company_address', '')); ?>" class="regular-text" placeholder="123 Rue Example, 75000 Paris">
+                    <p class="description"><?php _e('Adresse complète de l\'entreprise (utilisée dans les contenus générés)', 'osmose-ads'); ?></p>
                 </td>
             </tr>
             
