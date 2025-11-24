@@ -19,8 +19,33 @@ class Osmose_Ads_Activator {
         // Créer les options par défaut
         self::set_default_options();
         
+        // Créer la catégorie "Annonces"
+        self::create_annonces_category();
+        
         // Marquer que c'est la première activation
         set_transient('osmose_ads_activation_redirect', true, 30);
+    }
+    
+    /**
+     * Créer la catégorie "Annonces" lors de l'activation
+     */
+    private static function create_annonces_category() {
+        // Vérifier si la catégorie existe déjà
+        $category_exists = term_exists('Annonces', 'category');
+        
+        if (!$category_exists) {
+            // Créer la catégorie "Annonces"
+            $category_id = wp_create_category('Annonces');
+            
+            if (!is_wp_error($category_id)) {
+                // Sauvegarder l'ID de la catégorie dans les options
+                update_option('osmose_ads_category_id', $category_id);
+            }
+        } else {
+            // Si elle existe déjà, sauvegarder son ID
+            $category_id = is_array($category_exists) ? $category_exists['term_id'] : $category_exists;
+            update_option('osmose_ads_category_id', $category_id);
+        }
     }
 
     private static function create_tables() {

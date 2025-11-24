@@ -20,7 +20,8 @@ class Osmose_Ads_Rewrite {
         global $post;
         
         // Si c'est un post de type 'ad', charger le template personnalisé
-        if (isset($post) && $post->post_type === 'ad') {
+        // UNIQUEMENT si on accède via l'URL directe de l'annonce (pas depuis le blog)
+        if (isset($post) && $post->post_type === 'ad' && !is_home() && !is_archive()) {
             // Vérifier si un template existe dans le thème
             $theme_template = locate_template(array('single-ad.php'));
             if ($theme_template) {
@@ -33,6 +34,9 @@ class Osmose_Ads_Rewrite {
                 return $plugin_template;
             }
         }
+        
+        // Pour les annonces affichées dans le blog, utiliser le template standard du thème
+        // Le thème utilisera single.php ou category.php selon le contexte
         
         return $template;
     }

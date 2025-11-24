@@ -567,6 +567,16 @@ function osmose_ads_handle_bulk_generate() {
         // Générer les métadonnées
         $meta = $template->get_meta_for_city($city_id);
         
+        // Récupérer l'ID de la catégorie "Annonces"
+        $category_id = get_option('osmose_ads_category_id');
+        if (!$category_id) {
+            // Créer la catégorie si elle n'existe pas
+            $category_id = wp_create_category('Annonces');
+            if (!is_wp_error($category_id)) {
+                update_option('osmose_ads_category_id', $category_id);
+            }
+        }
+        
         // Créer l'annonce
         $ad_id = wp_insert_post(array(
             'post_title' => $service_name . ' à ' . $city_name,
@@ -574,6 +584,7 @@ function osmose_ads_handle_bulk_generate() {
             'post_content' => $content,
             'post_type' => 'ad',
             'post_status' => 'publish',
+            'post_category' => $category_id ? array($category_id) : array(), // Assigner la catégorie "Annonces"
         ));
         
         if (is_wp_error($ad_id)) {

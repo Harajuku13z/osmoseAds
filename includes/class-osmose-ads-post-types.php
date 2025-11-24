@@ -73,12 +73,17 @@ class Osmose_Ads_Post_Types {
             'capability_type'     => 'post',
             'has_archive'         => true,
             'hierarchical'        => false,
-            'supports'            => array('title', 'editor', 'custom-fields'),
+            'supports'            => array('title', 'editor', 'custom-fields', 'thumbnail', 'excerpt', 'comments'),
             'rewrite'             => array('slug' => 'ads'),
             'query_var'           => true,
+            'show_in_rest'        => true, // Support Gutenberg
+            'taxonomies'          => array('category'), // Support des catégories WordPress
         );
 
         register_post_type('ad', $args);
+        
+        // Associer les catégories WordPress au CPT 'ad'
+        register_taxonomy_for_object_type('category', 'ad');
     }
 
     /**
