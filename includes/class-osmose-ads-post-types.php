@@ -63,8 +63,8 @@ class Osmose_Ads_Post_Types {
         );
 
         // Utiliser la même structure d'URL que les posts
-        // Configuration des rewrite rules pour que les annonces utilisent exactement
-        // la même structure de permalink que les posts normaux
+        // Configuration pour que les annonces utilisent exactement la même structure que les posts
+        // sans préfixe /ad/
         
         $args = array(
             'labels'              => $labels,
@@ -79,12 +79,12 @@ class Osmose_Ads_Post_Types {
             'hierarchical'        => false,
             'supports'            => array('title', 'editor', 'custom-fields', 'thumbnail', 'excerpt', 'comments', 'author', 'trackbacks', 'revisions'),
             'rewrite'             => array(
-                'slug'       => '',  // Pas de préfixe
-                'with_front' => false,  // Ne pas ajouter de préfixe
+                'slug'       => '',  // Pas de préfixe - utilise directement le slug
+                'with_front' => false,  // Ne pas ajouter le préfixe de structure
                 'feeds'      => true,
                 'pages'      => true
             ),
-            'query_var'           => 'ad',  // Query var personnalisée
+            'query_var'           => 'ad',
             'show_in_rest'        => true, // Support Gutenberg
             'taxonomies'          => array('category', 'post_tag'), // Support des catégories et tags WordPress
         );
