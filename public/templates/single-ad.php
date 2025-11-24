@@ -233,9 +233,11 @@ get_header();
                                 <div class="osmose-sidebar-card osmose-card-gradient">
                                     <h4 class="osmose-sidebar-subtitle"><?php _e('Besoin d\'un devis ?', 'osmose-ads'); ?></h4>
                                     <p class="osmose-sidebar-text"><?php _e('Contactez-nous pour un devis gratuit.', 'osmose-ads'); ?></p>
-                                    <a href="<?php echo esc_url(home_url('/devis')); ?>" class="osmose-btn-devis-inline">
-                                        <?php _e('Demande de devis', 'osmose-ads'); ?>
-                                    </a>
+                                    <?php if ($devis_url): ?>
+                                        <a href="<?php echo esc_url($devis_url); ?>" class="osmose-btn-devis-inline">
+                                            <?php _e('Demande de devis', 'osmose-ads'); ?>
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                                 
                                 <!-- Informations Pratiques -->
@@ -286,10 +288,12 @@ get_header();
                         <h3 class="osmose-cta-title"><?php _e('Prêt à Démarrer Votre Projet', 'osmose-ads'); ?> <?php if ($city_name): echo esc_html('à ' . $city_name); endif; ?> ?</h3>
                         <p class="osmose-cta-text"><?php _e('Contactez-nous dès aujourd\'hui pour un devis gratuit et personnalisé', 'osmose-ads'); ?></p>
                         <div class="osmose-cta-buttons">
-                            <a href="<?php echo esc_url(home_url('/devis')); ?>" class="osmose-btn-hero osmose-btn-accent">
-                                <i class="fas fa-calculator"></i>
-                                <?php _e('Demander un Devis Gratuit', 'osmose-ads'); ?>
-                            </a>
+                            <?php if ($devis_url): ?>
+                                <a href="<?php echo esc_url($devis_url); ?>" class="osmose-btn-hero osmose-btn-accent">
+                                    <i class="fas fa-calculator"></i>
+                                    <?php _e('Demander un Devis Gratuit', 'osmose-ads'); ?>
+                                </a>
+                            <?php endif; ?>
                             <?php if ($phone_raw): ?>
                                 <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="osmose-btn-hero osmose-btn-primary osmose-track-call"
                                    data-ad-id="<?php echo esc_attr($ad_id); ?>"
