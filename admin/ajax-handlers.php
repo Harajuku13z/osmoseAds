@@ -484,7 +484,7 @@ function osmose_ads_track_call() {
     // Récupérer les données
     $ad_id = intval($_POST['ad_id'] ?? 0);
     $ad_slug = sanitize_text_field($_POST['ad_slug'] ?? '');
-    $page_url = esc_url_raw($_POST['page_url'] ?? window.location.href);
+    $page_url = esc_url_raw($_POST['page_url'] ?? '');
     $phone = sanitize_text_field($_POST['phone'] ?? '');
     
     // Si page_url n'est pas défini, utiliser l'URL actuelle
