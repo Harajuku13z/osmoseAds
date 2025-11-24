@@ -43,23 +43,31 @@ class Ad_Template {
         $final_content = '';
         
         if ($use_ai) {
-            // Personnalisation IA avancée
-            if (!class_exists('City_Content_Personalizer')) {
-                require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-city-content-personalizer.php';
-            }
-            $personalizer = new City_Content_Personalizer();
-            $city = get_post($city_id);
+            // Personnalisation IA avancée (fonctionnalité future)
+            // Vérifier que le fichier existe avant de l'inclure
+            $personalizer_file = OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-city-content-personalizer.php';
             
-            if ($city) {
-                $service_name = get_post_meta($this->post_id, 'service_name', true);
-                $personalized_content = $personalizer->generate_personalized_content(
-                    $template_content,
-                    $service_name,
-                    $city
-                );
+            if (file_exists($personalizer_file)) {
+                if (!class_exists('City_Content_Personalizer')) {
+                    require_once $personalizer_file;
+                }
                 
-                if ($personalized_content) {
-                    $final_content = $personalized_content;
+                if (class_exists('City_Content_Personalizer')) {
+                    $personalizer = new City_Content_Personalizer();
+                    $city = get_post($city_id);
+                    
+                    if ($city) {
+                        $service_name = get_post_meta($this->post_id, 'service_name', true);
+                        $personalized_content = $personalizer->generate_personalized_content(
+                            $template_content,
+                            $service_name,
+                            $city
+                        );
+                        
+                        if ($personalized_content) {
+                            $final_content = $personalized_content;
+                        }
+                    }
                 }
             }
         }
@@ -70,7 +78,7 @@ class Ad_Template {
         }
         
         // Mettre en cache pour 30 jours (2592000 secondes)
-        set_transient($cache_key, $final_content, 30 * DAY_IN_SECONDS);
+        set_transient($cache_key, $final_content, 2592000);
         
         return $final_content;
     }
@@ -95,22 +103,30 @@ class Ad_Template {
         }
         
         if ($use_ai) {
-            if (!class_exists('City_Content_Personalizer')) {
-                require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-city-content-personalizer.php';
-            }
-            $personalizer = new City_Content_Personalizer();
-            $city = get_post($city_id);
+            // Personnalisation IA avancée (fonctionnalité future)
+            $personalizer_file = OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-city-content-personalizer.php';
             
-            if ($city) {
-                $service_name = get_post_meta($this->post_id, 'service_name', true);
-                $personalized_meta = $personalizer->generate_personalized_meta(
-                    $service_name,
-                    $city,
-                    $meta
-                );
+            if (file_exists($personalizer_file)) {
+                if (!class_exists('City_Content_Personalizer')) {
+                    require_once $personalizer_file;
+                }
                 
-                if ($personalized_meta) {
-                    return $personalized_meta;
+                if (class_exists('City_Content_Personalizer')) {
+                    $personalizer = new City_Content_Personalizer();
+                    $city = get_post($city_id);
+                    
+                    if ($city) {
+                        $service_name = get_post_meta($this->post_id, 'service_name', true);
+                        $personalized_meta = $personalizer->generate_personalized_meta(
+                            $service_name,
+                            $city,
+                            $meta
+                        );
+                        
+                        if ($personalized_meta) {
+                            return $personalized_meta;
+                        }
+                    }
                 }
             }
         }
