@@ -251,7 +251,7 @@ get_header();
                                             <li><i class="fas fa-check"></i> <?php _e('Téléphone :', 'osmose-ads'); ?> <?php echo esc_html($phone ?: $phone_raw); ?></li>
                                         <?php endif; ?>
                                         <?php if ($company_email): ?>
-                                            <li><i class="fas fa-check"></i> <?php _e('Email :', 'osmose-ads'); ?> <?php echo esc_html($company_email); ?></li>
+                                            <li><i class="fas fa-envelope"></i> <?php _e('Email :', 'osmose-ads'); ?> <a href="mailto:<?php echo esc_attr($company_email); ?>"><?php echo esc_html($company_email); ?></a></li>
                                         <?php endif; ?>
                                         <?php if ($company_name): ?>
                                             <li><i class="fas fa-check"></i> <?php _e('Société :', 'osmose-ads'); ?> <?php echo esc_html($company_name); ?></li>

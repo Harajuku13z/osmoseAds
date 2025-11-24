@@ -118,6 +118,15 @@ class Osmose_Ads_Activator {
         if (!get_option('osmose_ads_company_phone')) {
             update_option('osmose_ads_company_phone', '');
         }
+        if (!get_option('osmose_ads_company_phone_raw')) {
+            update_option('osmose_ads_company_phone_raw', '');
+        }
+        if (!get_option('osmose_ads_company_email')) {
+            update_option('osmose_ads_company_email', '');
+        }
+        if (!get_option('osmose_ads_devis_url')) {
+            update_option('osmose_ads_devis_url', '');
+        }
         if (!get_option('osmose_ads_openai_api_key')) {
             update_option('osmose_ads_openai_api_key', '');
         }
