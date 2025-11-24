@@ -455,9 +455,11 @@ function osmose_ads_track_call() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'osmose_ads_call_tracking';
     
-    // Vérifier que la table existe
+    // Vérifier que la table existe (elle devrait avoir été créée à l'activation)
     if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
-        // Créer la table si elle n'existe pas
+        error_log('Osmose ADS: Call tracking table does not exist! Creating it now...');
+        
+        // Créer la table si elle n'existe pas (fallback)
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         $charset_collate = $wpdb->get_charset_collate();
         $sql = "CREATE TABLE IF NOT EXISTS $table_name (
@@ -478,7 +480,17 @@ function osmose_ads_track_call() {
             KEY idx_page_url (page_url(255))
         ) $charset_collate;";
         dbDelta($sql);
-        error_log('Osmose ADS: Created call tracking table');
+        
+        // Vérifier à nouveau
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+            error_log('Osmose ADS: Call tracking table created successfully');
+        } else {
+            error_log('Osmose ADS: ERROR - Failed to create call tracking table!');
+            wp_send_json_error(array('message' => __('Impossible de créer la table de tracking', 'osmose-ads')));
+            return;
+        }
+    } else {
+        error_log('Osmose ADS: Call tracking table exists');
     }
     
     // Récupérer les données
