@@ -144,6 +144,7 @@ class Osmose_Ads {
         
         // Intercepter les requêtes 404 pour vérifier si c'est une annonce
         $this->loader->add_action('parse_request', $this, 'intercept_ad_requests', 5);
+        $this->loader->add_action('template_redirect', $this, 'redirect_old_ad_urls', 1);
         
         // Intégration avec AIOSEO - S'assurer que les annonces sont reconnues comme des posts
         // AIOSEO utilise différents hooks selon la version
@@ -368,12 +369,45 @@ class Osmose_Ads {
     }
     
     /**
+     * Rediriger les anciennes URLs /ad/slug vers /slug
+     */
+    public function redirect_old_ad_urls() {
+        if (is_admin() || is_feed() || is_robots() || is_trackback()) {
+            return;
+        }
+        
+        if (isset($_SERVER['REQUEST_URI'])) {
+            $request_uri = $_SERVER['REQUEST_URI'];
+            
+            // Si l'URL contient /ad/ au début, rediriger vers la version sans /ad/
+            if (preg_match('#^/ad/([^/]+)/?$#', $request_uri, $matches)) {
+                $slug = $matches[1];
+                
+                // Vérifier si c'est bien une annonce
+                $ad_posts = get_posts(array(
+                    'post_type' => 'ad',
+                    'name' => $slug,
+                    'posts_per_page' => 1,
+                    'post_status' => 'publish',
+                ));
+                
+                if (!empty($ad_posts)) {
+                    // Rediriger vers la nouvelle URL sans /ad/
+                    $new_url = home_url('/' . $slug . '/');
+                    wp_redirect($new_url, 301);
+                    exit;
+                }
+            }
+        }
+    }
+    
+    /**
      * Intercepter les requêtes pour vérifier si un slug correspond à une annonce
      */
     public function intercept_ad_requests($wp) {
         // Ne rien faire dans l'admin
         if (is_admin()) {
-            return;
+            return $wp;
         }
         
         // Vérifier si on a un name dans la requête (slug)
@@ -384,6 +418,8 @@ class Osmose_Ads {
         } elseif (isset($_SERVER['REQUEST_URI'])) {
             // Extraire le slug depuis l'URL
             $request_uri = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+            // Supprimer les préfixes comme /ad/ si présents
+            $request_uri = preg_replace('#^ad/#', '', $request_uri);
             $path_parts = explode('/', $request_uri);
             $slug = end($path_parts);
         }
