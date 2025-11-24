@@ -9,10 +9,25 @@ if (!defined('ABSPATH')) {
 
 class Ad {
     
-    private $post_id;
+    public $post_id;
     
     public function __construct($post_id) {
-        $this->post_id = $post_id;
+        $this->post_id = intval($post_id);
+    }
+    
+    /**
+     * Récupérer le post WordPress
+     */
+    public function get_post() {
+        return get_post($this->post_id);
+    }
+    
+    /**
+     * Récupérer le slug de l'annonce
+     */
+    public function get_slug() {
+        $post = $this->get_post();
+        return $post ? $post->post_name : '';
     }
     
     /**
@@ -30,9 +45,18 @@ class Ad {
      * Récupérer le template associé
      */
     public function get_template() {
+        if (!class_exists('Ad_Template')) {
+            require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-ad-template.php';
+        }
+        
         $template_id = get_post_meta($this->post_id, 'template_id', true);
         if ($template_id) {
-            return new Ad_Template($template_id);
+            try {
+                return new Ad_Template($template_id);
+            } catch (Exception $e) {
+                error_log('Osmose ADS: Error loading template: ' . $e->getMessage());
+                return null;
+            }
         }
         return null;
     }

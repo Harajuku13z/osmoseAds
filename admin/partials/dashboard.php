@@ -13,6 +13,46 @@ $setup_completed = get_option('osmose_ads_setup_completed', false);
 $templates_count = wp_count_posts('ad_template');
 $ads_count = wp_count_posts('ad');
 $cities_count = wp_count_posts('city');
+
+// Statistiques d'appels
+global $wpdb;
+$table_name = $wpdb->prefix . 'osmose_ads_call_tracking';
+$total_calls = 0;
+$calls_today = 0;
+$calls_this_week = 0;
+$calls_this_month = 0;
+
+if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+    $total_calls = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+    $calls_today = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $table_name WHERE DATE(created_at) = %s",
+        current_time('Y-m-d')
+    ));
+    $calls_this_week = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(created_at, 1) = YEARWEEK(%s, 1)",
+        current_time('mysql')
+    ));
+    $calls_this_month = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $table_name WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d",
+        current_time('Y'),
+        current_time('m')
+    ));
+}
+
+// Récupérer les annonces avec numéros de suivi
+$ads_with_tracking = get_posts(array(
+    'post_type' => 'ad',
+    'posts_per_page' => 10,
+    'post_status' => 'publish',
+    'meta_query' => array(
+        array(
+            'key' => 'tracking_number',
+            'compare' => 'EXISTS'
+        )
+    ),
+    'orderby' => 'date',
+    'order' => 'DESC'
+));
 ?>
 
 <!-- Page Header -->
@@ -77,7 +117,90 @@ $cities_count = wp_count_posts('city');
                         </a>
                     </div>
                 </div>
+                
+                <div class="osmose-ads-card stat-box">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+                        <span class="dashicons dashicons-phone"></span>
+                    </div>
+                    <div class="stat-content">
+                        <h3><?php echo number_format_i18n($total_calls); ?></h3>
+                        <p><?php _e('Appels Trackés', 'osmose-ads'); ?></p>
+                        <small style="display: block; margin-top: 5px; color: #6b7280;">
+                            <?php echo number_format_i18n($calls_today); ?> <?php _e('aujourd\'hui', 'osmose-ads'); ?>
+                        </small>
+                        <a href="<?php echo admin_url('admin.php?page=osmose-ads-calls'); ?>" class="osmose-btn osmose-btn-outline">
+                            <?php _e('Voir les Stats', 'osmose-ads'); ?>
+                        </a>
+                    </div>
+                </div>
             </div>
+            
+            <!-- Annonces avec numéros de suivi -->
+            <?php if (!empty($ads_with_tracking)): ?>
+                <div class="osmose-ads-card mt-4">
+                    <h2>
+                        <span class="dashicons dashicons-list-view"></span>
+                        <?php _e('Annonces Récentes avec Numéros de Suivi', 'osmose-ads'); ?>
+                    </h2>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Titre', 'osmose-ads'); ?></th>
+                                    <th><?php _e('N° de Suivi', 'osmose-ads'); ?></th>
+                                    <th><?php _e('Vues', 'osmose-ads'); ?></th>
+                                    <th><?php _e('Appels', 'osmose-ads'); ?></th>
+                                    <th><?php _e('Date', 'osmose-ads'); ?></th>
+                                    <th><?php _e('Actions', 'osmose-ads'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($ads_with_tracking as $ad): 
+                                    $tracking_number = get_post_meta($ad->ID, 'tracking_number', true);
+                                    $view_count = intval(get_post_meta($ad->ID, 'view_count', true)) ?: 0;
+                                    
+                                    // Compter les appels pour cette annonce
+                                    $ad_call_count = 0;
+                                    if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+                                        $ad_call_count = (int) $wpdb->get_var($wpdb->prepare(
+                                            "SELECT COUNT(*) FROM $table_name WHERE ad_id = %d",
+                                            $ad->ID
+                                        ));
+                                    }
+                                ?>
+                                    <tr>
+                                        <td>
+                                            <strong><?php echo esc_html($ad->post_title); ?></strong>
+                                        </td>
+                                        <td>
+                                            <code style="background: #f0f7ff; padding: 4px 8px; border-radius: 4px; color: #3b82f6; font-weight: 600;">
+                                                <?php echo esc_html($tracking_number); ?>
+                                            </code>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info"><?php echo number_format_i18n($view_count); ?></span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success"><?php echo number_format_i18n($ad_call_count); ?></span>
+                                        </td>
+                                        <td>
+                                            <small><?php echo date_i18n('d/m/Y', strtotime($ad->post_date)); ?></small>
+                                        </td>
+                                        <td>
+                                            <a href="<?php echo get_permalink($ad->ID); ?>" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i> <?php _e('Voir', 'osmose-ads'); ?>
+                                            </a>
+                                            <a href="<?php echo get_edit_post_link($ad->ID); ?>" class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-pencil"></i> <?php _e('Modifier', 'osmose-ads'); ?>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endif; ?>
             
             <!-- Actions Rapides -->
             <div class="osmose-ads-card">
