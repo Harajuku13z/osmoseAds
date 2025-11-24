@@ -51,20 +51,36 @@ class Osmose_Ads_Rewrite {
     public function handle_call_tracking() {
         global $wp_query;
         
+        // Log pour debug
+        error_log('Osmose ADS: handle_call_tracking called');
+        error_log('Osmose ADS: Query vars: ' . print_r($wp_query->query_vars, true));
+        error_log('Osmose ADS: GET params: ' . print_r($_GET, true));
+        error_log('Osmose ADS: REQUEST_URI: ' . ($_SERVER['REQUEST_URI'] ?? 'N/A'));
+        
         if (!isset($wp_query->query_vars['osmose_call_track'])) {
+            error_log('Osmose ADS: osmose_call_track not set in query_vars');
             return;
         }
+        
+        error_log('Osmose ADS: Call tracking triggered!');
         
         // Récupérer les paramètres
         $ad_id = isset($_GET['ad_id']) ? intval($_GET['ad_id']) : 0;
         $ad_slug = isset($_GET['ad_slug']) ? sanitize_text_field($_GET['ad_slug']) : '';
         $source = isset($_GET['source']) ? sanitize_text_field($_GET['source']) : 'unknown';
         $phone = isset($_GET['phone']) ? sanitize_text_field($_GET['phone']) : '';
-        $page_url = isset($_GET['page_url']) ? esc_url_raw($_GET['page_url']) : '';
+        $page_url = isset($_GET['page_url']) ? urldecode($_GET['page_url']) : '';
+        
+        error_log('Osmose ADS: Tracking params - ad_id: ' . $ad_id . ', source: ' . $source . ', phone: ' . $phone);
         
         // Enregistrer l'appel dans la base de données
         global $wpdb;
         $table_name = $wpdb->prefix . 'osmose_ads_call_tracking';
+        
+        // Vérifier que la table existe
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+            error_log('Osmose ADS: ERROR - Table does not exist!');
+        }
         
         // Récupérer les informations de l'utilisateur
         $user_ip = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
@@ -72,7 +88,7 @@ class Osmose_Ads_Rewrite {
         $referrer = esc_url_raw($_SERVER['HTTP_REFERER'] ?? $page_url);
         
         // Enregistrer l'appel
-        $wpdb->insert(
+        $result = $wpdb->insert(
             $table_name,
             array(
                 'ad_id' => $ad_id ?: null,
@@ -82,17 +98,24 @@ class Osmose_Ads_Rewrite {
                 'user_ip' => $user_ip ?: '',
                 'user_agent' => $user_agent ?: '',
                 'referrer' => $referrer ?: '',
+                'source' => $source,
                 'call_time' => current_time('mysql'),
-                'created_at' => current_time('mysql'),
-                'source' => $source
+                'created_at' => current_time('mysql')
             ),
             array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
         );
+        
+        if ($result === false) {
+            error_log('Osmose ADS: ERROR inserting call - ' . $wpdb->last_error);
+        } else {
+            error_log('Osmose ADS: Call tracked successfully! ID: ' . $wpdb->insert_id);
+        }
         
         // Rediriger vers le numéro de téléphone
         if (!empty($phone)) {
             // Nettoyer le numéro pour le format tel:
             $phone_clean = preg_replace('/[^0-9+]/', '', $phone);
+            error_log('Osmose ADS: Redirecting to tel:' . $phone_clean);
             wp_redirect('tel:' . $phone_clean);
             exit;
         }
