@@ -11,16 +11,29 @@
         
         // Tracking des appels téléphoniques
         function trackPhoneCall(event) {
+            event.preventDefault(); // Empêcher l'action par défaut temporairement
+            
             var $link = $(event.currentTarget);
-            var adId = $link.data('ad-id') || '';
-            var adSlug = $link.data('ad-slug') || '';
-            var pageUrl = $link.data('page-url') || window.location.href;
-            var phone = $link.data('phone') || '';
+            var adId = $link.data('ad-id') || $link.attr('data-ad-id') || '';
+            var adSlug = $link.data('ad-slug') || $link.attr('data-ad-slug') || '';
+            var pageUrl = $link.data('page-url') || $link.attr('data-page-url') || window.location.href;
+            var phone = $link.data('phone') || $link.attr('data-phone') || '';
+            
+            // Si les données ne sont pas dans les attributs data, essayer de les récupérer depuis le href
+            if (!phone && $link.attr('href')) {
+                var href = $link.attr('href');
+                var match = href.match(/tel:([^"]+)/);
+                if (match) {
+                    phone = match[1];
+                }
+            }
             
             // Vérifier que les variables de tracking sont disponibles
             if (typeof window.osmoseAdsTracking === 'undefined') {
-                console.warn('Osmose ADS: Tracking variables not available');
-                return; // Laisser l'appel se faire normalement
+                console.warn('Osmose ADS: Tracking variables not available, redirecting anyway');
+                // Rediriger quand même vers le lien tel:
+                window.location.href = $link.attr('href');
+                return;
             }
             
             // Envoyer le tracking via AJAX (non-bloquant)
@@ -36,10 +49,14 @@
                     phone: phone
                 },
                 success: function(response) {
-                    console.log('Osmose ADS: Call tracked', response);
+                    console.log('Osmose ADS: Call tracked successfully', response);
                 },
                 error: function(xhr, status, error) {
-                    console.warn('Osmose ADS: Failed to track call', error);
+                    console.warn('Osmose ADS: Failed to track call', error, xhr.responseText);
+                },
+                complete: function() {
+                    // Après le tracking (succès ou échec), rediriger vers le lien tel:
+                    window.location.href = $link.attr('href');
                 }
             });
         }

@@ -77,6 +77,51 @@ class Osmose_Ads {
         
         $this->loader->add_action('wp_enqueue_scripts', $plugin_public, 'enqueue_styles');
         $this->loader->add_action('wp_enqueue_scripts', $plugin_public, 'enqueue_scripts');
+        
+        // Ajouter les variables de tracking dans le footer
+        $this->loader->add_action('wp_footer', $plugin_public, 'add_tracking_variables');
+        
+        // S'assurer que le contenu des annonces s'affiche dans single.php
+        $this->loader->add_filter('the_content', $this, 'display_ad_content_in_single', 10, 1);
+    }
+    
+    /**
+     * Afficher le contenu des annonces dans single.php du thème
+     */
+    public function display_ad_content_in_single($content) {
+        global $post;
+        
+        // Uniquement pour les annonces affichées dans single.php (pas dans le template personnalisé)
+        if (!isset($post) || $post->post_type !== 'ad') {
+            return $content;
+        }
+        
+        // Si on utilise déjà le template personnalisé, ne pas modifier
+        if (is_singular('ad') && !is_home() && !is_archive() && !is_category() && !is_search()) {
+            return $content;
+        }
+        
+        // Si le contenu est vide ou si c'est une annonce affichée dans le blog
+        if (empty($content) || (is_single() && $post->post_type === 'ad')) {
+            // Charger le modèle Ad
+            if (!class_exists('Ad')) {
+                require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-ad.php';
+            }
+            
+            try {
+                $ad = new Ad($post->ID);
+                $ad_content = $ad->get_content();
+                
+                if (!empty($ad_content)) {
+                    // Retourner le contenu de l'annonce
+                    return $ad_content;
+                }
+            } catch (Exception $e) {
+                error_log('Osmose ADS: Error loading ad content: ' . $e->getMessage());
+            }
+        }
+        
+        return $content;
     }
 
     /**
