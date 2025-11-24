@@ -7,9 +7,28 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Fonction helper pour générer les URLs de tracking
+if (!function_exists('osmose_get_call_tracking_url')) {
+    function osmose_get_call_tracking_url($ad_id, $ad_slug, $phone, $source, $page_url) {
+        return add_query_arg(array(
+            'ad_id' => $ad_id,
+            'ad_slug' => $ad_slug,
+            'phone' => $phone,
+            'source' => $source,
+            'page_url' => urlencode($page_url)
+        ), home_url('/osmose-call-track/'));
+    }
+}
+
 // Charger les modèles si nécessaire
 if (!class_exists('Ad')) {
     require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-ad.php';
+}
+if (!class_exists('City')) {
+    require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-city.php';
+}
+if (!class_exists('Ad_Template')) {
+    require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-ad-template.php';
 }
 
 // Récupérer l'annonce
@@ -236,12 +255,12 @@ get_header();
                                     <?php endif; ?>
                                 </div>
                                 
-                                <!-- Bouton Appel avec Tracking -->
+                                <!-- Carte Appel Direct -->
                                 <?php if ($phone_raw): ?>
-                                <div class="osmose-sidebar-card osmose-card-call">
-                                    <h4 class="osmose-sidebar-subtitle"><i class="fas fa-phone"></i> <?php _e('Appelez-nous', 'osmose-ads'); ?></h4>
-                                    <p class="osmose-sidebar-text"><?php _e('Intervention rapide et devis immédiat', 'osmose-ads'); ?></p>
-                                    <a href="<?php echo esc_url(get_call_tracking_url($ad_id, $ad_slug_for_tracking, $phone_raw, 'sidebar', $current_url)); ?>" 
+                                <div class="osmose-sidebar-card osmose-card-gradient-call" style="background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);">
+                                    <h4 class="osmose-sidebar-subtitle" style="color: white;"><i class="fas fa-phone me-2"></i><?php _e('Appelez-nous', 'osmose-ads'); ?></h4>
+                                    <p class="osmose-sidebar-text" style="color: rgba(255,255,255,0.9);"><?php _e('Intervention rapide et devis immédiat', 'osmose-ads'); ?></p>
+                                    <a href="<?php echo esc_url(osmose_get_call_tracking_url($ad_id, $ad_slug_for_tracking, $phone_raw, 'sidebar', $current_url)); ?>" 
                                        class="osmose-btn-call-sidebar">
                                         <i class="fas fa-phone-alt"></i>
                                         <?php echo esc_html($phone ?: $phone_raw); ?>
@@ -304,11 +323,7 @@ get_header();
                                 </a>
                             <?php endif; ?>
                             <?php if ($phone_raw): ?>
-                                <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="osmose-btn-hero osmose-btn-primary osmose-track-call"
-                                   data-ad-id="<?php echo esc_attr($ad_id); ?>"
-                                   data-ad-slug="<?php echo esc_attr($ad_slug_for_tracking); ?>"
-                                   data-page-url="<?php echo esc_attr($current_url); ?>"
-                                   data-phone="<?php echo esc_attr($phone_raw); ?>">
+                                <a href="<?php echo esc_url(osmose_get_call_tracking_url($ad_id, $ad_slug_for_tracking, $phone_raw, 'footer-cta', $current_url)); ?>" class="osmose-btn-hero osmose-btn-primary">
                                     <i class="fas fa-phone"></i>
                                     <?php _e('Appeler Maintenant', 'osmose-ads'); ?>
                                 </a>
@@ -357,26 +372,14 @@ get_header();
     
 </div>
 
-<!-- Bouton Flottant d'Appel -->
+<!-- Bouton d'appel flottant -->
 <?php if ($phone_raw): ?>
-    <a href="tel:<?php echo esc_attr($phone_raw); ?>" id="floatingCallBtn" class="osmose-floating-btn osmose-track-call"
-       data-ad-id="<?php echo esc_attr($ad_id); ?>"
-       data-ad-slug="<?php echo esc_attr($ad_slug_for_tracking); ?>"
-       data-page-url="<?php echo esc_attr($current_url); ?>"
-       data-phone="<?php echo esc_attr($phone_raw); ?>"
+    <a href="<?php echo esc_url(osmose_get_call_tracking_url($ad_id, $ad_slug_for_tracking, $phone_raw, 'floating', $current_url)); ?>" id="floatingCallBtn" class="osmose-floating-btn"
        aria-label="<?php printf(__('Appeler %s', 'osmose-ads'), esc_attr($phone ?: $phone_raw)); ?>"
        title="<?php printf(__('Appeler %s', 'osmose-ads'), esc_attr($phone ?: $phone_raw)); ?>">
         <i class="fas fa-phone"></i>
     </a>
 <?php endif; ?>
-
-<script>
-// Variables pour le tracking
-window.osmoseAdsTracking = {
-    ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
-    nonce: '<?php echo wp_create_nonce('osmose_ads_track_call'); ?>'
-};
-</script>
 
 <?php
 get_footer();
