@@ -106,7 +106,12 @@ require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
                     <!-- Photos des réalisations -->
                     <div class="mb-3">
                         <label class="form-label"><?php _e('Photos des réalisations', 'osmose-ads'); ?></label>
-                        <small class="form-text text-muted d-block mb-2"><?php _e('Ces photos seront automatiquement intégrées dans le contenu généré par l\'IA', 'osmose-ads'); ?></small>
+                        <div class="alert alert-info py-2 mb-2">
+                            <small>
+                                <i class="bi bi-info-circle me-1"></i>
+                                <?php _e('Les mots-clés que vous saisissez seront utilisés comme attribut ALT des images pour améliorer le référencement (SEO).', 'osmose-ads'); ?>
+                            </small>
+                        </div>
                         <div id="realization-images-container" class="mb-2 d-flex flex-wrap gap-2" style="min-height: 80px; padding: 10px; border: 2px dashed #ddd; border-radius: 8px; background: #f8f9fa;">
                             <p class="text-muted mb-0 w-100 text-center"><?php _e('Aucune photo ajoutée', 'osmose-ads'); ?></p>
                         </div>
@@ -201,12 +206,16 @@ jQuery(document).ready(function($) {
             attachments.forEach(function(attachment) {
                 // Vérifier si l'image n'est pas déjà ajoutée
                 if (!selectedRealizationImages.find(img => img.id === attachment.id)) {
-                    const keywords = prompt(<?php echo wp_json_encode(__('Mots-clés pour cette image (optionnel) :', 'osmose-ads')); ?>, '');
+                    const keywords = prompt(
+                        <?php echo wp_json_encode(__('Mots-clés pour l\'attribut ALT de cette image :', 'osmose-ads')); ?> + '\n' +
+                        <?php echo wp_json_encode(__('(Ces mots-clés seront utilisés comme texte alternatif pour le SEO)', 'osmose-ads')); ?>,
+                        ''
+                    );
                     
                     selectedRealizationImages.push({
                         id: attachment.id,
                         url: attachment.url,
-                        keywords: keywords || ''
+                        keywords: keywords || 'Réalisation professionnelle'
                     });
                 }
             });
@@ -225,12 +234,15 @@ jQuery(document).ready(function($) {
         } else {
             let html = '';
             selectedRealizationImages.forEach(function(image, index) {
-                html += '<div class="position-relative" style="width: 120px;">' +
-                    '<img src="' + image.url + '" class="img-thumbnail" style="width: 120px; height: 120px; object-fit: cover;">' +
+                html += '<div class="position-relative" style="width: 140px;">' +
+                    '<img src="' + image.url + '" class="img-thumbnail" style="width: 140px; height: 140px; object-fit: cover;" alt="' + (image.keywords || 'Photo') + '" title="ALT: ' + (image.keywords || 'Photo') + '">' +
                     '<button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-realization-image" data-index="' + index + '" style="padding: 2px 6px; line-height: 1;">' +
                     '<i class="bi bi-x"></i>' +
                     '</button>' +
-                    (image.keywords ? '<small class="d-block text-center mt-1" style="font-size: 0.7rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + image.keywords + '">' + image.keywords + '</small>' : '') +
+                    '<div class="text-center mt-1 px-1" style="background: #f8f9fa; border-radius: 4px; padding: 4px;">' +
+                    '<small class="d-block" style="font-size: 0.65rem; font-weight: 600; color: #0d6efd;">ALT:</small>' +
+                    '<small class="d-block" style="font-size: 0.7rem; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + (image.keywords || 'Non défini') + '">' + (image.keywords || 'Non défini') + '</small>' +
+                    '</div>' +
                     '</div>';
             });
             container.html(html);
