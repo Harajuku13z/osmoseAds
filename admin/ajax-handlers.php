@@ -125,11 +125,12 @@ function osmose_ads_handle_create_template() {
         $prompt .= "```\n\n\n";
         $prompt .= "---\n\n\n";
         $prompt .= "## ✍️ RÈGLES D'ÉCRITURE ABSOLUES\n\n\n";
-        $prompt .= "### 1. LONGUEUR ET DENSITÉ\n\n";
-        $prompt .= "- **Minimum 2500 mots**, idéal 3000-3500 mots\n\n";
-        $prompt .= "- Chaque section = **200-400 mots** minimum\n\n";
-        $prompt .= "- Chaque paragraphe = **80-150 mots** (dense en info)\n\n";
-        $prompt .= "- FAQ : **6-8 questions** avec réponses de 120-180 mots\n\n\n";
+        $prompt .= "### 1. LONGUEUR ET STRUCTURE\n\n";
+        $prompt .= "- **Contenu concis et professionnel** : 1500-2000 mots\n\n";
+        $prompt .= "- **Introduction courte** : 2-3 paragraphes présentant l'entreprise et ses valeurs\n\n";
+        $prompt .= "- **Sections thématiques** avec titres H2 clairs\n\n";
+        $prompt .= "- **Liste de prestations** : 8-12 services avec descriptions courtes (30-50 mots)\n\n";
+        $prompt .= "- **FAQ** : 5-8 questions pertinentes avec réponses concises (50-80 mots)\n\n\n";
         $prompt .= "### 2. TON ET STYLE\n\n";
         $prompt .= "- **Professionnel mais accessible** : vocabulaire technique expliqué\n\n";
         $prompt .= "- **Local et personnalisé** : références constantes à [VILLE], [DÉPARTEMENT], climat\n";
