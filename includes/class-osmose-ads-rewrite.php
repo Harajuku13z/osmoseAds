@@ -21,34 +21,6 @@ class Osmose_Ads_Rewrite {
     public function template_loader($template) {
         global $wp_query, $post;
         
-        // Intercepter les requêtes pour vérifier si un slug correspond à une annonce
-        // avant que WordPress ne retourne 404
-        if (is_404() && isset($wp_query->query['name'])) {
-            $slug = $wp_query->query['name'];
-            
-            // Vérifier si ce slug correspond à une annonce
-            $ad_posts = get_posts(array(
-                'post_type' => 'ad',
-                'name' => $slug,
-                'posts_per_page' => 1,
-                'post_status' => 'publish',
-            ));
-            
-            if (!empty($ad_posts)) {
-                // C'est une annonce ! Rediriger la requête vers le bon post
-                $wp_query->is_404 = false;
-                $wp_query->is_single = true;
-                $wp_query->is_singular = true;
-                $wp_query->queried_object = $ad_posts[0];
-                $wp_query->queried_object_id = $ad_posts[0]->ID;
-                $wp_query->posts = array($ad_posts[0]);
-                $wp_query->post_count = 1;
-                $wp_query->found_posts = 1;
-                $post = $ad_posts[0];
-                setup_postdata($post);
-            }
-        }
-        
         // Si c'est un post de type 'ad'
         if (isset($post) && $post->post_type === 'ad') {
             // Si on est dans le blog (home, archive, category, search, tag, author), utiliser le template standard
@@ -74,6 +46,59 @@ class Osmose_Ads_Rewrite {
                 $plugin_template = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/single-ad.php';
                 if (file_exists($plugin_template)) {
                     return $plugin_template;
+                }
+            }
+        }
+        
+        // Intercepter les erreurs 404 pour vérifier si c'est une annonce
+        if (is_404() && !is_admin()) {
+            $slug = '';
+            
+            // Récupérer le slug depuis différentes sources
+            if (isset($wp_query->query['name']) && !empty($wp_query->query['name'])) {
+                $slug = $wp_query->query['name'];
+            } elseif (isset($_SERVER['REQUEST_URI'])) {
+                // Extraire le slug depuis l'URL
+                $request_uri = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+                // Supprimer les préfixes comme /ad/ si présents
+                $request_uri = preg_replace('#^ad/#', '', $request_uri);
+                $path_parts = explode('/', $request_uri);
+                $slug = end($path_parts);
+            }
+            
+            if (!empty($slug)) {
+                // Vérifier si ce slug correspond à une annonce
+                $ad_posts = get_posts(array(
+                    'post_type' => 'ad',
+                    'name' => $slug,
+                    'posts_per_page' => 1,
+                    'post_status' => 'publish',
+                ));
+                
+                if (!empty($ad_posts)) {
+                    // C'est une annonce ! Corriger la requête
+                    $wp_query->is_404 = false;
+                    $wp_query->is_single = true;
+                    $wp_query->is_singular = true;
+                    $wp_query->queried_object = $ad_posts[0];
+                    $wp_query->queried_object_id = $ad_posts[0]->ID;
+                    $wp_query->posts = array($ad_posts[0]);
+                    $wp_query->post_count = 1;
+                    $wp_query->found_posts = 1;
+                    $wp_query->post = $ad_posts[0];
+                    $post = $ad_posts[0];
+                    setup_postdata($post);
+                    
+                    // Utiliser le template approprié
+                    $single_template = locate_template(array('single.php'));
+                    if ($single_template) {
+                        return $single_template;
+                    }
+                    
+                    $plugin_template = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/single-ad.php';
+                    if (file_exists($plugin_template)) {
+                        return $plugin_template;
+                    }
                 }
             }
         }
