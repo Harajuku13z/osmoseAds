@@ -64,32 +64,34 @@ class Osmose_Ads_Public {
             $ad_id = $post->ID;
             $ad_slug = $post->post_name;
             $page_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
-            $phone = get_option('osmose_ads_company_phone', '');
+            $phone_raw = get_option('osmose_ads_company_phone_raw', '');
             
             ?>
-            <script>
-            // Variables pour le tracking des appels
-            if (typeof window.osmoseAdsTracking === 'undefined') {
-                window.osmoseAdsTracking = {
-                    ajax_url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
-                    nonce: '<?php echo wp_create_nonce('osmose_ads_track_call'); ?>'
-                };
-            }
-            
-            // Ajouter les attributs data aux liens tel: existants si nécessaire
+            <script type="text/javascript">
             jQuery(document).ready(function($) {
+                console.log('Osmose ADS: Adding tracking attributes to tel: links');
+                console.log('Osmose ADS: Ad ID:', <?php echo intval($ad_id); ?>, 'Slug:', '<?php echo esc_js($ad_slug); ?>');
+                
+                // Ajouter les attributs data aux liens tel: existants si nécessaire
                 $('a[href^="tel:"]').each(function() {
                     var $link = $(this);
+                    console.log('Osmose ADS: Processing tel link:', $link.attr('href'));
+                    
                     if (!$link.hasClass('osmose-track-call')) {
                         $link.addClass('osmose-track-call');
-                        if (!$link.data('ad-id')) {
-                            $link.attr('data-ad-id', '<?php echo esc_js($ad_id); ?>');
-                            $link.attr('data-ad-slug', '<?php echo esc_js($ad_slug); ?>');
-                            $link.attr('data-page-url', '<?php echo esc_js($page_url); ?>');
-                            $link.attr('data-phone', '<?php echo esc_js($phone); ?>');
-                        }
                     }
+                    
+                    // Toujours mettre à jour les data attributes
+                    $link.attr('data-ad-id', '<?php echo esc_js($ad_id); ?>');
+                    $link.attr('data-ad-slug', '<?php echo esc_js($ad_slug); ?>');
+                    $link.attr('data-page-url', '<?php echo esc_js($page_url); ?>');
+                    $link.attr('data-phone', '<?php echo esc_js($phone_raw); ?>');
+                    
+                    console.log('Osmose ADS: Tel link processed with tracking class');
                 });
+                
+                console.log('Osmose ADS: Total tel: links found:', $('a[href^="tel:"]').length);
+                console.log('Osmose ADS: Total tracking links:', $('a.osmose-track-call').length);
             });
             </script>
             <?php
