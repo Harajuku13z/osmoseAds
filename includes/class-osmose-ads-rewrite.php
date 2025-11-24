@@ -19,9 +19,14 @@ class Osmose_Ads_Rewrite {
     public function template_loader($template) {
         global $post;
         
-        // Si c'est un post de type 'ad', charger le template personnalisé
-        // UNIQUEMENT si on accède via l'URL directe de l'annonce (pas depuis le blog)
-        if (isset($post) && $post->post_type === 'ad' && !is_home() && !is_archive()) {
+        // Si c'est un post de type 'ad'
+        if (isset($post) && $post->post_type === 'ad') {
+            // Si on est dans le blog (home, archive, category), utiliser le template standard
+            if (is_home() || is_archive() || is_category() || is_search()) {
+                return $template; // Laisser WordPress utiliser le template standard du thème
+            }
+            
+            // Sinon, si on accède directement à l'annonce, charger le template personnalisé
             // Vérifier si un template existe dans le thème
             $theme_template = locate_template(array('single-ad.php'));
             if ($theme_template) {
@@ -34,9 +39,6 @@ class Osmose_Ads_Rewrite {
                 return $plugin_template;
             }
         }
-        
-        // Pour les annonces affichées dans le blog, utiliser le template standard du thème
-        // Le thème utilisera single.php ou category.php selon le contexte
         
         return $template;
     }
