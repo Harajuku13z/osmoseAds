@@ -82,12 +82,26 @@ function osmose_ads_handle_create_template() {
         }
         
         // Construire le prompt complet selon le nouveau modèle
-        $prompt = "# 🎯 Prompt Expert : Génération d'Articles Couvreur Premium SEO\n\n\n";
+        $prompt = "═══════════════════════════════════════════════════════════════════\n";
+        $prompt .= "🚨 RÈGLE CRITIQUE N°1 - VARIABLES OBLIGATOIRES 🚨\n";
+        $prompt .= "═══════════════════════════════════════════════════════════════════\n\n";
+        $prompt .= "VOUS DEVEZ IMPÉRATIVEMENT UTILISER CES VARIABLES :\n";
+        $prompt .= "• [VILLE] pour le nom de la ville (JAMAIS \"Rennes\", \"Paris\", etc. en dur)\n";
+        $prompt .= "• [DÉPARTEMENT] pour le département (JAMAIS \"Ille-et-Vilaine\", etc. en dur)\n";
+        $prompt .= "• [CODE_POSTAL] pour le code postal\n";
+        $prompt .= "• [RÉGION] pour la région\n\n";
+        $prompt .= "❌ INTERDIT : \"Couvreur à Rennes\", \"Expert toiture à Paris\"\n";
+        $prompt .= "✅ CORRECT : \"Couvreur à [VILLE]\", \"Expert toiture à [VILLE]\"\n\n";
+        $prompt .= "Ces variables seront automatiquement remplacées pour chaque ville.\n";
+        $prompt .= "═══════════════════════════════════════════════════════════════════\n\n\n";
+        
+        $prompt .= "# 🎯 Prompt Expert : Génération d'Articles Couvreur Premium SEO\n\n\n";
         $prompt .= "## IDENTITÉ\n\n";
         $prompt .= "Tu es un rédacteur web senior spécialisé en BTP/couverture avec 10+ ans d'expérience. Tu maîtrises parfaitement le vocabulaire technique du métier, les enjeux clients et les standards WordPress/SEO 2025.\n\n\n";
         $prompt .= "---\n\n\n";
         $prompt .= "## 📋 MISSION\n\n";
-        $prompt .= "Créer un article HTML complet, dense en informations, optimisé SEO et géolocalisé pour promouvoir les services d'un couvreur dans une ville spécifique.\n\n\n";
+        $prompt .= "Créer un article HTML complet, dense en informations, optimisé SEO et géolocalisé pour promouvoir les services d'un couvreur.\n";
+        $prompt .= "⚠️ ATTENTION : N'utilisez JAMAIS de nom de ville en dur. Utilisez TOUJOURS [VILLE] et [DÉPARTEMENT].\n\n\n";
         $prompt .= "---\n\n\n";
         $prompt .= "## 📥 DONNÉES REQUISES\n\n\n";
         $prompt .= "```\n\n";
@@ -118,16 +132,18 @@ function osmose_ads_handle_create_template() {
         $prompt .= "- FAQ : **6-8 questions** avec réponses de 120-180 mots\n\n\n";
         $prompt .= "### 2. TON ET STYLE\n\n";
         $prompt .= "- **Professionnel mais accessible** : vocabulaire technique expliqué\n\n";
-        $prompt .= "- **Local et personnalisé** : références constantes à [VILLE], [DÉPARTEMENT], climat\n\n";
+        $prompt .= "- **Local et personnalisé** : références constantes à [VILLE], [DÉPARTEMENT], climat\n";
+        $prompt .= "  ⚠️ RAPPEL : Écrivez \"à [VILLE]\" et PAS \"à Rennes\" ou toute autre ville\n\n";
         $prompt .= "- **Orienté client** : \"vous\", \"votre maison\", \"votre projet\"\n\n";
         $prompt .= "- **Rassurant** : mentionne garanties, expertise, proximité\n\n";
         $prompt .= "- **Zéro blabla** : chaque phrase apporte une valeur concrète\n\n\n";
         $prompt .= "### 3. CONTENU TECHNIQUE OBLIGATOIRE\n\n";
         $prompt .= "Pour chaque service, détaille :\n\n";
-        $prompt .= "- **Problématiques concrètes** des clients à [VILLE]\n\n";
+        $prompt .= "- **Problématiques concrètes** des clients à [VILLE] ⚠️ Utilisez [VILLE]\n\n";
         $prompt .= "- **Solutions techniques précises** (matériaux, méthodes, étapes)\n\n";
         $prompt .= "- **Bénéfices mesurables** (durée de vie, économies, confort)\n\n";
-        $prompt .= "- **Spécificités locales** (climat, architecture, réglementations)\n\n\n";
+        $prompt .= "- **Spécificités locales** (climat [DÉPARTEMENT], architecture [VILLE], réglementations)\n";
+        $prompt .= "  ⚠️ Toujours utiliser les variables [VILLE] et [DÉPARTEMENT]\n\n\n";
         $prompt .= "Exemples de détails attendus :\n\n";
         $prompt .= "- \"Tuiles terre cuite traditionnelles pour une durée de vie de 50-70 ans\"\n\n";
         $prompt .= "- \"Isolation en laine minérale soufflée sur une épaisseur minimum de 320mm\"\n\n";
