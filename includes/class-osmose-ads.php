@@ -100,6 +100,14 @@ class Osmose_Ads {
         // Inclure les annonces dans les requêtes principales du blog
         $this->loader->add_action('pre_get_posts', $this, 'include_ads_in_main_query');
         
+        // Inclure les annonces dans l'écran "Articles" de WordPress
+        $this->loader->add_action('pre_get_posts', $this, 'include_ads_in_admin_posts', 10);
+        
+        // Ajouter une colonne pour identifier les annonces dans la liste des articles
+        $this->loader->add_filter('manage_post_posts_columns', $this, 'add_ad_type_column');
+        $this->loader->add_action('manage_post_posts_custom_column', $this, 'show_ad_type_column', 10, 2);
+        $this->loader->add_filter('manage_edit-post_sortable_columns', $this, 'make_ad_type_sortable');
+        
         // Créer la catégorie "Annonces" lors de l'activation
         $this->loader->add_action('init', $this, 'create_annonces_category', 20);
         
@@ -117,7 +125,7 @@ class Osmose_Ads {
         }
         
         // Inclure les annonces dans la page d'accueil, archive, recherche et catégories
-        if ($query->is_home() || $query->is_archive() || $query->is_search() || $query->is_category()) {
+        if ($query->is_home() || $query->is_archive() || $query->is_search() || $query->is_category() || $query->is_tag() || $query->is_author()) {
             $post_types = $query->get('post_type');
             
             // Si aucun post_type n'est défini ou si c'est 'post', ajouter 'ad'
@@ -129,6 +137,38 @@ class Osmose_Ads {
                     $query->set('post_type', array_unique($post_types));
                 }
             }
+        }
+    }
+    
+    /**
+     * Inclure les annonces dans l'écran "Articles" de WordPress
+     */
+    public function include_ads_in_admin_posts($query) {
+        // Uniquement dans l'admin
+        if (!is_admin()) {
+            return;
+        }
+        
+        // Vérifier qu'on est sur la page edit.php (Articles)
+        global $pagenow;
+        if ($pagenow !== 'edit.php') {
+            return;
+        }
+        
+        // Vérifier qu'on n'est pas déjà en train de filtrer par un type de post spécifique
+        // et qu'on n'est pas sur une page de CPT spécifique
+        $screen = get_current_screen();
+        if ($screen && $screen->post_type && $screen->post_type !== 'post') {
+            return;
+        }
+        
+        // Si la requête est pour 'post' ou vide (par défaut), inclure aussi 'ad'
+        $post_types = $query->get('post_type');
+        if (empty($post_types) || $post_types === 'post') {
+            $query->set('post_type', array('post', 'ad'));
+        } elseif (is_array($post_types) && in_array('post', $post_types) && !in_array('ad', $post_types)) {
+            $post_types[] = 'ad';
+            $query->set('post_type', array_unique($post_types));
         }
     }
     
@@ -187,6 +227,43 @@ class Osmose_Ads {
                 wp_set_post_categories($post_id, $current_categories);
             }
         }
+    }
+    
+    /**
+     * Ajouter une colonne "Type" dans la liste des articles pour identifier les annonces
+     */
+    public function add_ad_type_column($columns) {
+        $new_columns = array();
+        foreach ($columns as $key => $value) {
+            $new_columns[$key] = $value;
+            // Ajouter la colonne "Type" après "Titre"
+            if ($key === 'title') {
+                $new_columns['osmose_ad_type'] = __('Type', 'osmose-ads');
+            }
+        }
+        return $new_columns;
+    }
+    
+    /**
+     * Afficher le type (Article ou Annonce) dans la colonne
+     */
+    public function show_ad_type_column($column_name, $post_id) {
+        if ($column_name === 'osmose_ad_type') {
+            $post_type = get_post_type($post_id);
+            if ($post_type === 'ad') {
+                echo '<span style="color: #2271b1; font-weight: 600;">📢 ' . __('Annonce', 'osmose-ads') . '</span>';
+            } else {
+                echo '<span style="color: #646970;">📝 ' . __('Article', 'osmose-ads') . '</span>';
+            }
+        }
+    }
+    
+    /**
+     * Rendre la colonne "Type" triable
+     */
+    public function make_ad_type_sortable($columns) {
+        $columns['osmose_ad_type'] = 'post_type';
+        return $columns;
     }
 
     /**
