@@ -98,16 +98,25 @@ class Osmose_Ads_Activator {
             user_ip varchar(45),
             user_agent text,
             referrer varchar(500),
+            call_time datetime DEFAULT CURRENT_TIMESTAMP,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_ad_id (ad_id),
             KEY idx_created_at (created_at),
+            KEY idx_call_time (call_time),
             KEY idx_page_url (page_url(255))
         ) $charset_collate;";
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql_templates);
         dbDelta($sql_calls);
+        
+        // Vérifier que les tables ont bien été créées
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_calls'") == $table_calls) {
+            error_log('Osmose ADS: Call tracking table created successfully during activation');
+        } else {
+            error_log('Osmose ADS: WARNING - Failed to create call tracking table during activation');
+        }
     }
 
     private static function set_default_options() {
