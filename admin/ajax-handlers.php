@@ -153,7 +153,7 @@ function osmose_ads_handle_create_template() {
         $prompt .= "### 4. STRUCTURE HTML SÉMANTIQUE\n\n\n";
         $prompt .= "**Balises autorisées uniquement** :\n\n";
         $prompt .= "```html\n\n";
-        $prompt .= "<h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <blockquote>, <br>\n\n";
+        $prompt .= "<h2>, <h3>, <h4>, <p>, <strong>, <em>, <br>\n\n";
         $prompt .= "```\n\n\n";
         $prompt .= "**Interdictions absolues** :\n\n";
         $prompt .= "```\n\n";
