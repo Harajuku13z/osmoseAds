@@ -47,7 +47,8 @@
 .osmose-hero-overlay-modern {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 1;
 }
 
 .osmose-hero-container {
@@ -68,6 +69,8 @@
     font-weight: 800;
     margin-bottom: 1.5rem;
     line-height: 1.2;
+    color: #ffffff !important;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .osmose-hero-title-modern i {
@@ -79,7 +82,9 @@
     font-size: 1.25rem;
     margin-bottom: 2rem;
     line-height: 1.75;
-    opacity: 0.95;
+    color: #ffffff !important;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+    opacity: 1;
 }
 
 .osmose-hero-buttons {

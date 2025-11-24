@@ -131,7 +131,8 @@ add_action('wp_head', function() use ($page_description, $meta_keywords, $meta) 
 $phone = get_option('osmose_ads_company_phone', '');
 $phone_raw = get_option('osmose_ads_company_phone_raw', '');
 $company_name = get_bloginfo('name');
-$company_email = get_option('admin_email', '');
+$company_email = get_option('osmose_ads_company_email', get_option('admin_email', ''));
+$devis_url = get_option('osmose_ads_devis_url', '');
 $company_address = get_option('osmose_ads_company_address', '');
 
 get_header();
@@ -158,10 +159,12 @@ get_header();
                     ?>
                 </p>
                 <div class="osmose-hero-buttons">
-                    <a href="<?php echo esc_url(home_url('/devis')); ?>" class="osmose-btn-hero osmose-btn-accent">
-                        <i class="fas fa-calculator"></i>
-                        <?php _e('Devis Gratuit', 'osmose-ads'); ?>
-                    </a>
+                    <?php if ($devis_url): ?>
+                        <a href="<?php echo esc_url($devis_url); ?>" class="osmose-btn-hero osmose-btn-accent">
+                            <i class="fas fa-calculator"></i>
+                            <?php _e('Devis Gratuit', 'osmose-ads'); ?>
+                        </a>
+                    <?php endif; ?>
                     <?php if ($phone_raw): ?>
                         <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="osmose-btn-hero osmose-btn-primary osmose-track-call"
                            data-ad-id="<?php echo esc_attr($ad_id); ?>"

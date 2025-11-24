@@ -10,6 +10,8 @@ if (isset($_POST['submit'])) {
     update_option('osmose_ads_ai_personalization', isset($_POST['ai_personalization']) ? 1 : 0);
     update_option('osmose_ads_company_phone', sanitize_text_field($_POST['company_phone'] ?? ''));
     update_option('osmose_ads_company_phone_raw', sanitize_text_field($_POST['company_phone_raw'] ?? ''));
+    update_option('osmose_ads_company_email', sanitize_email($_POST['company_email'] ?? ''));
+    update_option('osmose_ads_devis_url', esc_url_raw($_POST['devis_url'] ?? ''));
     update_option('osmose_ads_openai_api_key', sanitize_text_field($_POST['openai_api_key'] ?? ''));
     update_option('osmose_ads_ai_provider', sanitize_text_field($_POST['ai_provider'] ?? 'openai'));
     
@@ -24,6 +26,8 @@ if (isset($_POST['submit'])) {
 $ai_personalization = get_option('osmose_ads_ai_personalization', false);
 $company_phone = get_option('osmose_ads_company_phone', '');
 $company_phone_raw = get_option('osmose_ads_company_phone_raw', '');
+$company_email = get_option('osmose_ads_company_email', '');
+$devis_url = get_option('osmose_ads_devis_url', '');
 $openai_api_key = get_option('osmose_ads_openai_api_key', '');
 $ai_provider = get_option('osmose_ads_ai_provider', 'openai');
 $services = get_option('osmose_ads_services', array());
@@ -80,6 +84,22 @@ $services = get_option('osmose_ads_services', array());
                 <td>
                     <input type="text" name="company_phone_raw" value="<?php echo esc_attr($company_phone_raw); ?>" class="regular-text" placeholder="0123456789">
                     <p class="description"><?php _e('Numéro de téléphone sans formatage (pour liens tel:)', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            
+            <tr>
+                <th scope="row"><?php _e('Email Entreprise', 'osmose-ads'); ?></th>
+                <td>
+                    <input type="email" name="company_email" value="<?php echo esc_attr($company_email); ?>" class="regular-text" placeholder="contact@example.com">
+                    <p class="description"><?php _e('Adresse email affichée sur les pages d\'annonces', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            
+            <tr>
+                <th scope="row"><?php _e('URL "Demander un Devis"', 'osmose-ads'); ?></th>
+                <td>
+                    <input type="url" name="devis_url" value="<?php echo esc_attr($devis_url); ?>" class="regular-text" placeholder="https://example.com/devis">
+                    <p class="description"><?php _e('URL de la page de demande de devis (utilisée pour le bouton "Devis Gratuit")', 'osmose-ads'); ?></p>
                 </td>
             </tr>
             

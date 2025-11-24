@@ -222,6 +222,8 @@ class Osmose_Ads_Admin {
         register_setting('osmose_ads_settings', 'osmose_ads_ai_personalization');
         register_setting('osmose_ads_settings', 'osmose_ads_company_phone');
         register_setting('osmose_ads_settings', 'osmose_ads_company_phone_raw');
+        register_setting('osmose_ads_settings', 'osmose_ads_company_email');
+        register_setting('osmose_ads_settings', 'osmose_ads_devis_url');
         register_setting('osmose_ads_settings', 'osmose_ads_openai_api_key');
         register_setting('osmose_ads_settings', 'osmose_ads_ai_provider');
         register_setting('osmose_ads_settings', 'osmose_ads_services');

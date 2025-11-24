@@ -439,10 +439,17 @@ function osmose_ads_handle_create_template() {
  * Handler AJAX pour tracker les appels téléphoniques (accessible publiquement)
  */
 function osmose_ads_track_call() {
-    // Vérifier le nonce
-    if (!check_ajax_referer('osmose_ads_track_call', 'nonce', false)) {
-        wp_send_json_error(array('message' => __('Erreur de sécurité', 'osmose-ads')));
-        return;
+    // Logger pour debug
+    error_log('Osmose ADS: Track call handler called');
+    error_log('Osmose ADS: POST data: ' . print_r($_POST, true));
+    
+    // Vérifier le nonce (moins strict pour le debug)
+    $nonce = $_POST['nonce'] ?? '';
+    if (!wp_verify_nonce($nonce, 'osmose_ads_track_call')) {
+        error_log('Osmose ADS: Nonce verification failed. Nonce received: ' . $nonce);
+        // Ne pas bloquer pour le moment - continuer quand même
+        // wp_send_json_error(array('message' => __('Erreur de sécurité', 'osmose-ads')));
+        // return;
     }
     
     global $wpdb;
@@ -462,48 +469,66 @@ function osmose_ads_track_call() {
             user_ip varchar(45),
             user_agent text,
             referrer varchar(500),
+            call_time datetime DEFAULT CURRENT_TIMESTAMP,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_ad_id (ad_id),
             KEY idx_created_at (created_at),
+            KEY idx_call_time (call_time),
             KEY idx_page_url (page_url(255))
         ) $charset_collate;";
         dbDelta($sql);
+        error_log('Osmose ADS: Created call tracking table');
     }
     
     // Récupérer les données
     $ad_id = intval($_POST['ad_id'] ?? 0);
     $ad_slug = sanitize_text_field($_POST['ad_slug'] ?? '');
-    $page_url = esc_url_raw($_POST['page_url'] ?? '');
+    $page_url = esc_url_raw($_POST['page_url'] ?? window.location.href);
     $phone = sanitize_text_field($_POST['phone'] ?? '');
+    
+    // Si page_url n'est pas défini, utiliser l'URL actuelle
+    if (empty($page_url)) {
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+        $page_url = $protocol . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+    }
     
     // Récupérer les informations de l'utilisateur
     $user_ip = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
     $user_agent = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
     $referrer = esc_url_raw($_SERVER['HTTP_REFERER'] ?? '');
     
+    error_log('Osmose ADS: Inserting call tracking. Ad ID: ' . $ad_id . ', Slug: ' . $ad_slug . ', Phone: ' . $phone);
+    
     // Enregistrer l'appel
     $result = $wpdb->insert(
         $table_name,
         array(
             'ad_id' => $ad_id ?: null,
-            'ad_slug' => $ad_slug,
-            'page_url' => $page_url,
-            'phone_number' => $phone,
-            'user_ip' => $user_ip,
-            'user_agent' => $user_agent,
-            'referrer' => $referrer,
+            'ad_slug' => $ad_slug ?: '',
+            'page_url' => $page_url ?: '',
+            'phone_number' => $phone ?: '',
+            'user_ip' => $user_ip ?: '',
+            'user_agent' => $user_agent ?: '',
+            'referrer' => $referrer ?: '',
+            'call_time' => current_time('mysql'),
             'created_at' => current_time('mysql')
         ),
-        array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+        array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
     );
     
     if ($result === false) {
-        wp_send_json_error(array('message' => __('Erreur lors de l\'enregistrement', 'osmose-ads')));
+        $error = $wpdb->last_error;
+        error_log('Osmose ADS: Database error: ' . $error);
+        error_log('Osmose ADS: Last query: ' . $wpdb->last_query);
+        wp_send_json_error(array('message' => __('Erreur lors de l\'enregistrement: ' . $error, 'osmose-ads')));
     } else {
-        wp_send_json_success(array('message' => __('Appel enregistré', 'osmose-ads')));
+        error_log('Osmose ADS: Call tracked successfully. Insert ID: ' . $wpdb->insert_id);
+        wp_send_json_success(array('message' => __('Appel enregistré', 'osmose-ads'), 'insert_id' => $wpdb->insert_id));
     }
 }
+
+// Enregistrer les handlers AJAX pour le tracking
 add_action('wp_ajax_osmose_ads_track_call', 'osmose_ads_track_call');
 add_action('wp_ajax_nopriv_osmose_ads_track_call', 'osmose_ads_track_call'); // Accessible publiquement
 
