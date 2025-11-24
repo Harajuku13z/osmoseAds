@@ -63,8 +63,8 @@ class Osmose_Ads_Post_Types {
         );
 
         // Utiliser la même structure d'URL que les posts
-        // On désactive les rewrite rules par défaut du CPT et on interceptera les requêtes
-        // pour que les annonces utilisent exactement la même structure que les posts
+        // Configuration des rewrite rules pour que les annonces utilisent exactement
+        // la même structure de permalink que les posts normaux
         
         $args = array(
             'labels'              => $labels,
@@ -78,8 +78,13 @@ class Osmose_Ads_Post_Types {
             'has_archive'         => true,
             'hierarchical'        => false,
             'supports'            => array('title', 'editor', 'custom-fields', 'thumbnail', 'excerpt', 'comments', 'author', 'trackbacks', 'revisions'),
-            'rewrite'             => false, // Pas de rewrite rules - on interceptera les requêtes
-            'query_var'           => true,
+            'rewrite'             => array(
+                'slug'       => '',  // Pas de préfixe
+                'with_front' => false,  // Ne pas ajouter de préfixe
+                'feeds'      => true,
+                'pages'      => true
+            ),
+            'query_var'           => 'ad',  // Query var personnalisée
             'show_in_rest'        => true, // Support Gutenberg
             'taxonomies'          => array('category', 'post_tag'), // Support des catégories et tags WordPress
         );
