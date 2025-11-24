@@ -166,11 +166,7 @@ get_header();
                         </a>
                     <?php endif; ?>
                     <?php if ($phone_raw): ?>
-                        <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="osmose-btn-hero osmose-btn-primary osmose-track-call"
-                           data-ad-id="<?php echo esc_attr($ad_id); ?>"
-                           data-ad-slug="<?php echo esc_attr($ad_slug_for_tracking); ?>"
-                           data-page-url="<?php echo esc_attr($current_url); ?>"
-                           data-phone="<?php echo esc_attr($phone_raw); ?>">
+                        <a href="<?php echo esc_url(osmose_get_call_tracking_url($ad_id, $ad_slug_for_tracking, $phone_raw, 'hero', $current_url)); ?>" class="osmose-btn-hero osmose-btn-primary">
                             <i class="fas fa-phone"></i>
                             <?php echo esc_html($phone ?: $phone_raw); ?>
                         </a>
