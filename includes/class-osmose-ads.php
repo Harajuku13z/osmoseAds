@@ -138,9 +138,12 @@ class Osmose_Ads {
         
         // Rewrite Rules
         $rewrite = new Osmose_Ads_Rewrite();
-        $this->loader->add_action('init', $rewrite, 'add_rewrite_rules');
+        $this->loader->add_action('init', $rewrite, 'add_rewrite_rules', 10);
         $this->loader->add_filter('query_vars', $rewrite, 'add_query_vars');
-        $this->loader->add_filter('template_include', $rewrite, 'template_loader');
+        $this->loader->add_filter('template_include', $rewrite, 'template_loader', 5);
+        
+        // Intercepter les requêtes 404 pour vérifier si c'est une annonce
+        $this->loader->add_action('parse_request', $this, 'intercept_ad_requests', 5);
         
         // Intégration avec AIOSEO - S'assurer que les annonces sont reconnues comme des posts
         // AIOSEO utilise différents hooks selon la version
@@ -362,6 +365,33 @@ class Osmose_Ads {
             return true;
         }
         return $is_valid;
+    }
+    
+    /**
+     * Intercepter les requêtes pour vérifier si un slug correspond à une annonce
+     */
+    public function intercept_ad_requests($wp) {
+        // Vérifier si on a un name dans la requête (slug)
+        if (isset($wp->query_vars['name']) && !empty($wp->query_vars['name'])) {
+            $slug = $wp->query_vars['name'];
+            
+            // Vérifier si ce slug correspond à une annonce
+            $ad_posts = get_posts(array(
+                'post_type' => 'ad',
+                'name' => $slug,
+                'posts_per_page' => 1,
+                'post_status' => 'publish',
+            ));
+            
+            if (!empty($ad_posts)) {
+                // C'est une annonce ! Modifier la requête pour pointer vers cette annonce
+                $wp->query_vars['post_type'] = 'ad';
+                $wp->query_vars['name'] = $slug;
+                unset($wp->query_vars['error']); // Supprimer l'erreur si présente
+            }
+        }
+        
+        return $wp;
     }
     
     /**

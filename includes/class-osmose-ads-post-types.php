@@ -63,7 +63,8 @@ class Osmose_Ads_Post_Types {
         );
 
         // Utiliser la même structure d'URL que les posts
-        // On utilise 'rewrite' avec un slug vide et with_front pour utiliser la structure des posts
+        // On utilise 'rewrite' => false pour désactiver les règles par défaut
+        // et on interceptera les requêtes dans add_rewrite_rules()
         
         $args = array(
             'labels'              => $labels,
@@ -77,12 +78,7 @@ class Osmose_Ads_Post_Types {
             'has_archive'         => true,
             'hierarchical'        => false,
             'supports'            => array('title', 'editor', 'custom-fields', 'thumbnail', 'excerpt', 'comments', 'author', 'trackbacks', 'revisions'),
-            'rewrite'             => array(
-                'slug' => '',  // Slug vide pour utiliser la même structure que les posts
-                'with_front' => true,  // Respecter la structure de permalink (ex: /blog/ si configuré)
-                'feeds' => true,
-                'pages' => true
-            ),
+            'rewrite'             => false, // Désactiver les règles par défaut - on gérera dans add_rewrite_rules()
             'query_var'           => true,
             'show_in_rest'        => true, // Support Gutenberg
             'taxonomies'          => array('category', 'post_tag'), // Support des catégories et tags WordPress
