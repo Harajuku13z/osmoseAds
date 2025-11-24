@@ -87,7 +87,7 @@ require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
                     <h5 class="mb-3"><i class="bi bi-images me-2"></i><?php _e('Images (Optionnel)', 'osmose-ads'); ?></h5>
                     
                     <!-- Image mise en avant -->
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label class="form-label"><?php _e('Image mise en avant', 'osmose-ads'); ?></label>
                         <div id="featured-image-preview" class="mb-2" style="min-height: 100px; border: 2px dashed #ddd; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #f8f9fa;">
                             <p class="text-muted mb-0"><?php _e('Aucune image sélectionnée', 'osmose-ads'); ?></p>
@@ -101,6 +101,20 @@ require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
                             </button>
                         </div>
                         <input type="hidden" name="featured_image_id" id="featured_image_id" value="">
+                    </div>
+                    
+                    <!-- Photos des réalisations -->
+                    <div class="mb-3">
+                        <label class="form-label"><?php _e('Photos des réalisations', 'osmose-ads'); ?></label>
+                        <small class="form-text text-muted d-block mb-2"><?php _e('Ces photos seront automatiquement intégrées dans le contenu généré par l\'IA', 'osmose-ads'); ?></small>
+                        <div id="realization-images-container" class="mb-2 d-flex flex-wrap gap-2" style="min-height: 80px; padding: 10px; border: 2px dashed #ddd; border-radius: 8px; background: #f8f9fa;">
+                            <p class="text-muted mb-0 w-100 text-center"><?php _e('Aucune photo ajoutée', 'osmose-ads'); ?></p>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="add-realization-images">
+                            <i class="bi bi-images"></i> <?php _e('Ajouter des photos', 'osmose-ads'); ?>
+                        </button>
+                        <input type="hidden" name="realization_images" id="realization_images" value="">
+                        <input type="hidden" name="realization_images_keywords" id="realization_images_keywords" value="">
                     </div>
                 </div>
                 
@@ -161,6 +175,82 @@ jQuery(document).ready(function($) {
         $(this).hide();
     });
     
+    // Media Uploader pour les photos de réalisations
+    let realizationImagesFrame;
+    let selectedRealizationImages = [];
+    
+    $('#add-realization-images').on('click', function(e) {
+        e.preventDefault();
+        
+        if (realizationImagesFrame) {
+            realizationImagesFrame.open();
+            return;
+        }
+        
+        realizationImagesFrame = wp.media({
+            title: <?php echo wp_json_encode(__('Choisir des photos de réalisations', 'osmose-ads')); ?>,
+            button: {
+                text: <?php echo wp_json_encode(__('Sélectionner', 'osmose-ads')); ?>
+            },
+            multiple: true
+        });
+        
+        realizationImagesFrame.on('select', function() {
+            const attachments = realizationImagesFrame.state().get('selection').toJSON();
+            
+            attachments.forEach(function(attachment) {
+                // Vérifier si l'image n'est pas déjà ajoutée
+                if (!selectedRealizationImages.find(img => img.id === attachment.id)) {
+                    const keywords = prompt(<?php echo wp_json_encode(__('Mots-clés pour cette image (optionnel) :', 'osmose-ads')); ?>, '');
+                    
+                    selectedRealizationImages.push({
+                        id: attachment.id,
+                        url: attachment.url,
+                        keywords: keywords || ''
+                    });
+                }
+            });
+            
+            updateRealizationImagesDisplay();
+        });
+        
+        realizationImagesFrame.open();
+    });
+    
+    function updateRealizationImagesDisplay() {
+        const container = $('#realization-images-container');
+        
+        if (selectedRealizationImages.length === 0) {
+            container.html('<p class="text-muted mb-0 w-100 text-center"><?php _e('Aucune photo ajoutée', 'osmose-ads'); ?></p>');
+        } else {
+            let html = '';
+            selectedRealizationImages.forEach(function(image, index) {
+                html += '<div class="position-relative" style="width: 120px;">' +
+                    '<img src="' + image.url + '" class="img-thumbnail" style="width: 120px; height: 120px; object-fit: cover;">' +
+                    '<button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-realization-image" data-index="' + index + '" style="padding: 2px 6px; line-height: 1;">' +
+                    '<i class="bi bi-x"></i>' +
+                    '</button>' +
+                    (image.keywords ? '<small class="d-block text-center mt-1" style="font-size: 0.7rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + image.keywords + '">' + image.keywords + '</small>' : '') +
+                    '</div>';
+            });
+            container.html(html);
+        }
+        
+        // Mettre à jour les champs cachés
+        const imageIds = selectedRealizationImages.map(img => img.id).join(',');
+        const imageKeywords = selectedRealizationImages.map(img => img.keywords).join('|||');
+        
+        $('#realization_images').val(imageIds);
+        $('#realization_images_keywords').val(imageKeywords);
+    }
+    
+    // Supprimer une photo de réalisation
+    $(document).on('click', '.remove-realization-image', function() {
+        const index = $(this).data('index');
+        selectedRealizationImages.splice(index, 1);
+        updateRealizationImagesDisplay();
+    });
+    
     // Soumission du formulaire
     $('#createTemplateForm').on('submit', function(e) {
         e.preventDefault();
@@ -182,7 +272,9 @@ jQuery(document).ready(function($) {
             service_name: serviceName,
             service_description: $('#service_description').val().trim(),
             service_keywords: serviceName, // Utiliser le service_name comme keywords
-            featured_image_id: $('#featured_image_id').val()
+            featured_image_id: $('#featured_image_id').val(),
+            realization_images: $('#realization_images').val(),
+            realization_images_keywords: $('#realization_images_keywords').val()
         };
         
         $.ajax({
@@ -211,6 +303,10 @@ jQuery(document).ready(function($) {
                     $('#featured_image_id').val('');
                     $('#featured-image-preview').html('<p class="text-muted mb-0"><?php _e('Aucune image sélectionnée', 'osmose-ads'); ?></p>');
                     $('#remove-featured-image').hide();
+                    
+                    // Réinitialiser les photos de réalisations
+                    selectedRealizationImages = [];
+                    updateRealizationImagesDisplay();
                     
                     // Scroll vers le résultat
                     $('html, body').animate({
