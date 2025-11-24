@@ -4,6 +4,13 @@
  */
 class Osmose_Ads_Rewrite {
 
+    public function __construct() {
+        add_action('init', array($this, 'add_rewrite_tags'));
+        add_filter('template_include', array($this, 'template_loader'));
+        add_action('template_redirect', array($this, 'intercept_ad_requests'));
+        add_action('template_redirect', array($this, 'handle_call_tracking'));
+    }
+
     public function add_rewrite_rules() {
         // Les annonces utilisent maintenant la même structure d'URL que les posts
         // L'interception se fait dans parse_request et template_loader
@@ -28,6 +35,75 @@ class Osmose_Ads_Rewrite {
             flush_rewrite_rules(false);
             delete_option('osmose_ads_flush_rewrite_rules');
         }
+    }
+
+    public function add_rewrite_tags() {
+        add_rewrite_tag('%ad_slug%', '([^&]+)');
+        
+        // Ajouter une règle de réécriture pour le tracking des appels
+        add_rewrite_rule('^osmose-call-track/?$', 'index.php?osmose_call_track=1', 'top');
+        add_rewrite_tag('%osmose_call_track%', '([0-9]+)');
+    }
+
+    /**
+     * Gérer le tracking des appels via URL
+     */
+    public function handle_call_tracking() {
+        global $wp_query;
+        
+        if (!isset($wp_query->query_vars['osmose_call_track'])) {
+            return;
+        }
+        
+        // Récupérer les paramètres
+        $ad_id = isset($_GET['ad_id']) ? intval($_GET['ad_id']) : 0;
+        $ad_slug = isset($_GET['ad_slug']) ? sanitize_text_field($_GET['ad_slug']) : '';
+        $source = isset($_GET['source']) ? sanitize_text_field($_GET['source']) : 'unknown';
+        $phone = isset($_GET['phone']) ? sanitize_text_field($_GET['phone']) : '';
+        $page_url = isset($_GET['page_url']) ? esc_url_raw($_GET['page_url']) : '';
+        
+        // Enregistrer l'appel dans la base de données
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'osmose_ads_call_tracking';
+        
+        // Récupérer les informations de l'utilisateur
+        $user_ip = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
+        $user_agent = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $referrer = esc_url_raw($_SERVER['HTTP_REFERER'] ?? $page_url);
+        
+        // Enregistrer l'appel
+        $wpdb->insert(
+            $table_name,
+            array(
+                'ad_id' => $ad_id ?: null,
+                'ad_slug' => $ad_slug ?: '',
+                'page_url' => $page_url ?: $referrer,
+                'phone_number' => $phone ?: '',
+                'user_ip' => $user_ip ?: '',
+                'user_agent' => $user_agent ?: '',
+                'referrer' => $referrer ?: '',
+                'call_time' => current_time('mysql'),
+                'created_at' => current_time('mysql'),
+                'source' => $source
+            ),
+            array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+        );
+        
+        // Rediriger vers le numéro de téléphone
+        if (!empty($phone)) {
+            // Nettoyer le numéro pour le format tel:
+            $phone_clean = preg_replace('/[^0-9+]/', '', $phone);
+            wp_redirect('tel:' . $phone_clean);
+            exit;
+        }
+        
+        // Si pas de numéro, rediriger vers la page d'origine
+        if (!empty($page_url)) {
+            wp_redirect($page_url);
+        } else {
+            wp_redirect(home_url());
+        }
+        exit;
     }
 
     public function add_query_vars($vars) {
@@ -66,62 +142,14 @@ class Osmose_Ads_Rewrite {
             }
         }
         
-        // Intercepter les erreurs 404 pour vérifier si c'est une annonce
-        if (is_404() && !is_admin()) {
-            $slug = '';
-            
-            // Récupérer le slug depuis différentes sources
-            if (isset($wp_query->query['name']) && !empty($wp_query->query['name'])) {
-                $slug = $wp_query->query['name'];
-            } elseif (isset($_SERVER['REQUEST_URI'])) {
-                // Extraire le slug depuis l'URL
-                $request_uri = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
-                // Supprimer les préfixes comme /ad/ si présents
-                $request_uri = preg_replace('#^ad/#', '', $request_uri);
-                // Supprimer les paramètres de requête
-                $request_uri = preg_replace('/\?.*$/', '', $request_uri);
-                $path_parts = explode('/', $request_uri);
-                $slug = end($path_parts);
-            }
-            
-            if (!empty($slug) && $slug !== 'ad') { // Éviter les boucles
-                // Vérifier si ce slug correspond à une annonce
-                $ad_posts = get_posts(array(
-                    'post_type' => 'ad',
-                    'name' => $slug,
-                    'posts_per_page' => 1,
-                    'post_status' => 'publish',
-                ));
-                
-                if (!empty($ad_posts)) {
-                    // C'est une annonce ! Corriger la requête
-                    $wp_query->is_404 = false;
-                    $wp_query->is_single = true;
-                    $wp_query->is_singular = true;
-                    $wp_query->queried_object = $ad_posts[0];
-                    $wp_query->queried_object_id = $ad_posts[0]->ID;
-                    $wp_query->posts = array($ad_posts[0]);
-                    $wp_query->post_count = 1;
-                    $wp_query->found_posts = 1;
-                    $wp_query->post = $ad_posts[0];
-                    $post = $ad_posts[0];
-                    setup_postdata($post);
-                    
-                    // Utiliser le template approprié
-                    $single_template = locate_template(array('single.php'));
-                    if ($single_template) {
-                        return $single_template;
-                    }
-                    
-                    $plugin_template = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/single-ad.php';
-                    if (file_exists($plugin_template)) {
-                        return $plugin_template;
-                    }
-                }
-            }
-        }
-        
         return $template;
     }
-}
 
+    /**
+     * Intercepter les requêtes d'annonces avant le chargement du template
+     */
+    public function intercept_ad_requests() {
+        // Cette fonction n'est plus nécessaire avec la nouvelle structure
+        // mais on la garde pour compatibilité
+    }
+}
