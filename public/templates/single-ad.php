@@ -1,6 +1,6 @@
 <?php
 /**
- * Template public pour afficher une annonce - Design Exceptionnel avec Hero et Sidebar
+ * Template public pour afficher une annonce - Design moderne inspiré de Tailwind
  */
 
 if (!defined('ABSPATH')) {
@@ -56,7 +56,6 @@ try {
         $featured_image_url = wp_get_attachment_image_url($featured_image_id, 'full');
     }
     
-    // Si pas d'image mise en avant, essayer depuis le template
     if (empty($featured_image_url) && $template) {
         $template_featured_id = get_post_thumbnail_id($template->post_id);
         if ($template_featured_id) {
@@ -64,24 +63,18 @@ try {
         }
     }
     
-    // Image par défaut si aucune
     if (empty($featured_image_url)) {
         $featured_image_url = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80';
     }
     
-    // Récupérer les informations pour le tracking
     $ad_id = $ad->post_id;
     $ad_slug_for_tracking = $ad->get_slug();
     $current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
-    
-    // Récupérer la date de publication
     $publication_date = $ad->get_formatted_publication_date('d F Y');
     
-    // Récupérer les statistiques
     $view_count = intval(get_post_meta($ad->post_id, 'view_count', true)) ?: 0;
     update_post_meta($ad->post_id, 'view_count', $view_count + 1);
     
-    // Récupérer le nombre d'appels
     global $wpdb;
     $table_name = $wpdb->prefix . 'osmose_ads_call_tracking';
     $call_count = 0;
@@ -105,7 +98,6 @@ $page_title = $meta['meta_title'] ?? get_the_title();
 $page_description = $meta['meta_description'] ?? '';
 $meta_keywords = $meta['meta_keywords'] ?? '';
 
-// Définir les métadonnées via les filtres WordPress
 add_filter('wp_title', function($title) use ($page_title) {
     return $page_title ? $page_title : $title;
 }, 10, 1);
@@ -121,14 +113,12 @@ add_action('wp_head', function() use ($page_description, $meta_keywords, $meta) 
     if ($meta_keywords) {
         echo '<meta name="keywords" content="' . esc_attr($meta_keywords) . '">' . "\n";
     }
-    // Open Graph
     if (isset($meta['og_title'])) {
         echo '<meta property="og:title" content="' . esc_attr($meta['og_title']) . '">' . "\n";
     }
     if (isset($meta['og_description'])) {
         echo '<meta property="og:description" content="' . esc_attr($meta['og_description']) . '">' . "\n";
     }
-    // Twitter
     if (isset($meta['twitter_title'])) {
         echo '<meta name="twitter:title" content="' . esc_attr($meta['twitter_title']) . '">' . "\n";
     }
@@ -137,257 +127,232 @@ add_action('wp_head', function() use ($page_description, $meta_keywords, $meta) 
     }
 }, 1);
 
-// Récupérer le téléphone
+// Récupérer les informations
 $phone = get_option('osmose_ads_company_phone', '');
 $phone_raw = get_option('osmose_ads_company_phone_raw', '');
-
-// Informations de l'entreprise
 $company_name = get_bloginfo('name');
 $company_email = get_option('admin_email', '');
 $company_address = get_option('osmose_ads_company_address', '');
 
-// Headers
 get_header();
 ?>
 
-<div class="osmose-ad-page-wrapper">
+<div class="osmose-ad-page-modern">
     
-    <!-- Hero Section avec Image Mise en Avant -->
-    <section class="osmose-hero" style="background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('<?php echo esc_url($featured_image_url); ?>');">
-        <div class="osmose-hero-overlay"></div>
-        <div class="osmose-hero-content">
-            <div class="container">
-                <div class="row align-items-center">
-                    <div class="col-lg-8">
-                        <?php if ($city): ?>
-                            <div class="hero-badge">
-                                <i class="bi bi-geo-alt-fill"></i>
-                                <span><?php echo esc_html($city->post_title); ?></span>
-                                <?php 
-                                $department = get_post_meta($city->ID, 'department', true);
-                                if ($department) {
-                                    echo '<span class="badge-separator">•</span><span>' . esc_html($department) . '</span>';
-                                }
-                                ?>
-                            </div>
-                        <?php endif; ?>
-                        <h1 class="hero-title"><?php echo esc_html(get_the_title()); ?></h1>
-                        <div class="hero-meta">
-                            <span><i class="bi bi-calendar3"></i> <?php echo esc_html($publication_date); ?></span>
-                            <span><i class="bi bi-eye"></i> <?php echo number_format_i18n($view_count + 1); ?> vues</span>
-                            <span><i class="bi bi-telephone"></i> <?php echo number_format_i18n($call_count); ?> appels</span>
-                        </div>
-                    </div>
+    <!-- Hero Section -->
+    <section class="osmose-hero-modern">
+        <div class="osmose-hero-bg" style="background-image: url('<?php echo esc_url($featured_image_url); ?>');"></div>
+        <div class="osmose-hero-overlay-modern"></div>
+        
+        <div class="osmose-hero-container">
+            <div class="osmose-hero-content-modern">
+                <h1 class="osmose-hero-title-modern">
+                    <i class="fas fa-tools"></i>
+                    <?php echo esc_html(get_the_title()); ?>
+                </h1>
+                <p class="osmose-hero-description">
+                    <?php 
+                    $city_name = $city ? $city->post_title : '';
+                    $dept = $city ? get_post_meta($city->ID, 'department', true) : '';
+                    echo esc_html(sprintf(__('Service professionnel à %s - Devis gratuit et intervention rapide', 'osmose-ads'), $city_name ?: '')); 
+                    ?>
+                </p>
+                <div class="osmose-hero-buttons">
+                    <a href="<?php echo esc_url(home_url('/devis')); ?>" class="osmose-btn-hero osmose-btn-accent">
+                        <i class="fas fa-calculator"></i>
+                        <?php _e('Devis Gratuit', 'osmose-ads'); ?>
+                    </a>
+                    <?php if ($phone_raw): ?>
+                        <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="osmose-btn-hero osmose-btn-primary osmose-track-call"
+                           data-ad-id="<?php echo esc_attr($ad_id); ?>"
+                           data-ad-slug="<?php echo esc_attr($ad_slug_for_tracking); ?>"
+                           data-page-url="<?php echo esc_attr($current_url); ?>"
+                           data-phone="<?php echo esc_attr($phone_raw); ?>">
+                            <i class="fas fa-phone"></i>
+                            <?php echo esc_html($phone ?: $phone_raw); ?>
+                        </a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </section>
     
-    <!-- Main Content avec Sidebar -->
-    <div class="osmose-main-content">
-        <div class="container">
-            <div class="row">
+    <!-- Contenu Principal -->
+    <section class="osmose-content-section">
+        <div class="osmose-container">
+            <div class="osmose-content-wrapper">
                 
-                <!-- Contenu Principal -->
-                <div class="col-lg-8">
-                    <article class="osmose-article-content">
-                        <!-- Numéro de suivi -->
-                        <div class="tracking-badge-top">
-                            <i class="bi bi-hash"></i>
-                            <strong><?php _e('Référence:', 'osmose-ads'); ?></strong>
-                            <code><?php echo esc_html($tracking_number); ?></code>
-                        </div>
-                        
-                        <!-- Contenu HTML Formaté -->
-                        <div class="article-body">
-                            <?php 
-                            if ($content) {
-                                // Formater et nettoyer le contenu HTML
-                                $formatted_content = wp_kses_post($content);
-                                // Ajouter des classes pour le style
-                                $formatted_content = preg_replace('/<h2>/', '<h2 class="article-h2">', $formatted_content);
-                                $formatted_content = preg_replace('/<h3>/', '<h3 class="article-h3">', $formatted_content);
-                                $formatted_content = preg_replace('/<p>/', '<p class="article-paragraph">', $formatted_content);
-                                $formatted_content = preg_replace('/<ul>/', '<ul class="article-list">', $formatted_content);
-                                $formatted_content = preg_replace('/<ol>/', '<ol class="article-list">', $formatted_content);
-                                echo $formatted_content;
-                            } else {
-                                echo '<p class="article-paragraph">' . __('Contenu non disponible', 'osmose-ads') . '</p>';
-                            }
-                            ?>
-                        </div>
-                        
-                        <!-- Section Contact Bas -->
-                        <div class="article-contact-bottom">
-                            <h3><i class="bi bi-envelope-fill"></i> <?php _e('Besoin d\'un devis ?', 'osmose-ads'); ?></h3>
-                            <p><?php _e('Contactez-nous pour une estimation gratuite de votre projet', 'osmose-ads'); ?></p>
-                            <div class="contact-actions-bottom">
-                                <?php if ($phone_raw): ?>
-                                    <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="btn-contact osmose-track-call"
-                                       data-ad-id="<?php echo esc_attr($ad_id); ?>"
-                                       data-ad-slug="<?php echo esc_attr($ad_slug_for_tracking); ?>"
-                                       data-page-url="<?php echo esc_attr($current_url); ?>"
-                                       data-phone="<?php echo esc_attr($phone_raw); ?>">
-                                        <i class="bi bi-telephone-fill"></i>
-                                        <?php echo esc_html($phone ?: $phone_raw); ?>
+                <!-- Contenu Principal (Gauche) -->
+                <div class="osmose-content-main">
+                    <div class="osmose-content-card">
+                        <div class="osmose-content-grid">
+                            
+                            <!-- Colonne Gauche - Contenu -->
+                            <div class="osmose-content-left">
+                                <div class="osmose-content-text">
+                                    <?php 
+                                    if ($content) {
+                                        // Formater le contenu HTML
+                                        $formatted_content = wp_kses_post($content);
+                                        $formatted_content = preg_replace('/<h2>/', '<h2 class="osmose-h2">', $formatted_content);
+                                        $formatted_content = preg_replace('/<h3>/', '<h3 class="osmose-h3">', $formatted_content);
+                                        $formatted_content = preg_replace('/<h4>/', '<h4 class="osmose-h4">', $formatted_content);
+                                        $formatted_content = preg_replace('/<p>/', '<p class="osmose-paragraph">', $formatted_content);
+                                        $formatted_content = preg_replace('/<ul>/', '<ul class="osmose-list">', $formatted_content);
+                                        $formatted_content = preg_replace('/<ol>/', '<ol class="osmose-list">', $formatted_content);
+                                        echo $formatted_content;
+                                    } else {
+                                        echo '<p class="osmose-paragraph">' . __('Contenu non disponible', 'osmose-ads') . '</p>';
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+                            
+                            <!-- Colonne Droite - Sidebar -->
+                            <div class="osmose-sidebar-modern">
+                                
+                                <!-- Carte Contact -->
+                                <div class="osmose-sidebar-card osmose-card-green">
+                                    <h3 class="osmose-sidebar-title"><?php _e('Pourquoi choisir', 'osmose-ads'); ?> <?php echo esc_html($company_name); ?></h3>
+                                    <p class="osmose-sidebar-text"><?php 
+                                    $service_desc = sprintf(__('Choisir %s pour votre projet à %s, c\'est opter pour l\'expertise d\'une entreprise locale réputée. Nous garantissons des prestations de qualité, un suivi personnalisé, des délais respectés et des tarifs transparents.', 'osmose-ads'), $company_name, $city_name);
+                                    echo esc_html($service_desc);
+                                    ?></p>
+                                </div>
+                                
+                                <!-- Carte Financement -->
+                                <div class="osmose-sidebar-card osmose-card-yellow">
+                                    <h4 class="osmose-sidebar-subtitle"><?php _e('Financement et aides', 'osmose-ads'); ?></h4>
+                                    <p><?php _e('Pour faciliter vos projets, vous pouvez bénéficier d\'aides financières telles que MaPrimeRénov, les CEE, l\'éco-PTZ ou une TVA réduite. Notre équipe est à votre disposition pour vous renseigner sur ces dispositifs.', 'osmose-ads'); ?></p>
+                                </div>
+                                
+                                <!-- Carte Devis -->
+                                <div class="osmose-sidebar-card osmose-card-gradient">
+                                    <h4 class="osmose-sidebar-subtitle"><?php _e('Besoin d\'un devis ?', 'osmose-ads'); ?></h4>
+                                    <p class="osmose-sidebar-text"><?php _e('Contactez-nous pour un devis gratuit.', 'osmose-ads'); ?></p>
+                                    <a href="<?php echo esc_url(home_url('/devis')); ?>" class="osmose-btn-devis-inline">
+                                        <?php _e('Demande de devis', 'osmose-ads'); ?>
                                     </a>
-                                <?php endif; ?>
-                                <a href="<?php echo esc_url(home_url('/devis')); ?>" class="btn-contact btn-contact-secondary">
-                                    <i class="bi bi-envelope-fill"></i>
-                                    <?php _e('Demander un Devis', 'osmose-ads'); ?>
+                                </div>
+                                
+                                <!-- Informations Pratiques -->
+                                <div class="osmose-sidebar-card osmose-card-gray">
+                                    <h4 class="osmose-sidebar-subtitle"><?php _e('Informations Pratiques', 'osmose-ads'); ?></h4>
+                                    <ul class="osmose-info-list">
+                                        <?php if ($company_address): ?>
+                                            <li><i class="fas fa-check"></i> <?php _e('Adresse :', 'osmose-ads'); ?> <?php echo esc_html($company_address); ?></li>
+                                        <?php endif; ?>
+                                        <?php if ($phone_raw): ?>
+                                            <li><i class="fas fa-check"></i> <?php _e('Téléphone :', 'osmose-ads'); ?> <?php echo esc_html($phone ?: $phone_raw); ?></li>
+                                        <?php endif; ?>
+                                        <?php if ($company_email): ?>
+                                            <li><i class="fas fa-check"></i> <?php _e('Email :', 'osmose-ads'); ?> <?php echo esc_html($company_email); ?></li>
+                                        <?php endif; ?>
+                                        <?php if ($company_name): ?>
+                                            <li><i class="fas fa-check"></i> <?php _e('Société :', 'osmose-ads'); ?> <?php echo esc_html($company_name); ?></li>
+                                        <?php endif; ?>
+                                    </ul>
+                                </div>
+                                
+                                <!-- Partage Social -->
+                                <div class="osmose-sidebar-card osmose-card-border">
+                                    <h4 class="osmose-sidebar-subtitle text-center"><?php _e('Partager ce service', 'osmose-ads'); ?></h4>
+                                    <div class="osmose-social-share">
+                                        <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo urlencode($current_url); ?>" target="_blank" class="osmose-social-btn osmose-social-fb">
+                                            <i class="fab fa-facebook-f"></i>
+                                            <span>Facebook</span>
+                                        </a>
+                                        <a href="https://wa.me/?text=<?php echo urlencode(get_the_title() . ' - ' . $current_url); ?>" target="_blank" class="osmose-social-btn osmose-social-wa">
+                                            <i class="fab fa-whatsapp"></i>
+                                            <span>WhatsApp</span>
+                                        </a>
+                                        <a href="mailto:?subject=<?php echo urlencode(get_the_title()); ?>&body=<?php echo urlencode(__('Je vous partage ce service intéressant :', 'osmose-ads') . ' ' . $current_url); ?>" class="osmose-social-btn osmose-social-email">
+                                            <i class="fas fa-envelope"></i>
+                                            <span>Email</span>
+                                        </a>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            
+                        </div>
+                    </div>
+                    
+                    <!-- CTA Section -->
+                    <div class="osmose-cta-section">
+                        <h3 class="osmose-cta-title"><?php _e('Prêt à Démarrer Votre Projet', 'osmose-ads'); ?> <?php if ($city_name): echo esc_html('à ' . $city_name); endif; ?> ?</h3>
+                        <p class="osmose-cta-text"><?php _e('Contactez-nous dès aujourd\'hui pour un devis gratuit et personnalisé', 'osmose-ads'); ?></p>
+                        <div class="osmose-cta-buttons">
+                            <a href="<?php echo esc_url(home_url('/devis')); ?>" class="osmose-btn-hero osmose-btn-accent">
+                                <i class="fas fa-calculator"></i>
+                                <?php _e('Demander un Devis Gratuit', 'osmose-ads'); ?>
+                            </a>
+                            <?php if ($phone_raw): ?>
+                                <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="osmose-btn-hero osmose-btn-primary osmose-track-call"
+                                   data-ad-id="<?php echo esc_attr($ad_id); ?>"
+                                   data-ad-slug="<?php echo esc_attr($ad_slug_for_tracking); ?>"
+                                   data-page-url="<?php echo esc_attr($current_url); ?>"
+                                   data-phone="<?php echo esc_attr($phone_raw); ?>">
+                                    <i class="fas fa-phone"></i>
+                                    <?php _e('Appeler Maintenant', 'osmose-ads'); ?>
                                 </a>
-                            </div>
+                            <?php endif; ?>
                         </div>
-                    </article>
-                </div>
-                
-                <!-- Sidebar -->
-                <div class="col-lg-4">
-                    <aside class="osmose-sidebar">
-                        
-                        <!-- Carte Contact Principale -->
-                        <div class="sidebar-card sidebar-card-contact">
-                            <div class="sidebar-card-header">
-                                <h3><i class="bi bi-telephone-fill"></i> <?php _e('Contact Rapide', 'osmose-ads'); ?></h3>
-                            </div>
-                            <div class="sidebar-card-body">
-                                <?php if ($phone_raw): ?>
-                                    <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="sidebar-call-button osmose-track-call"
-                                       data-ad-id="<?php echo esc_attr($ad_id); ?>"
-                                       data-ad-slug="<?php echo esc_attr($ad_slug_for_tracking); ?>"
-                                       data-page-url="<?php echo esc_attr($current_url); ?>"
-                                       data-phone="<?php echo esc_attr($phone_raw); ?>">
-                                        <div class="call-button-icon">
-                                            <i class="bi bi-telephone-fill"></i>
-                                        </div>
-                                        <div class="call-button-text">
-                                            <strong><?php _e('Appeler Maintenant', 'osmose-ads'); ?></strong>
-                                            <span><?php echo esc_html($phone ?: $phone_raw); ?></span>
-                                        </div>
-                                    </a>
-                                <?php endif; ?>
-                                
-                                <a href="<?php echo esc_url(home_url('/devis')); ?>" class="sidebar-devis-button">
-                                    <i class="bi bi-envelope-fill"></i>
-                                    <?php _e('Demander un Devis Gratuit', 'osmose-ads'); ?>
-                                </a>
-                            </div>
-                        </div>
-                        
-                        <!-- Informations Importantes -->
-                        <div class="sidebar-card">
-                            <div class="sidebar-card-header">
-                                <h3><i class="bi bi-info-circle-fill"></i> <?php _e('Informations', 'osmose-ads'); ?></h3>
-                            </div>
-                            <div class="sidebar-card-body">
-                                <div class="info-item">
-                                    <i class="bi bi-hash"></i>
-                                    <div>
-                                        <strong><?php _e('Référence', 'osmose-ads'); ?></strong>
-                                        <span><?php echo esc_html($tracking_number); ?></span>
-                                    </div>
-                                </div>
-                                
-                                <?php if ($city): ?>
-                                    <div class="info-item">
-                                        <i class="bi bi-geo-alt-fill"></i>
-                                        <div>
-                                            <strong><?php _e('Zone d\'intervention', 'osmose-ads'); ?></strong>
-                                            <span><?php echo esc_html($city->post_title); ?></span>
-                                        </div>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <div class="info-item">
-                                    <i class="bi bi-calendar3"></i>
-                                    <div>
-                                        <strong><?php _e('Publication', 'osmose-ads'); ?></strong>
-                                        <span><?php echo esc_html($publication_date); ?></span>
-                                    </div>
-                                </div>
-                                
-                                <div class="info-item">
-                                    <i class="bi bi-eye"></i>
-                                    <div>
-                                        <strong><?php _e('Vues', 'osmose-ads'); ?></strong>
-                                        <span><?php echo number_format_i18n($view_count + 1); ?></span>
-                                    </div>
-                                </div>
-                                
-                                <div class="info-item">
-                                    <i class="bi bi-telephone"></i>
-                                    <div>
-                                        <strong><?php _e('Appels', 'osmose-ads'); ?></strong>
-                                        <span><?php echo number_format_i18n($call_count); ?></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Informations Entreprise -->
-                        <?php if ($company_name || $company_email || $company_address): ?>
-                            <div class="sidebar-card">
-                                <div class="sidebar-card-header">
-                                    <h3><i class="bi bi-building"></i> <?php _e('Notre Entreprise', 'osmose-ads'); ?></h3>
-                                </div>
-                                <div class="sidebar-card-body">
-                                    <?php if ($company_name): ?>
-                                        <div class="info-item">
-                                            <i class="bi bi-shop"></i>
-                                            <div>
-                                                <strong><?php echo esc_html($company_name); ?></strong>
-                                            </div>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <?php if ($company_email): ?>
-                                        <div class="info-item">
-                                            <i class="bi bi-envelope"></i>
-                                            <div>
-                                                <a href="mailto:<?php echo esc_attr($company_email); ?>"><?php echo esc_html($company_email); ?></a>
-                                            </div>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <?php if ($company_address): ?>
-                                        <div class="info-item">
-                                            <i class="bi bi-geo-alt"></i>
-                                            <div>
-                                                <span><?php echo esc_html($company_address); ?></span>
-                                            </div>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <!-- Annonces Similaires -->
-                        <?php if (!empty($related_ads)): ?>
-                            <div class="sidebar-card">
-                                <div class="sidebar-card-header">
-                                    <h3><i class="bi bi-grid-3x3-gap"></i> <?php _e('Autres Services', 'osmose-ads'); ?></h3>
-                                </div>
-                                <div class="sidebar-card-body">
-                                    <div class="related-posts-list">
-                                        <?php foreach ($related_ads as $related_ad): ?>
-                                            <a href="<?php echo get_permalink($related_ad->ID); ?>" class="related-post-item">
-                                                <span class="related-post-title"><?php echo esc_html($related_ad->post_title); ?></span>
-                                                <i class="bi bi-arrow-right"></i>
-                                            </a>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                        
-                    </aside>
+                    </div>
                 </div>
                 
             </div>
         </div>
-    </div>
+    </section>
+    
+    <!-- Annonces Similaires -->
+    <?php if (!empty($related_ads)): ?>
+        <section class="osmose-related-section">
+            <div class="osmose-container">
+                <div class="osmose-section-header">
+                    <h2 class="osmose-section-title"><?php _e('Autres Services', 'osmose-ads'); ?> <?php if ($city_name): echo esc_html('à ' . $city_name); endif; ?></h2>
+                    <p class="osmose-section-subtitle"><?php _e('Découvrez nos autres services disponibles dans votre ville', 'osmose-ads'); ?></p>
+                </div>
+                
+                <div class="osmose-related-grid">
+                    <?php foreach ($related_ads as $related_ad): 
+                        $related_city_id = get_post_meta($related_ad->ID, 'city_id', true);
+                        $related_city = $related_city_id ? get_post($related_city_id) : null;
+                    ?>
+                        <div class="osmose-related-card">
+                            <div class="osmose-related-content">
+                                <h3 class="osmose-related-title"><?php echo esc_html($related_ad->post_title); ?></h3>
+                                <?php 
+                                $excerpt = wp_trim_words($related_ad->post_content, 20);
+                                if ($excerpt):
+                                ?>
+                                    <p class="osmose-related-excerpt"><?php echo esc_html($excerpt); ?>...</p>
+                                <?php endif; ?>
+                                <a href="<?php echo get_permalink($related_ad->ID); ?>" class="osmose-related-link">
+                                    <?php _e('Voir le service', 'osmose-ads'); ?>
+                                </a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </section>
+    <?php endif; ?>
     
 </div>
+
+<!-- Bouton Flottant d'Appel -->
+<?php if ($phone_raw): ?>
+    <a href="tel:<?php echo esc_attr($phone_raw); ?>" id="floatingCallBtn" class="osmose-floating-btn osmose-track-call"
+       data-ad-id="<?php echo esc_attr($ad_id); ?>"
+       data-ad-slug="<?php echo esc_attr($ad_slug_for_tracking); ?>"
+       data-page-url="<?php echo esc_attr($current_url); ?>"
+       data-phone="<?php echo esc_attr($phone_raw); ?>"
+       aria-label="<?php printf(__('Appeler %s', 'osmose-ads'), esc_attr($phone ?: $phone_raw)); ?>"
+       title="<?php printf(__('Appeler %s', 'osmose-ads'), esc_attr($phone ?: $phone_raw)); ?>">
+        <i class="fas fa-phone"></i>
+    </a>
+<?php endif; ?>
 
 <script>
 // Variables pour le tracking
