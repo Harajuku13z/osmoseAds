@@ -261,11 +261,12 @@ function osmose_ads_handle_create_template() {
         $prompt .= "<p>[Récapitulatif proposition de valeur en 2-3 phrases]</p>\n\n";
         $prompt .= "<p>[Invitation claire à l'action avec bénéfices immédiats : devis gratuit, intervention rapide]</p>\n\n";
         $prompt .= "<p>[Formule engageante de clôture personnalisée]</p>\n\n\n\n\n";
-        $prompt .= "<p><strong>Contactez [ENTREPRISE] :</strong><br>\n\n";
-        $prompt .= "Téléphone : [TELEPHONE]<br>\n\n";
-        $prompt .= "Email : [EMAIL]<br>\n\n";
-        $prompt .= "Adresse : [ADRESSE_COMPLETE]</p>\n\n";
-        $prompt .= "```\n\n\n";
+        $prompt .= "<p><strong>Contactez " . ($company_name ?: '[ENTREPRISE]') . " :</strong><br>\n";
+        $prompt .= "Téléphone : " . ($company_phone ?: '[TELEPHONE]') . "<br>\n";
+        $prompt .= "Email : " . ($company_email ?: '[EMAIL]') . "<br>\n";
+        $prompt .= "Adresse : " . ($company_address ?: '[ADRESSE_COMPLETE]') . "</p>\n\n";
+        $prompt .= "```\n\n";
+        $prompt .= "⚠️ NE PAS AJOUTER de texte après cette section (pas de commentaires, pas de notes de validation).\n\n";
         $prompt .= "---\n\n\n";
         $prompt .= "## 🎯 EXEMPLES DE CONTENU DE QUALITÉ\n\n\n";
         $prompt .= "### ❌ MAUVAIS (générique, creux)\n\n";
@@ -350,6 +351,31 @@ function osmose_ads_handle_create_template() {
     if (is_wp_error($ai_response)) {
         wp_send_json_error(array('message' => $ai_response->get_error_message()));
     }
+    
+    // Nettoyer la réponse de l'IA
+    $content = $ai_response ?? '';
+    
+    // Supprimer les commentaires de validation à la fin
+    $content = preg_replace('/\s*[-─═]{3,}.*$/s', '', $content);
+    $content = preg_replace('/\s*✅.*$/s', '', $content);
+    $content = preg_replace('/\s*\*\*Note.*$/s', '', $content);
+    
+    // Convertir le Markdown en HTML si l'IA a généré du Markdown
+    $content = preg_replace('/^####\s+(.+)$/m', '<h4>$1</h4>', $content);
+    $content = preg_replace('/^###\s+(.+)$/m', '<h3>$1</h3>', $content);
+    $content = preg_replace('/^##\s+(.+)$/m', '<h2>$1</h2>', $content);
+    $content = preg_replace('/^#\s+(.+)$/m', '<h2>$1</h2>', $content);
+    
+    // Convertir le gras Markdown en HTML
+    $content = preg_replace('/\*\*(.+?)\*\*/s', '<strong>$1</strong>', $content);
+    $content = preg_replace('/__(.+?)__/s', '<strong>$1</strong>', $content);
+    
+    // Convertir l'italique Markdown en HTML
+    $content = preg_replace('/\*(.+?)\*/s', '<em>$1</em>', $content);
+    $content = preg_replace('/_(.+?)_/s', '<em>$1</em>', $content);
+    
+    // Mettre à jour la réponse
+    $ai_response = trim($content);
     
     // Demander à l'IA de générer les meta SEO selon les normes All in One SEO
     $meta_prompt = "Pour le service '$service_name' dans une ville [VILLE] du département [DÉPARTEMENT], génère des métadonnées SEO optimisées selon les normes All in One SEO. Réponds UNIQUEMENT au format JSON suivant (sans texte avant ou après) :\n\n";
