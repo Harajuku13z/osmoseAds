@@ -78,11 +78,13 @@ class Osmose_Ads_Rewrite {
                 $request_uri = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
                 // Supprimer les préfixes comme /ad/ si présents
                 $request_uri = preg_replace('#^ad/#', '', $request_uri);
+                // Supprimer les paramètres de requête
+                $request_uri = preg_replace('/\?.*$/', '', $request_uri);
                 $path_parts = explode('/', $request_uri);
                 $slug = end($path_parts);
             }
             
-            if (!empty($slug)) {
+            if (!empty($slug) && $slug !== 'ad') { // Éviter les boucles
                 // Vérifier si ce slug correspond à une annonce
                 $ad_posts = get_posts(array(
                     'post_type' => 'ad',
