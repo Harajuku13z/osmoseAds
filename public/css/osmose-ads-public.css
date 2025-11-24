@@ -115,42 +115,68 @@
 .osmose-btn-hero {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 1rem 2rem;
-    border-radius: 0.5rem;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.125rem 2.5rem;
+    border-radius: 50px;
     font-weight: 700;
     font-size: 1.125rem;
     text-decoration: none;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     color: #ffffff !important;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.osmose-btn-hero::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.osmose-btn-hero:hover::before {
+    width: 300px;
+    height: 300px;
 }
 
 .osmose-btn-hero i {
     color: #ffffff !important;
+    font-size: 1.25rem;
+    transition: transform 0.3s ease;
+}
+
+.osmose-btn-hero:hover i {
+    transform: scale(1.1);
 }
 
 .osmose-btn-accent {
-    background-color: var(--accent-color);
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
     color: #ffffff !important;
 }
 
 .osmose-btn-accent:hover {
-    background-color: var(--accent-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
     color: #ffffff !important;
 }
 
 .osmose-btn-primary {
-    background-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
     color: #ffffff !important;
 }
 
 .osmose-btn-primary:hover {
-    background-color: var(--primary-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
     color: #ffffff !important;
 }
 
