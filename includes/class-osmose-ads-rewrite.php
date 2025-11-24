@@ -7,6 +7,22 @@ class Osmose_Ads_Rewrite {
     public function add_rewrite_rules() {
         // Les annonces utilisent maintenant la même structure d'URL que les posts
         // L'interception se fait dans parse_request et template_loader
+        
+        // Ajouter une règle pour gérer les URLs avec /ad/ (anciennes URLs)
+        // et rediriger vers la nouvelle structure sans préfixe
+        $permalink_structure = get_option('permalink_structure');
+        if (!empty($permalink_structure)) {
+            // Si la structure est simple comme /%postname%/
+            if (strpos($permalink_structure, '%postname%') !== false && strpos($permalink_structure, '%year%') === false) {
+                // Ajouter une règle pour /ad/slug et rediriger vers /slug
+                add_rewrite_rule(
+                    '^ad/([^/]+)/?$',
+                    'index.php?post_type=ad&name=$matches[1]',
+                    'top'
+                );
+            }
+        }
+        
         // Flush rules si nécessaire
         if (get_option('osmose_ads_flush_rewrite_rules')) {
             flush_rewrite_rules(false);

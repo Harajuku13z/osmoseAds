@@ -63,37 +63,8 @@ class Osmose_Ads_Post_Types {
         );
 
         // Utiliser la même structure d'URL que les posts
-        // Pour cela, on doit utiliser un slug qui correspond à la structure des posts
-        // et intercepter les requêtes pour vérifier si c'est une annonce
-        
-        $permalink_structure = get_option('permalink_structure');
-        $rewrite_config = false; // Par défaut, pas de rewrite rules personnalisées
-        
-        // Si on a une structure de permalink personnalisée, utiliser la même structure
-        if (!empty($permalink_structure)) {
-            // Extraire la base si elle existe (ex: /blog/%postname%/)
-            $rewrite_base = '';
-            if (preg_match('/^([^%]+)/', $permalink_structure, $matches)) {
-                $rewrite_base = rtrim($matches[1], '/');
-            }
-            
-            // Si pas de base ou base vide, utiliser directement le slug
-            if (empty($rewrite_base)) {
-                $rewrite_config = array(
-                    'slug' => '',
-                    'with_front' => false,
-                    'feeds' => true,
-                    'pages' => true
-                );
-            } else {
-                $rewrite_config = array(
-                    'slug' => ltrim($rewrite_base, '/'),
-                    'with_front' => false,
-                    'feeds' => true,
-                    'pages' => true
-                );
-            }
-        }
+        // On désactive les rewrite rules par défaut du CPT et on interceptera les requêtes
+        // pour que les annonces utilisent exactement la même structure que les posts
         
         $args = array(
             'labels'              => $labels,
@@ -107,7 +78,7 @@ class Osmose_Ads_Post_Types {
             'has_archive'         => true,
             'hierarchical'        => false,
             'supports'            => array('title', 'editor', 'custom-fields', 'thumbnail', 'excerpt', 'comments', 'author', 'trackbacks', 'revisions'),
-            'rewrite'             => $rewrite_config,
+            'rewrite'             => false, // Pas de rewrite rules - on interceptera les requêtes
             'query_var'           => true,
             'show_in_rest'        => true, // Support Gutenberg
             'taxonomies'          => array('category', 'post_tag'), // Support des catégories et tags WordPress
