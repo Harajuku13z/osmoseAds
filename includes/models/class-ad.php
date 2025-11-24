@@ -121,15 +121,37 @@ class Ad {
     }
     
     /**
-     * Récupérer le statut
+     * Récupérer le statut de l'annonce
      */
     public function get_status() {
-        $status = get_post_meta($this->post_id, 'status', true);
+        $status = get_post_meta($this->post_id, 'ad_status', true);
         if (!$status) {
-            $post = get_post($this->post_id);
-            return $post->post_status === 'publish' ? 'published' : 'draft';
+            // Compatibilité : vérifier l'ancien système
+            $status = get_post_meta($this->post_id, 'status', true);
+            if (!$status) {
+                $post = get_post($this->post_id);
+                return $post->post_status === 'publish' ? 'published' : 'draft';
+            }
         }
         return $status;
+    }
+    
+    /**
+     * Définir le statut de l'annonce
+     */
+    public function set_status($status) {
+        $allowed_statuses = array('draft', 'published', 'archived');
+        if (!in_array($status, $allowed_statuses)) {
+            return false;
+        }
+        return update_post_meta($this->post_id, 'ad_status', $status);
+    }
+    
+    /**
+     * Vérifier si l'annonce est publiée
+     */
+    public function is_published() {
+        return $this->get_status() === 'published';
     }
     
     /**
@@ -151,7 +173,7 @@ class Ad {
     }
     
     /**
-     * Récupérer les annonces similaires
+     * Récupérer les annonces similaires (même ville, status published)
      */
     public function get_related_ads($limit = 5) {
         $city = $this->get_city();
@@ -160,16 +182,44 @@ class Ad {
         }
         
         $city_id = $city->ID;
+        $template_id = get_post_meta($this->post_id, 'template_id', true);
+        
+        $meta_query = array(
+            'relation' => 'AND',
+            array(
+                'key' => 'city_id',
+                'value' => $city_id,
+            ),
+        );
+        
+        // Exclure le même template pour avoir des services différents
+        if ($template_id) {
+            $meta_query[] = array(
+                'key' => 'template_id',
+                'value' => $template_id,
+                'compare' => '!=',
+            );
+        }
+        
         $posts = get_posts(array(
             'post_type' => 'ad',
-            'posts_per_page' => $limit + 1, // +1 pour exclure la current
+            'posts_per_page' => $limit + 5, // +5 pour filtrer ensuite
             'post_status' => 'publish',
-            'meta_key' => 'city_id',
-            'meta_value' => $city_id,
+            'meta_query' => $meta_query,
             'post__not_in' => array($this->post_id),
+            'orderby' => 'rand', // Ordre aléatoire pour varier les suggestions
         ));
         
-        return array_slice($posts, 0, $limit);
+        // Filtrer pour ne garder que les annonces "published"
+        $filtered_posts = array();
+        foreach ($posts as $post) {
+            $ad = new self($post->ID);
+            if ($ad->is_published() && count($filtered_posts) < $limit) {
+                $filtered_posts[] = $post;
+            }
+        }
+        
+        return $filtered_posts;
     }
 }
 

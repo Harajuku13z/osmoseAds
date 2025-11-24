@@ -17,6 +17,7 @@ class Ad_Template {
     
     /**
      * Récupérer le contenu personnalisé pour une ville
+     * Avec système de cache de 30 jours
      */
     public function get_content_for_city($city_id, $use_ai = null) {
         $template_content = get_post_field('post_content', $this->post_id);
@@ -29,6 +30,17 @@ class Ad_Template {
         if ($use_ai === null) {
             $use_ai = get_option('osmose_ads_ai_personalization', false);
         }
+        
+        // Générer une clé de cache unique
+        $cache_key = 'osmose_content_' . $this->post_id . '_' . $city_id . '_' . md5(substr($template_content, 0, 100));
+        
+        // Vérifier le cache
+        $cached_content = get_transient($cache_key);
+        if ($cached_content !== false) {
+            return $cached_content;
+        }
+        
+        $final_content = '';
         
         if ($use_ai) {
             // Personnalisation IA avancée
@@ -47,13 +59,20 @@ class Ad_Template {
                 );
                 
                 if ($personalized_content) {
-                    return $personalized_content;
+                    $final_content = $personalized_content;
                 }
             }
         }
         
         // Fallback : remplacement de variables basique
-        return $this->replace_variables($template_content, $city_id);
+        if (empty($final_content)) {
+            $final_content = $this->replace_variables($template_content, $city_id);
+        }
+        
+        // Mettre en cache pour 30 jours (2592000 secondes)
+        set_transient($cache_key, $final_content, 30 * DAY_IN_SECONDS);
+        
+        return $final_content;
     }
     
     /**
@@ -182,6 +201,33 @@ class Ad_Template {
     public function is_active() {
         $is_active = get_post_meta($this->post_id, 'is_active', true);
         return $is_active !== '0' && $is_active !== false;
+    }
+    
+    /**
+     * Récupérer le compteur d'utilisation
+     */
+    public function get_usage_count() {
+        return (int) get_post_meta($this->post_id, 'usage_count', true);
+    }
+    
+    /**
+     * Invalider le cache pour toutes les villes
+     */
+    public function clear_cache() {
+        global $wpdb;
+        
+        // Supprimer tous les transients commençant par osmose_content_{template_id}_
+        $prefix = 'osmose_content_' . $this->post_id . '_';
+        
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM $wpdb->options WHERE option_name LIKE %s",
+            '_transient_' . $wpdb->esc_like($prefix) . '%'
+        ));
+        
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM $wpdb->options WHERE option_name LIKE %s",
+            '_transient_timeout_' . $wpdb->esc_like($prefix) . '%'
+        ));
     }
 }
 

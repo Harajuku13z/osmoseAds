@@ -78,12 +78,7 @@ class Osmose_Ads_Post_Types {
             'has_archive'         => true,
             'hierarchical'        => false,
             'supports'            => array('title', 'editor', 'custom-fields', 'thumbnail', 'excerpt', 'comments', 'author', 'trackbacks', 'revisions'),
-            'rewrite'             => array(
-                'slug'       => '',  // Pas de préfixe - utilise directement le slug
-                'with_front' => false,  // Ne pas ajouter le préfixe de structure
-                'feeds'      => true,
-                'pages'      => true
-            ),
+            'rewrite'             => false,  // Désactivé pour gérer manuellement les URLs
             'query_var'           => 'ad',
             'show_in_rest'        => true, // Support Gutenberg
             'taxonomies'          => array('category', 'post_tag'), // Support des catégories et tags WordPress
