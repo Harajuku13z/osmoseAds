@@ -371,10 +371,24 @@ class Osmose_Ads {
      * Intercepter les requêtes pour vérifier si un slug correspond à une annonce
      */
     public function intercept_ad_requests($wp) {
+        // Ne rien faire dans l'admin
+        if (is_admin()) {
+            return;
+        }
+        
         // Vérifier si on a un name dans la requête (slug)
+        $slug = '';
+        
         if (isset($wp->query_vars['name']) && !empty($wp->query_vars['name'])) {
             $slug = $wp->query_vars['name'];
-            
+        } elseif (isset($_SERVER['REQUEST_URI'])) {
+            // Extraire le slug depuis l'URL
+            $request_uri = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+            $path_parts = explode('/', $request_uri);
+            $slug = end($path_parts);
+        }
+        
+        if (!empty($slug)) {
             // Vérifier si ce slug correspond à une annonce
             $ad_posts = get_posts(array(
                 'post_type' => 'ad',
@@ -387,6 +401,7 @@ class Osmose_Ads {
                 // C'est une annonce ! Modifier la requête pour pointer vers cette annonce
                 $wp->query_vars['post_type'] = 'ad';
                 $wp->query_vars['name'] = $slug;
+                $wp->query_vars['p'] = $ad_posts[0]->ID;
                 unset($wp->query_vars['error']); // Supprimer l'erreur si présente
             }
         }

@@ -7,9 +7,6 @@ class Osmose_Ads_Rewrite {
     public function add_rewrite_rules() {
         // Les annonces utilisent maintenant la même structure d'URL que les posts
         // L'interception se fait dans parse_request et template_loader
-        // Pas besoin de rewrite rules spéciales car WordPress va chercher d'abord dans les posts,
-        // et nous intercepterons dans template_loader si c'est une 404
-        
         // Flush rules si nécessaire
         if (get_option('osmose_ads_flush_rewrite_rules')) {
             flush_rewrite_rules(false);
