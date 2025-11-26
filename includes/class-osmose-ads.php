@@ -81,6 +81,9 @@ class Osmose_Ads {
         // Ajouter les variables de tracking dans le footer
         $this->loader->add_action('wp_footer', $plugin_public, 'add_tracking_variables');
         
+        // Générer le sitemap XML
+        $this->loader->add_action('template_redirect', $plugin_public, 'generate_sitemap');
+        
         // S'assurer que le contenu des annonces s'affiche dans single.php
         $this->loader->add_filter('the_content', $this, 'display_ad_content_in_single', 10, 1);
     }

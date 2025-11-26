@@ -97,6 +97,68 @@ class Osmose_Ads_Public {
             <?php
         }
     }
+
+    /**
+     * Générer et afficher le sitemap XML
+     */
+    public function generate_sitemap() {
+        global $wp_query;
+        
+        if (!isset($wp_query->query_vars['osmose_ads_sitemap'])) {
+            return;
+        }
+
+        // Récupérer toutes les annonces publiées
+        $ads = get_posts(array(
+            'post_type' => 'ad',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'orderby' => 'modified',
+            'order' => 'DESC',
+        ));
+
+        // En-têtes XML
+        header('Content-Type: application/xml; charset=utf-8');
+        
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
+        echo '        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' . "\n";
+        echo '        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . "\n";
+        echo '        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">' . "\n";
+
+        // URL de la page d'accueil
+        $home_url = home_url('/');
+        $lastmod = get_lastpostmodified('GMT');
+        echo "  <url>\n";
+        echo "    <loc>" . esc_url($home_url) . "</loc>\n";
+        echo "    <lastmod>" . esc_html($lastmod ? date('c', strtotime($lastmod)) : date('c')) . "</lastmod>\n";
+        echo "    <changefreq>daily</changefreq>\n";
+        echo "    <priority>1.0</priority>\n";
+        echo "  </url>\n";
+
+        // URLs des annonces
+        foreach ($ads as $ad) {
+            $url = get_permalink($ad->ID);
+            $modified = $ad->post_modified_gmt;
+            $modified_date = $modified ? date('c', strtotime($modified)) : date('c');
+            
+            // Déterminer la priorité (peut être ajustée selon vos besoins)
+            $priority = '0.8';
+            
+            // Déterminer la fréquence de changement
+            $changefreq = 'weekly';
+            
+            echo "  <url>\n";
+            echo "    <loc>" . esc_url($url) . "</loc>\n";
+            echo "    <lastmod>" . esc_html($modified_date) . "</lastmod>\n";
+            echo "    <changefreq>" . esc_html($changefreq) . "</changefreq>\n";
+            echo "    <priority>" . esc_html($priority) . "</priority>\n";
+            echo "  </url>\n";
+        }
+
+        echo '</urlset>';
+        exit;
+    }
 }
 
 
