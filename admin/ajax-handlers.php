@@ -408,6 +408,31 @@ function osmose_ads_handle_create_template() {
             $twitter_description = $og_description;
         }
     }
+
+    // Remplacer les mentions génériques d'entreprise par le vrai nom de l'entreprise
+    $company_name_for_meta = trim($company_name ?: get_bloginfo('name'));
+    if (!empty($company_name_for_meta)) {
+        $meta_placeholders = array(
+            '[Entreprise]',
+            'Nom de l\'entreprise',
+            'Nom de l’entreprise',
+        );
+
+        $replace_cb = function($value) use ($meta_placeholders, $company_name_for_meta) {
+            if (!is_string($value) || $value === '') {
+                return $value;
+            }
+            return str_replace($meta_placeholders, $company_name_for_meta, $value);
+        };
+
+        $meta_title           = $replace_cb($meta_title);
+        $meta_description     = $replace_cb($meta_description);
+        $meta_keywords        = $replace_cb($meta_keywords);
+        $og_title             = $replace_cb($og_title);
+        $og_description       = $replace_cb($og_description);
+        $twitter_title        = $replace_cb($twitter_title);
+        $twitter_description  = $replace_cb($twitter_description);
+    }
     
     // Créer le post template
     $template_id = wp_insert_post(array(
