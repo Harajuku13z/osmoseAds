@@ -290,6 +290,53 @@ function osmose_ads_handle_create_template() {
         }
     }
 
+    // Filet de sécurité : si aucun JSON valide n'a été extrait, construire un HTML complet minimal
+    // pour éviter de n'avoir que quelques paragraphes sans structure (pas de liste de prestations, pas de FAQ, etc.)
+    if (empty($template_json_raw)) {
+        $intro_html = wpautop($ai_response);
+
+        $fallback_html  = "<div class='space-y-6'>";
+        $fallback_html .= "<div class='space-y-4'>";
+        $fallback_html .= $intro_html;
+        $fallback_html .= "</div>";
+
+        // Bloc engagement qualité
+        $fallback_html .= "<div class='bg-blue-50 p-6 rounded-lg'>";
+        $fallback_html .= "<h2 class='text-xl font-bold text-gray-900 mb-3'>Notre Engagement Qualité</h2>";
+        $fallback_html .= "<p class='leading-relaxed mb-3'>Nous intervenons à [VILLE] et dans toute la région de [RÉGION] avec une exigence élevée sur la préparation du chantier, la sécurité et la durabilité des solutions mises en œuvre.</p>";
+        $fallback_html .= "<p class='leading-relaxed'>Chaque intervention de {$service_name} respecte les normes professionnelles en vigueur et les recommandations des fabricants de matériaux.</p>";
+        $fallback_html .= "</div>";
+
+        // Bloc prestations génériques structurées (au moins une base si l'IA n'a rien fourni)
+        $fallback_html .= "<div class='space-y-4'>";
+        $fallback_html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>Nos prestations {$service_name}</h2>";
+        $fallback_html .= "<ul class='space-y-3'>";
+        $fallback_html .= "<li><i class='fas fa-check text-green-600 mr-2'></i>Audit technique et diagnostic précis des besoins en {$service_name} à [VILLE].</li>";
+        $fallback_html .= "<li><i class='fas fa-check text-green-600 mr-2'></i>Interventions ciblées pour résoudre les problématiques prioritaires détectées sur votre projet.</li>";
+        $fallback_html .= "<li><i class='fas fa-check text-green-600 mr-2'></i>Mise en œuvre de solutions conformes aux normes en vigueur en [RÉGION].</li>";
+        $fallback_html .= "<li><i class='fas fa-check text-green-600 mr-2'></i>Accompagnement et conseils personnalisés avant, pendant et après l'intervention.</li>";
+        $fallback_html .= "<li><i class='fas fa-check text-green-600 mr-2'></i>Utilisation de matériaux adaptés au contexte climatique local et à votre bâtiment.</li>";
+        $fallback_html .= "</ul>";
+        $fallback_html .= "</div>";
+
+        // Bloc FAQ générique
+        $fallback_html .= "<div class='space-y-4'>";
+        $fallback_html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>FAQ sur {$service_name} à [VILLE]</h2>";
+        $fallback_html .= "<div class='space-y-2'>";
+        $fallback_html .= "<p><strong>Q1 : Comment obtenir un devis pour {$service_name} à [VILLE] ?</strong></p>";
+        $fallback_html .= "<p>A : Contactez-nous via le formulaire ou par téléphone. Nous analysons votre besoin et vous transmettons un devis détaillé et personnalisé.</p>";
+        $fallback_html .= "<p><strong>Q2 : Intervenez-vous uniquement à [VILLE] ?</strong></p>";
+        $fallback_html .= "<p>A : Nous intervenons à [VILLE] et dans tout le département [DÉPARTEMENT], en [RÉGION].</p>";
+        $fallback_html .= "<p><strong>Q3 : Quelles garanties proposez-vous sur vos prestations de {$service_name} ?</strong></p>";
+        $fallback_html .= "<p>A : Nos interventions respectent les normes en vigueur et bénéficient des garanties légales associées aux travaux réalisés.</p>";
+        $fallback_html .= "</div>";
+        $fallback_html .= "</div>";
+
+        $fallback_html .= "</div>";
+
+        $ai_response = $fallback_html;
+    }
+
     // Si aucune meta extraite depuis le JSON, fallback sur l'ancienne logique (2e appel IA dédié aux méta)
     if (empty($meta_title) && empty($meta_description)) {
         // Demander à l'IA de générer les meta SEO selon les normes All in One SEO
