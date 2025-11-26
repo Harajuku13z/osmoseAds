@@ -66,6 +66,8 @@ class Ad_Template {
                         
                         if ($personalized_content) {
                             $final_content = $personalized_content;
+                            // S'assurer que les placeholders sont remplacés même dans le contenu personnalisé
+                            $final_content = $this->replace_variables($final_content, $city_id);
                         }
                     }
                 }
@@ -75,6 +77,9 @@ class Ad_Template {
         // Fallback : remplacement de variables basique
         if (empty($final_content)) {
             $final_content = $this->replace_variables($template_content, $city_id);
+        } else {
+            // S'assurer que même si on a du contenu, les placeholders sont remplacés
+            $final_content = $this->replace_variables($final_content, $city_id);
         }
         
         // Nettoyage : supprimer toute ancienne galerie statique déjà présente dans le template
@@ -199,6 +204,32 @@ class Ad_Template {
                 $links_section .= '</p>';
                 $links_section .= '</div>';
                 $final_content .= "\n\n" . $links_section;
+            }
+        }
+
+        // Validation finale : s'assurer qu'aucun placeholder ne reste
+        $placeholders = array('[VILLE]', '[RÉGION]', '[DÉPARTEMENT]', '[CODE_POSTAL]');
+        $remaining_placeholders = array();
+        foreach ($placeholders as $placeholder) {
+            if (strpos($final_content, $placeholder) !== false) {
+                $remaining_placeholders[] = $placeholder;
+            }
+        }
+        
+        // Si des placeholders restent, forcer le remplacement une dernière fois
+        if (!empty($remaining_placeholders)) {
+            error_log('Osmose ADS: Placeholders non remplacés détectés dans le contenu final: ' . implode(', ', $remaining_placeholders) . ' - Remplacement forcé');
+            $final_content = $this->replace_variables($final_content, $city_id);
+            
+            // Vérifier à nouveau après remplacement
+            $still_remaining = array();
+            foreach ($placeholders as $placeholder) {
+                if (strpos($final_content, $placeholder) !== false) {
+                    $still_remaining[] = $placeholder;
+                }
+            }
+            if (!empty($still_remaining)) {
+                error_log('Osmose ADS: ERREUR - Placeholders toujours présents après remplacement: ' . implode(', ', $still_remaining));
             }
         }
         

@@ -822,8 +822,67 @@ function osmose_ads_handle_bulk_generate() {
         // Générer le contenu
         $content = $template->get_content_for_city($city_id);
         
+        // Vérifier que tous les placeholders ont été remplacés
+        $placeholders = array('[VILLE]', '[RÉGION]', '[DÉPARTEMENT]', '[CODE_POSTAL]');
+        $remaining_placeholders = array();
+        foreach ($placeholders as $placeholder) {
+            if (strpos($content, $placeholder) !== false) {
+                $remaining_placeholders[] = $placeholder;
+            }
+        }
+        
+        // Si des placeholders restent, forcer le remplacement manuel
+        if (!empty($remaining_placeholders)) {
+            error_log('Osmose ADS: Placeholders non remplacés détectés dans le contenu: ' . implode(', ', $remaining_placeholders));
+            // Forcer le remplacement des variables
+            $city = get_post($city_id);
+            if ($city) {
+                $city_name = get_post_meta($city_id, 'name', true) ?: $city->post_title;
+                $department = get_post_meta($city_id, 'department', true);
+                $region = get_post_meta($city_id, 'region', true);
+                $postal_code = get_post_meta($city_id, 'postal_code', true);
+                
+                $replacements = array(
+                    '[VILLE]' => $city_name,
+                    '[RÉGION]' => $region ?: '',
+                    '[DÉPARTEMENT]' => $department ?: '',
+                    '[CODE_POSTAL]' => $postal_code ?: '',
+                );
+                
+                $content = str_replace(array_keys($replacements), array_values($replacements), $content);
+            }
+        }
+        
         // Générer les métadonnées
         $meta = $template->get_meta_for_city($city_id);
+        
+        // Vérifier aussi les métadonnées pour les placeholders
+        foreach ($meta as $key => $value) {
+            if (is_string($value)) {
+                foreach ($placeholders as $placeholder) {
+                    if (strpos($value, $placeholder) !== false) {
+                        error_log("Osmose ADS: Placeholder $placeholder détecté dans $key, remplacement forcé");
+                        // Forcer le remplacement
+                        $city = get_post($city_id);
+                        if ($city) {
+                            $city_name = get_post_meta($city_id, 'name', true) ?: $city->post_title;
+                            $department = get_post_meta($city_id, 'department', true);
+                            $region = get_post_meta($city_id, 'region', true);
+                            $postal_code = get_post_meta($city_id, 'postal_code', true);
+                            
+                            $replacements = array(
+                                '[VILLE]' => $city_name,
+                                '[RÉGION]' => $region ?: '',
+                                '[DÉPARTEMENT]' => $department ?: '',
+                                '[CODE_POSTAL]' => $postal_code ?: '',
+                            );
+                            
+                            $meta[$key] = str_replace(array_keys($replacements), array_values($replacements), $value);
+                        }
+                    }
+                }
+            }
+        }
         
         // Préparer l'extrait pour l'annonce (utiliser meta_description)
         $ad_excerpt = '';
