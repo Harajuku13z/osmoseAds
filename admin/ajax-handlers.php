@@ -186,24 +186,132 @@ function osmose_ads_handle_create_template() {
     $company_email = get_option('admin_email', '');
     $site_url = get_site_url();
     
-    // Appeler l'IA pour générer le contenu
+    // Appeler l'IA pour générer le contenu en DEUX ÉTAPES
     $ai_service = new AI_Service();
     
-    if (empty($prompt)) {
-        // Utiliser le nouveau prompt JSON inspiré de la version Laravel
-        $prompt = osmose_ads_build_template_prompt($service_name, '');
+    // ========== ÉTAPE 1 : Générer un JSON structuré avec les données brutes ==========
+    $step1_prompt = "Tu es un expert technique en {$service_name} avec une connaissance PROFONDE des prestations, techniques et matériaux spécifiques à ce domaine.\n\n";
+    $step1_prompt .= "GÉNÈRE UN JSON AVEC CES CHAMPS (données brutes, pas de HTML) :\n\n";
+    $step1_prompt .= "{\n";
+    $step1_prompt .= "  \"title\": \"Expert en {$service_name} à [VILLE] dans le département [DÉPARTEMENT]\",\n";
+    $step1_prompt .= "  \"title_subtitle\": \"[Une phrase d'accroche technique de 10-15 mots]\",\n";
+    $step1_prompt .= "  \"intro_paragraphs\": [\n";
+    $step1_prompt .= "    \"[Premier paragraphe d'introduction de 3-4 phrases, technique et spécifique à {$service_name}, mentionnant [ENTREPRISE]]\",\n";
+    $step1_prompt .= "    \"[Deuxième paragraphe d'introduction de 3-4 phrases, technique et spécifique à {$service_name}]\",\n";
+    $step1_prompt .= "    \"[Troisième paragraphe d'introduction de 3-4 phrases, technique et spécifique à {$service_name}]\",\n";
+    $step1_prompt .= "  ],\n";
+    $step1_prompt .= "  \"guarantee_title\": \"Garantie satisfaction et performances\",\n";
+    $step1_prompt .= "  \"guarantee_paragraphs\": [\n";
+    $step1_prompt .= "    \"[Premier paragraphe sur les garanties, suivi personnalisé, normes, propreté, sécurité]\",\n";
+    $step1_prompt .= "    \"[Deuxième paragraphe sur les garanties si nécessaire]\",\n";
+    $step1_prompt .= "  ],\n";
+    $step1_prompt .= "  \"prestations_title\": \"Nos Prestations " . strtolower($service_name) . "\",\n";
+    $step1_prompt .= "  \"prestations\": [\n";
+    for ($i = 1; $i <= 10; $i++) {
+        $step1_prompt .= "    {\n";
+        $step1_prompt .= "      \"name\": \"[Nom technique précis de la prestation {$i}, ex: 'Isolation combles perdus' pour isolation]\",\n";
+        $step1_prompt .= "      \"description\": \"[Description détaillée de 2-3 phrases expliquant la technique, les matériaux et les bénéfices pour {$service_name}]\",\n";
+        $step1_prompt .= "    }" . ($i < 10 ? ',' : '') . "\n";
+    }
+    $step1_prompt .= "  ],\n";
+    $step1_prompt .= "  \"faq_title\": \"FAQ " . strtolower($service_name) . "\",\n";
+    $step1_prompt .= "  \"faq_questions\": [\n";
+    for ($i = 1; $i <= 4; $i++) {
+        $step1_prompt .= "    {\n";
+        $step1_prompt .= "      \"question\": \"[Question technique et détaillée {$i} sur {$service_name}]\",\n";
+        $step1_prompt .= "      \"answer\": \"[Réponse complète de 2-3 phrases, technique et détaillée]\",\n";
+        $step1_prompt .= "    }" . ($i < 4 ? ',' : '') . "\n";
+    }
+    $step1_prompt .= "  ],\n";
+    $step1_prompt .= "  \"short_description\": \"[Résumé en une phrase claire et attractive le service {$service_name} à [VILLE], avec un angle technique et commercial fort]\",\n";
+    $step1_prompt .= "  \"long_description\": \"[Rédiger 2 à 3 phrases explicatives sur notre service de {$service_name} à [VILLE] et en [RÉGION], en insistant sur l'expertise technique, les types d'interventions, les matériaux utilisés et les garanties]\",\n";
+    $step1_prompt .= "  \"meta_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+    $step1_prompt .= "  \"meta_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.\",\n";
+    $step1_prompt .= "  \"meta_keywords\": \"{$service_name}, [VILLE], [RÉGION], service professionnel, devis gratuit\",\n";
+    $step1_prompt .= "  \"og_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+    $step1_prompt .= "  \"og_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.\",\n";
+    $step1_prompt .= "  \"twitter_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+    $step1_prompt .= "  \"twitter_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.\",\n";
+    $step1_prompt .= "  \"icon\": \"fas fa-tools\"\n";
+    $step1_prompt .= "}\n\n";
+    $step1_prompt .= "IMPORTANT :\n";
+    $step1_prompt .= "- Utilise UNIQUEMENT les placeholders [VILLE], [RÉGION], [DÉPARTEMENT], [ENTREPRISE] dans les textes\n";
+    $step1_prompt .= "- Chaque prestation DOIT avoir un nom technique précis (pas 'Diagnostic' ou 'Conseil' générique)\n";
+    $step1_prompt .= "- Chaque description de prestation DOIT être détaillée (2-3 phrases) avec techniques, matériaux et bénéfices\n";
+    $step1_prompt .= "- Les prestations doivent être UNIQUES à {$service_name}\n";
+    $step1_prompt .= "- Réponds UNIQUEMENT avec le JSON, sans texte avant ou après\n";
+    
+    $step1_system = 'Tu es un expert technique en ' . $service_name . '. Tu génères des données structurées précises et techniques. Réponds UNIQUEMENT en JSON valide.';
+    
+    // Premier appel IA
+    $step1_response = $ai_service->call_ai($step1_prompt, $step1_system, array(
+        'temperature' => 0.8,
+        'max_tokens' => 3000,
+    ));
+    
+    if (is_wp_error($step1_response)) {
+        wp_send_json_error(array('message' => 'Erreur lors de la génération des données : ' . $step1_response->get_error_message()));
     }
     
-    $system_message = 'Tu es un rédacteur web senior spécialisé en BTP/couverture avec 10+ ans d\'expérience. Tu maîtrises parfaitement le vocabulaire technique du métier, les enjeux clients et les standards WordPress/SEO 2025.';
+    // Extraire le JSON de la première réponse
+    $json_start = strpos($step1_response, '{');
+    $json_end = strrpos($step1_response, '}');
+    if ($json_start === false || $json_end === false || $json_end <= $json_start) {
+        wp_send_json_error(array('message' => 'La première étape n\'a pas généré un JSON valide. Réponse reçue : ' . substr($step1_response, 0, 200)));
+    }
     
-    // Générer le contenu principal avec plus de tokens pour un contenu de qualité
-    $ai_response = $ai_service->call_ai($prompt, $system_message, array(
-        'temperature' => 0.8,
+    $step1_json = substr($step1_response, $json_start, $json_end - $json_start + 1);
+    $step1_data = json_decode($step1_json, true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($step1_data)) {
+        wp_send_json_error(array('message' => 'Erreur de parsing JSON de la première étape : ' . json_last_error_msg()));
+    }
+    
+    // ========== ÉTAPE 2 : Convertir le JSON en HTML formaté ==========
+    $step2_prompt = "Tu es un expert en conversion de données JSON vers HTML WordPress.\n\n";
+    $step2_prompt .= "Voici un JSON avec les données d'une page de service WordPress pour {$service_name} :\n\n";
+    $step2_prompt .= $step1_json . "\n\n";
+    $step2_prompt .= "CONVERTIS ce JSON en HTML WordPress complet et formaté avec cette structure :\n\n";
+    $step2_prompt .= "<div class='space-y-6'>\n";
+    $step2_prompt .= "  <div class='space-y-4'>\n";
+    $step2_prompt .= "    <h1 class='text-3xl font-bold'>[title]</h1>\n";
+    $step2_prompt .= "    <p class='text-lg leading-relaxed'>[title_subtitle]</p>\n";
+    $step2_prompt .= "    [Pour chaque paragraphe dans intro_paragraphs : <p class='text-lg leading-relaxed'>[paragraphe]</p>]\n";
+    $step2_prompt .= "  </div>\n";
+    $step2_prompt .= "  <div class='space-y-4'>\n";
+    $step2_prompt .= "    <h2 class='text-2xl font-bold text-gray-900 mb-4'>[guarantee_title]</h2>\n";
+    $step2_prompt .= "    [Pour chaque paragraphe dans guarantee_paragraphs : <p class='text-lg leading-relaxed'>[paragraphe]</p>]\n";
+    $step2_prompt .= "  </div>\n";
+    $step2_prompt .= "  <div class='space-y-4'>\n";
+    $step2_prompt .= "    <h2 class='text-2xl font-bold text-gray-900 mb-4'>[prestations_title]</h2>\n";
+    $step2_prompt .= "    <ul class='space-y-3'>\n";
+    $step2_prompt .= "      [Pour chaque prestation dans prestations : <li><strong>[name]</strong> - [description]</li>]\n";
+    $step2_prompt .= "    </ul>\n";
+    $step2_prompt .= "  </div>\n";
+    $step2_prompt .= "  <div class='space-y-4'>\n";
+    $step2_prompt .= "    <h2 class='text-2xl font-bold text-gray-900 mb-4'>[faq_title]</h2>\n";
+    $step2_prompt .= "    <div class='space-y-2'>\n";
+    $step2_prompt .= "      [Pour chaque question dans faq_questions : <p><strong>[question]</strong></p><p>[answer]</p>]\n";
+    $step2_prompt .= "    </div>\n";
+    $step2_prompt .= "  </div>\n";
+    $step2_prompt .= "</div>\n\n";
+    $step2_prompt .= "IMPORTANT :\n";
+    $step2_prompt .= "- Génère UNIQUEMENT le HTML, sans texte avant ou après\n";
+    $step2_prompt .= "- Utilise les classes CSS fournies\n";
+    $step2_prompt .= "- Ajoute 2-3 liens internes dans le contenu (vers la page d'accueil ou autres services)\n";
+    $step2_prompt .= "- Respecte exactement la structure fournie\n";
+    $step2_prompt .= "- Garde tous les placeholders [VILLE], [RÉGION], [DÉPARTEMENT], [ENTREPRISE] intacts\n";
+    
+    $step2_system = 'Tu es un expert en conversion JSON vers HTML WordPress. Tu génères du HTML propre et bien formaté. Réponds UNIQUEMENT avec le HTML, sans texte avant ou après.';
+    
+    // Deuxième appel IA
+    $ai_response = $ai_service->call_ai($step2_prompt, $step2_system, array(
+        'temperature' => 0.3,
         'max_tokens' => 4000,
     ));
     
     if (is_wp_error($ai_response)) {
-        wp_send_json_error(array('message' => $ai_response->get_error_message()));
+        wp_send_json_error(array('message' => 'Erreur lors de la conversion HTML : ' . $ai_response->get_error_message()));
     }
     
     // Nettoyer la réponse de l'IA
@@ -250,142 +358,113 @@ function osmose_ads_handle_create_template() {
         $content = str_ireplace($region_name, '[RÉGION]', $content);
     }
     
-    // Mettre à jour la réponse
-    $ai_response = trim($content);
-
-    // Essayer d'extraire un JSON complet (nouvelle logique inspirée de Laravel)
-    $meta_title = '';
-    $meta_description = '';
-    $meta_keywords = '';
-    $og_title = '';
-    $og_description = '';
-    $twitter_title = '';
-    $twitter_description = '';
-    $short_description = '';
-    $long_description = '';
+    // Nettoyer le HTML généré par l'étape 2
+    $description_html = trim($ai_response);
+    
+    // Supprimer les balises markdown ou code si présentes
+    $description_html = preg_replace('/```html\s*/i', '', $description_html);
+    $description_html = preg_replace('/```\s*$/i', '', $description_html);
+    $description_html = trim($description_html);
+    
+    // Utiliser les données de l'étape 1 pour les métadonnées
+    $template_json_raw = $step1_json;
+    $meta_title = isset($step1_data['meta_title']) ? $step1_data['meta_title'] : '';
+    $meta_description = isset($step1_data['meta_description']) ? $step1_data['meta_description'] : '';
+    $meta_keywords = isset($step1_data['meta_keywords']) ? $step1_data['meta_keywords'] : '';
+    $og_title = isset($step1_data['og_title']) ? $step1_data['og_title'] : '';
+    $og_description = isset($step1_data['og_description']) ? $step1_data['og_description'] : '';
+    $twitter_title = isset($step1_data['twitter_title']) ? $step1_data['twitter_title'] : '';
+    $twitter_description = isset($step1_data['twitter_description']) ? $step1_data['twitter_description'] : '';
+    $short_description = isset($step1_data['short_description']) ? $step1_data['short_description'] : '';
+    $long_description = isset($step1_data['long_description']) ? $step1_data['long_description'] : '';
     $long_description_is_fallback = false;
-    $icon = '';
-    $template_json_raw = '';
-    $description_html = '';
-
-    $json_start = strpos($ai_response, '{');
-    $json_end   = strrpos($ai_response, '}');
-    if ($json_start !== false && $json_end !== false && $json_end > $json_start) {
-        $json_str = substr($ai_response, $json_start, $json_end - $json_start + 1);
-        $decoded  = json_decode($json_str, true);
-
-        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-            $template_json_raw = $json_str;
-
-            // Récupérer les champs principaux du JSON
-            $description_html   = isset($decoded['description']) ? $decoded['description'] : '';
-            $short_description  = isset($decoded['short_description']) ? $decoded['short_description'] : '';
-            $long_description   = isset($decoded['long_description']) ? $decoded['long_description'] : '';
-            $icon               = isset($decoded['icon']) ? $decoded['icon'] : '';
-            $meta_title         = isset($decoded['meta_title']) ? $decoded['meta_title'] : '';
-            $meta_description   = isset($decoded['meta_description']) ? $decoded['meta_description'] : '';
-            $meta_keywords      = isset($decoded['meta_keywords']) ? $decoded['meta_keywords'] : '';
-            $og_title           = isset($decoded['og_title']) ? $decoded['og_title'] : '';
-            $og_description     = isset($decoded['og_description']) ? $decoded['og_description'] : '';
-            $twitter_title      = isset($decoded['twitter_title']) ? $decoded['twitter_title'] : '';
-            $twitter_description= isset($decoded['twitter_description']) ? $decoded['twitter_description'] : '';
-
-            // Filet de sécurité : si long_description n'est pas fourni, le construire à partir du HTML (fallback SEO uniquement)
-            if (empty($long_description) && !empty($description_html)) {
-                $plain_text = wp_strip_all_tags($description_html);
-                $plain_text = trim(preg_replace('/\s+/', ' ', $plain_text));
-                if (function_exists('mb_substr')) {
-                    $long_description = mb_substr($plain_text, 0, 500);
-                } else {
-                    $long_description = substr($plain_text, 0, 500);
-                }
-                // Marquer que cette long_description est un fallback auto-généré (éviter de la réinjecter dans le HTML pour ne pas dupliquer/couper le contenu)
-                $long_description_is_fallback = true;
-            }
-
-            // Même chose pour la short_description
-            if (empty($short_description) && !empty($long_description)) {
-                if (function_exists('mb_substr')) {
-                    $short_description = mb_substr($long_description, 0, 160);
-                } else {
-                    $short_description = substr($long_description, 0, 160);
+    $icon = isset($step1_data['icon']) ? $step1_data['icon'] : 'fas fa-tools';
+    
+    // Si le HTML n'a pas été généré correctement, utiliser les données de l'étape 1 pour construire le HTML
+    if (empty($description_html) || strlen($description_html) < 100) {
+        // Construire le HTML à partir des données de l'étape 1
+        $description_html = "<div class='space-y-6'>";
+        $description_html .= "<div class='space-y-4'>";
+        $description_html .= "<h1 class='text-3xl font-bold'>" . esc_html($step1_data['title'] ?? $service_name . ' à [VILLE]') . "</h1>";
+        if (!empty($step1_data['title_subtitle'])) {
+            $description_html .= "<p class='text-lg leading-relaxed'>" . esc_html($step1_data['title_subtitle']) . "</p>";
+        }
+        if (!empty($step1_data['intro_paragraphs']) && is_array($step1_data['intro_paragraphs'])) {
+            foreach ($step1_data['intro_paragraphs'] as $para) {
+                if (!empty($para)) {
+                    $description_html .= "<p class='text-lg leading-relaxed'>" . esc_html($para) . "</p>";
                 }
             }
-
-            if (!empty($description_html)) {
-                // Si la "description" renvoyée par l'IA ne contient aucun HTML (simple texte),
-                // construire un HTML complet standard à partir de ce texte (intro + prestations + FAQ)
-                if (strpos($description_html, '<') === false) {
-                    $intro_blocks = preg_split('/\n{2,}/', trim($description_html));
-                    $intro_html = '';
-                    foreach ($intro_blocks as $block) {
-                        $block = trim($block);
-                        if ($block !== '') {
-                            $intro_html .= '<p class="text-lg leading-relaxed">' . esc_html($block) . '</p>';
-                        }
+        }
+        $description_html .= "</div>";
+        
+        // Section Garantie
+        if (!empty($step1_data['guarantee_title']) || !empty($step1_data['guarantee_paragraphs'])) {
+            $description_html .= "<div class='space-y-4'>";
+            $description_html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>" . esc_html($step1_data['guarantee_title'] ?? 'Garantie satisfaction et performances') . "</h2>";
+            if (!empty($step1_data['guarantee_paragraphs']) && is_array($step1_data['guarantee_paragraphs'])) {
+                foreach ($step1_data['guarantee_paragraphs'] as $para) {
+                    if (!empty($para)) {
+                        $description_html .= "<p class='text-lg leading-relaxed'>" . esc_html($para) . "</p>";
                     }
-
-                    if ($intro_html === '') {
-                        $intro_html = '<p class="text-lg leading-relaxed">Nous mettons à votre disposition notre expertise en ' . esc_html($service_name) . ' à [VILLE] et dans toute la région de [RÉGION].</p>';
-                    }
-
-                    $html  = "<div class='space-y-6'>";
-                    $html .= "<div class='space-y-4'>";
-                    $html .= "<h1 class='text-3xl font-bold'>" . esc_html($service_name) . " à [VILLE]</h1>";
-                    $html .= $intro_html;
-                    $html .= "</div>";
-
-                    // Bloc prestations génériques mais structurées
-                    $html .= "<div class='space-y-4'>";
-                    $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>Nos prestations " . esc_html($service_name) . "</h2>";
-                    $html .= "<ul class='space-y-3'>";
-                    $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Diagnostic complet de vos besoins en " . esc_html($service_name) . " à [VILLE].</li>";
-                    $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Mise en œuvre de solutions conformes aux normes en vigueur en [RÉGION].</li>";
-                    $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Utilisation de matériaux adaptés au climat local et à votre bâtiment.</li>";
-                    $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Accompagnement personnalisé avant, pendant et après l’intervention.</li>";
-                    $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Entretien et suivi pour garantir la durabilité de vos travaux.</li>";
-                    $html .= "</ul>";
-                    $html .= "</div>";
-
-                    // Bloc FAQ générique avec liens
-                    $devis_url = get_option('osmose_ads_devis_url', '');
-                    $site_url = get_site_url();
-                    $html .= "<div class='space-y-4'>";
-                    $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>FAQ sur " . esc_html($service_name) . " à [VILLE]</h2>";
-                    $html .= "<div class='space-y-2'>";
-                    $html .= "<p><strong>Q1 : Comment obtenir un devis pour " . esc_html($service_name) . " à [VILLE] ?</strong></p>";
-                    if (!empty($devis_url)) {
-                        $html .= "<p>A : Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un <a href='" . esc_url($devis_url) . "' class='text-blue-600 hover:underline'>devis détaillé et gratuit</a>.</p>";
-                    } else {
-                        $html .= "<p>A : Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un devis détaillé et gratuit.</p>";
-                    }
-                    $html .= "<p><strong>Q2 : Intervenez-vous uniquement à [VILLE] ?</strong></p>";
-                    $html .= "<p>A : Nous intervenons à [VILLE] et dans tout le département [DÉPARTEMENT], en [RÉGION]. Découvrez nos autres <a href='" . esc_url($site_url) . "' class='text-blue-600 hover:underline'>services disponibles</a> dans votre région.</p>";
-                    $html .= "<p><strong>Q3 : Quelles garanties proposez-vous sur vos prestations de " . esc_html($service_name) . " ?</strong></p>";
-                    $html .= "<p>A : Nos interventions respectent les normes en vigueur et bénéficient des garanties légales associées aux travaux réalisés. Pour plus d'informations, consultez notre <a href='" . esc_url($site_url) . "' class='text-blue-600 hover:underline'>site web</a>.</p>";
-                    $html .= "</div>";
-                    $html .= "</div>";
-
-                    $html .= "</div>";
-
-                    $description_html = $html;
-                }
-
-                // Utiliser la description HTML (originale ou fallback) comme contenu du template
-                $ai_response = $description_html;
-
-                // Si une long_description explicite est fournie par l'IA, l'injecter dans le HTML du template
-                // (mais ne PAS réinjecter la version fallback auto-générée qui est déjà un résumé du contenu)
-                if (!empty($long_description) && !$long_description_is_fallback) {
-                    $about_html  = "<section class='osmose-service-about space-y-4'>\n";
-                    $about_html .= "  <h2 class='text-2xl font-bold text-gray-900'>À propos de notre service de {$service_name}</h2>\n";
-                    $about_html .= "  <p class='leading-relaxed'>" . esc_html($long_description) . "</p>\n";
-                    $about_html .= "</section>\n";
-
-                    // Par défaut, on ajoute cette section à la fin du contenu généré
-                    $ai_response .= "\n\n" . $about_html;
                 }
             }
+            $description_html .= "</div>";
+        }
+        
+        // Section Prestations
+        if (!empty($step1_data['prestations']) && is_array($step1_data['prestations'])) {
+            $description_html .= "<div class='space-y-4'>";
+            $description_html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>" . esc_html($step1_data['prestations_title'] ?? 'Nos Prestations ' . strtolower($service_name)) . "</h2>";
+            $description_html .= "<ul class='space-y-3'>";
+            foreach ($step1_data['prestations'] as $prestation) {
+                if (isset($prestation['name']) && isset($prestation['description'])) {
+                    $description_html .= "<li><strong>" . esc_html($prestation['name']) . "</strong> - " . esc_html($prestation['description']) . "</li>";
+                }
+            }
+            $description_html .= "</ul>";
+            $description_html .= "</div>";
+        }
+        
+        // Section FAQ
+        if (!empty($step1_data['faq_questions']) && is_array($step1_data['faq_questions'])) {
+            $description_html .= "<div class='space-y-4'>";
+            $description_html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>" . esc_html($step1_data['faq_title'] ?? 'FAQ ' . strtolower($service_name)) . "</h2>";
+            $description_html .= "<div class='space-y-2'>";
+            foreach ($step1_data['faq_questions'] as $faq) {
+                if (isset($faq['question']) && isset($faq['answer'])) {
+                    $description_html .= "<p><strong>" . esc_html($faq['question']) . "</strong></p>";
+                    $description_html .= "<p>" . esc_html($faq['answer']) . "</p>";
+                }
+            }
+            $description_html .= "</div>";
+            $description_html .= "</div>";
+        }
+        
+        $description_html .= "</div>";
+    }
+    
+    // Utiliser le HTML généré comme contenu final
+    $ai_response = $description_html;
+    
+    // Filet de sécurité : si long_description n'est pas fourni, le construire à partir du HTML (fallback SEO uniquement)
+    if (empty($long_description) && !empty($description_html)) {
+        $plain_text = wp_strip_all_tags($description_html);
+        $plain_text = trim(preg_replace('/\s+/', ' ', $plain_text));
+        if (function_exists('mb_substr')) {
+            $long_description = mb_substr($plain_text, 0, 500);
+        } else {
+            $long_description = substr($plain_text, 0, 500);
+        }
+        $long_description_is_fallback = true;
+    }
+
+    // Même chose pour la short_description
+    if (empty($short_description) && !empty($long_description)) {
+        if (function_exists('mb_substr')) {
+            $short_description = mb_substr($long_description, 0, 160);
+        } else {
+            $short_description = substr($long_description, 0, 160);
         }
     }
 
@@ -393,7 +472,7 @@ function osmose_ads_handle_create_template() {
     if (empty($template_json_raw) || empty($description_html)) {
         wp_send_json_error(array(
             'message' => __(
-                'La génération IA n\'a pas renvoyé un JSON complet (champ "description" manquant ou invalide). Aucune annonce n\'a été créée. Merci de relancer la génération pour obtenir un contenu complet (intro + prestations + FAQ).',
+                'La génération IA n\'a pas renvoyé un contenu complet. Aucune annonce n\'a été créée. Merci de relancer la génération.',
                 'osmose-ads'
             ),
         ));
@@ -403,70 +482,206 @@ function osmose_ads_handle_create_template() {
     $has_title = (stripos($description_html, '<h1') !== false || stripos($description_html, '<h2') !== false);
     $has_list = (stripos($description_html, '<ul') !== false || stripos($description_html, '<ol') !== false);
     $has_faq = (stripos($description_html, 'FAQ') !== false || stripos($description_html, 'faq') !== false || stripos($description_html, 'Question') !== false);
+    $has_guarantee = (stripos($description_html, 'Garantie') !== false || stripos($description_html, 'garantie') !== false);
     
-    // Si le contenu ne contient pas toutes les sections, construire un HTML complet
-    if (!$has_title || !$has_list || !$has_faq) {
-        error_log('Osmose ADS: Contenu incomplet détecté - Titre: ' . ($has_title ? 'OUI' : 'NON') . ', Liste: ' . ($has_list ? 'OUI' : 'NON') . ', FAQ: ' . ($has_faq ? 'OUI' : 'NON'));
+    // Compter le nombre de prestations dans la liste (doit être au moins 8)
+    $prestation_count = 0;
+    if ($has_list) {
+        preg_match_all('/<li[^>]*>/i', $description_html, $matches);
+        $prestation_count = count($matches[0]);
+    }
+    
+    // Compter le nombre de questions FAQ (doit être au moins 3)
+    $faq_count = 0;
+    if ($has_faq) {
+        preg_match_all('/(Q\d+|Question|FAQ|Quels sont|Comment|Quelle|Combien)/i', $description_html, $matches);
+        $faq_count = count($matches[0]);
+    }
+    
+    // Si le contenu ne contient pas toutes les sections ou n'a pas assez de prestations/FAQ, compléter avec les données de l'étape 1
+    if (!$has_title || !$has_list || !$has_faq || !$has_guarantee || $prestation_count < 8 || $faq_count < 3) {
+        error_log('Osmose ADS: Contenu incomplet détecté - Titre: ' . ($has_title ? 'OUI' : 'NON') . ', Liste: ' . ($has_list ? 'OUI' : 'NON') . ', FAQ: ' . ($has_faq ? 'OUI' : 'NON') . ', Garantie: ' . ($has_guarantee ? 'OUI' : 'NON') . ', Prestations: ' . $prestation_count . ', FAQ: ' . $faq_count);
         
-        // Extraire l'intro du contenu existant si possible
+        // Utiliser les données de l'étape 1 pour compléter le contenu
         $intro_html = '';
-        if (preg_match('/<p[^>]*>(.*?)<\/p>/is', $description_html, $matches)) {
-            $intro_html = '<p class="text-lg leading-relaxed">' . strip_tags($matches[1]) . '</p>';
-        } else {
-            // Extraire le texte brut
+        if (!empty($step1_data['intro_paragraphs']) && is_array($step1_data['intro_paragraphs'])) {
+            foreach ($step1_data['intro_paragraphs'] as $para) {
+                if (!empty($para)) {
+                    $intro_html .= '<p class="text-lg leading-relaxed">' . esc_html($para) . '</p>';
+                }
+            }
+        }
+        
+        // Si pas d'intro depuis step1, extraire du HTML existant
+        if (empty($intro_html)) {
             $plain_text = wp_strip_all_tags($description_html);
             $intro_blocks = preg_split('/\n{2,}/', trim($plain_text));
+            $intro_count = 0;
             foreach ($intro_blocks as $block) {
                 $block = trim($block);
-                if ($block !== '' && strlen($block) > 20) {
-                    $intro_html .= '<p class="text-lg leading-relaxed">' . esc_html($block) . '</p>';
-                    break; // Prendre seulement le premier paragraphe significatif
+                if ($block !== '' && strlen($block) > 20 && $intro_count < 3) {
+                    if (stripos($block, 'Q1') === false && stripos($block, 'Q2') === false && stripos($block, 'Question') === false) {
+                        $intro_html .= '<p class="text-lg leading-relaxed">' . esc_html($block) . '</p>';
+                        $intro_count++;
+                    }
                 }
             }
         }
         
         if (empty($intro_html)) {
-            $intro_html = '<p class="text-lg leading-relaxed">Nous mettons à votre disposition notre expertise en ' . esc_html($service_name) . ' à [VILLE] et dans toute la région de [RÉGION].</p>';
+            $company_name = get_bloginfo('name');
+            $intro_html = '<p class="text-lg leading-relaxed">Expert en ' . esc_html($service_name) . ' à [VILLE] dans le département [DÉPARTEMENT]. Solutions efficaces pour une habitation confortable et performante.</p>';
+            $intro_html .= '<p class="text-lg leading-relaxed">' . esc_html($company_name) . ' propose ses services de ' . esc_html(strtolower($service_name)) . ' à [VILLE] dans le département [DÉPARTEMENT], garantissant des solutions sur mesure pour améliorer l\'efficacité de votre habitat. Notre équipe qualifiée utilise des techniques modernes et des matériaux de qualité pour assurer une intervention optimale.</p>';
         }
 
         // Construire un HTML complet avec toutes les sections
         $html  = "<div class='space-y-6'>";
         $html .= "<div class='space-y-4'>";
-        $html .= "<h1 class='text-3xl font-bold'>" . esc_html($service_name) . " à [VILLE]</h1>";
+        $html .= "<h1 class='text-3xl font-bold'>" . esc_html($step1_data['title'] ?? 'Expert en ' . $service_name . ' à [VILLE] dans le département [DÉPARTEMENT]') . "</h1>";
+        if (!empty($step1_data['title_subtitle'])) {
+            $html .= "<p class='text-lg leading-relaxed'>" . esc_html($step1_data['title_subtitle']) . "</p>";
+        }
         $html .= $intro_html;
         $html .= "</div>";
-
-        // Bloc prestations (seulement si pas déjà présent)
-        if (!$has_list) {
+        
+        // Section Garantie (toujours ajoutée si manquante, utiliser les données de step1)
+        if (!$has_guarantee) {
             $html .= "<div class='space-y-4'>";
-            $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>Nos prestations " . esc_html($service_name) . "</h2>";
+            $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>" . esc_html($step1_data['guarantee_title'] ?? 'Garantie satisfaction et performances') . "</h2>";
+            if (!empty($step1_data['guarantee_paragraphs']) && is_array($step1_data['guarantee_paragraphs'])) {
+                foreach ($step1_data['guarantee_paragraphs'] as $para) {
+                    if (!empty($para)) {
+                        $html .= "<p class='text-lg leading-relaxed'>" . esc_html($para) . "</p>";
+                    }
+                }
+            } else {
+                $company_name = get_bloginfo('name');
+                $html .= "<p class='text-lg leading-relaxed'>Chez " . esc_html($company_name) . ", nous vous assurons une garantie décennale sur nos travaux de " . esc_html(strtolower($service_name)) . ", ainsi qu'un suivi personnalisé pour garantir votre entière satisfaction. Nous respectons les normes en vigueur et travaillons dans le souci de la propreté et de la sécurité sur chaque chantier.</p>";
+            }
+            $html .= "</div>";
+        }
+
+        // Bloc prestations (toujours ajouté si manquant ou si moins de 8 prestations, utiliser les données de step1)
+        if (!$has_list || $prestation_count < 8) {
+            $html .= "<div class='space-y-4'>";
+            $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>" . esc_html($step1_data['prestations_title'] ?? 'Nos Prestations ' . strtolower($service_name)) . "</h2>";
             $html .= "<ul class='space-y-3'>";
-            $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Diagnostic complet de vos besoins en " . esc_html($service_name) . " à [VILLE].</li>";
-            $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Mise en œuvre de solutions conformes aux normes en vigueur en [RÉGION].</li>";
-            $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Utilisation de matériaux adaptés au climat local et à votre bâtiment.</li>";
-            $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Accompagnement personnalisé avant, pendant et après l'intervention.</li>";
-            $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Entretien et suivi pour garantir la durabilité de vos travaux.</li>";
+            
+            // Utiliser les prestations de step1 si disponibles
+            if (!empty($step1_data['prestations']) && is_array($step1_data['prestations'])) {
+                foreach ($step1_data['prestations'] as $prestation) {
+                    if (isset($prestation['name']) && isset($prestation['description'])) {
+                        $html .= "<li><strong>" . esc_html($prestation['name']) . "</strong> - " . esc_html($prestation['description']) . "</li>";
+                    }
+                }
+            } else {
+                // Fallback : générer des prestations techniques spécifiques selon le service
+                $prestations = array();
+                $service_lower = strtolower($service_name);
+                
+                if (stripos($service_lower, 'isolation') !== false) {
+                    $prestations = array(
+                        "Isolation combles perdus - Nous intervenons pour isoler vos combles perdus en utilisant des matériaux performants pour réduire les pertes de chaleur et améliorer le confort thermique de votre maison.",
+                        "Isolation toiture - L'isolation de la toiture est essentielle pour limiter les déperditions de chaleur. Nous vous proposons des solutions adaptées pour une isolation efficace et durable.",
+                        "Traitement ponts thermiques - Nos experts identifient et traitent les ponts thermiques de votre habitation pour garantir une isolation optimale et des économies d'énergie significatives.",
+                        "Isolation murs - Les murs mal isolés peuvent représenter jusqu'à 25% de pertes de chaleur. Nous intervenons pour renforcer l'isolation de vos murs, vous permettant de réaliser des économies d'énergie.",
+                        "Isolation sols - Une bonne isolation des sols contribue à améliorer le confort thermique de votre maison. Nous vous proposons des solutions efficaces pour optimiser l'isolation de vos planchers.",
+                        "Isolation phonique - Pour un confort acoustique optimal, nous réalisons des travaux d'isolation phonique pour réduire les nuisances sonores et améliorer la qualité de vie dans votre logement.",
+                        "Isolation thermique par l'extérieur - L'isolation thermique par l'extérieur permet d'améliorer l'efficacité énergétique de votre maison tout en préservant l'espace intérieur. Nous vous proposons des solutions sur mesure.",
+                        "Isolation écologique - Soucieux de l'environnement, nous privilégions des matériaux écologiques et respectueux de la planète pour vos travaux d'isolation, garantissant des performances énergétiques durables.",
+                        "Isolation sous rampant - L'isolation sous rampant est essentielle pour limiter les déperditions de chaleur par la toiture. Nous réalisons une isolation efficace et adaptée à votre configuration pour un confort optimal.",
+                        "Isolation par insufflation - L'isolation par insufflation permet d'atteindre les endroits difficiles d'accès. Nous utilisons cette technique pour assurer une isolation homogène et performante de votre habitation."
+                    );
+                } elseif (stripos($service_lower, 'couvreur') !== false || stripos($service_lower, 'toiture') !== false) {
+                    $prestations = array(
+                        "Réfection toiture ardoise - Nous réalisons la réfection complète de votre toiture en ardoise, en utilisant des matériaux de qualité supérieure pour garantir la durabilité et l'étanchéité de votre toit.",
+                        "Pose tuiles canal - Spécialistes de la pose de tuiles canal, nous intervenons pour rénover ou installer votre toiture avec des tuiles adaptées au climat de [RÉGION].",
+                        "Installation écran de sous-toiture - L'écran de sous-toiture est essentiel pour protéger votre charpente. Nous installons des écrans performants pour assurer une protection optimale contre l'humidité.",
+                        "Traitement charpente - Nous réalisons le traitement et la protection de votre charpente contre les insectes xylophages et l'humidité, garantissant la pérennité de votre structure.",
+                        "Pose zinguerie - La zinguerie est cruciale pour l'étanchéité de votre toiture. Nous installons des éléments de zinguerie de qualité pour protéger les points sensibles de votre toit.",
+                        "Réparation toiture d'urgence - En cas d'urgence, nous intervenons rapidement pour réparer les dommages de votre toiture et éviter les infiltrations d'eau dans votre habitation.",
+                        "Démoussage et nettoyage toiture - Nous réalisons le démoussage et le nettoyage de votre toiture pour préserver l'état de vos tuiles et améliorer l'esthétique de votre toit.",
+                        "Isolation toiture - Nous proposons des solutions d'isolation de toiture performantes pour améliorer le confort thermique de votre habitation et réduire vos factures de chauffage.",
+                        "Installation fenêtres de toit - Nous installons des fenêtres de toit de qualité pour apporter de la lumière naturelle dans vos combles et améliorer le confort de votre espace.",
+                        "Entretien et maintenance toiture - Nous proposons des contrats d'entretien régulier pour maintenir votre toiture en parfait état et prévenir les problèmes futurs."
+                    );
+                } else {
+                    for ($i = 1; $i <= 10; $i++) {
+                        $prestations[] = "Prestation technique " . $service_name . " " . $i . " - Description détaillée de la prestation avec techniques et matériaux spécifiques pour garantir des résultats optimaux à [VILLE].";
+                    }
+                }
+                
+                foreach ($prestations as $prestation) {
+                    $html .= "<li><strong>" . esc_html(explode(' - ', $prestation)[0]) . "</strong> - " . esc_html(explode(' - ', $prestation)[1] ?? $prestation) . "</li>";
+                }
+            }
             $html .= "</ul>";
             $html .= "</div>";
         }
 
-        // Bloc FAQ (seulement si pas déjà présent)
-        if (!$has_faq) {
-            $devis_url = get_option('osmose_ads_devis_url', '');
-            $site_url = get_site_url();
+        // Bloc FAQ (toujours ajouté si manquant ou si moins de 3 questions, utiliser les données de step1)
+        if (!$has_faq || $faq_count < 3) {
             $html .= "<div class='space-y-4'>";
-            $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>FAQ sur " . esc_html($service_name) . " à [VILLE]</h2>";
+            $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>" . esc_html($step1_data['faq_title'] ?? 'FAQ ' . strtolower($service_name)) . "</h2>";
             $html .= "<div class='space-y-2'>";
-            $html .= "<p><strong>Q1 : Comment obtenir un devis pour " . esc_html($service_name) . " à [VILLE] ?</strong></p>";
-            if (!empty($devis_url)) {
-                $html .= "<p>A : Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un <a href='" . esc_url($devis_url) . "' class='text-blue-600 hover:underline'>devis détaillé et gratuit</a>.</p>";
+            
+            // Utiliser les questions FAQ de step1 si disponibles
+            if (!empty($step1_data['faq_questions']) && is_array($step1_data['faq_questions'])) {
+                foreach ($step1_data['faq_questions'] as $faq) {
+                    if (isset($faq['question']) && isset($faq['answer'])) {
+                        $html .= "<p><strong>" . esc_html($faq['question']) . "</strong></p>";
+                        $html .= "<p>" . esc_html($faq['answer']) . "</p>";
+                    }
+                }
             } else {
-                $html .= "<p>A : Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un devis détaillé et gratuit.</p>";
+                // Fallback : FAQ spécifiques selon le service
+                $devis_url = get_option('osmose_ads_devis_url', '');
+                $site_url = get_site_url();
+                $service_lower = strtolower($service_name);
+                
+                if (stripos($service_lower, 'isolation') !== false) {
+                    $html .= "<p><strong>Quels sont les avantages de l'isolation des combles perdus ?</strong></p>";
+                    $html .= "<p>L'isolation des combles perdus permet de limiter les pertes de chaleur, de réduire les factures de chauffage et d'améliorer le confort thermique de votre maison. C'est une solution efficace et rentable.</p>";
+                    
+                    $html .= "<p><strong>Comment savoir si mon isolation actuelle est efficace ?</strong></p>";
+                    $html .= "<p>Si vous constatez des variations de température importantes dans votre logement, des courants d'air ou des moisissures, il est probable que votre isolation ne soit pas optimale. Dans ce cas, il est recommandé de faire appel à des professionnels pour une évaluation.</p>";
+                    
+                    $html .= "<p><strong>Quels sont les matériaux d'isolation les plus performants ?</strong></p>";
+                    $html .= "<p>Les matériaux d'isolation performants varient en fonction des besoins et des contraintes de chaque projet. Parmi les plus couramment utilisés, on retrouve la laine de roche, la ouate de cellulose, le polystyrène expansé, etc. Un professionnel saura vous conseiller sur le choix le plus adapté.</p>";
+                    
+                    $html .= "<p><strong>Combien de temps durent les travaux d'isolation ?</strong></p>";
+                    $html .= "<p>La durée des travaux d'isolation dépend de la surface à traiter, des matériaux utilisés et de la complexité de l'intervention. En général, pour une maison standard, les travaux peuvent durer de quelques jours à quelques semaines.</p>";
+                } elseif (stripos($service_lower, 'couvreur') !== false || stripos($service_lower, 'toiture') !== false) {
+                    $html .= "<p><strong>Quand faut-il refaire sa toiture ?</strong></p>";
+                    $html .= "<p>Il est recommandé de refaire sa toiture lorsque les tuiles ou ardoises présentent des signes d'usure importants, des fuites récurrentes, ou après une tempête ayant causé des dommages. Une inspection régulière permet d'anticiper les travaux nécessaires.</p>";
+                    
+                    $html .= "<p><strong>Quelle est la durée de vie d'une toiture ?</strong></p>";
+                    $html .= "<p>La durée de vie d'une toiture dépend du matériau utilisé : une toiture en ardoise peut durer 50 à 100 ans, une toiture en tuiles 30 à 50 ans. Un entretien régulier prolonge significativement la durée de vie de votre toiture.</p>";
+                    
+                    $html .= "<p><strong>Quels sont les signes d'une toiture à réparer ?</strong></p>";
+                    $html .= "<p>Les signes d'une toiture nécessitant des réparations incluent : des tuiles ou ardoises cassées ou manquantes, des fuites d'eau, des traces d'humidité dans les combles, des mousses importantes, ou des tuiles qui se soulèvent.</p>";
+                    
+                    $html .= "<p><strong>Combien coûte une réfection de toiture ?</strong></p>";
+                    $html .= "<p>Le coût d'une réfection de toiture varie selon la surface, le matériau choisi, la complexité de la charpente et les travaux annexes. Il est recommandé de demander plusieurs devis pour comparer les offres et choisir la solution la plus adaptée à votre budget.</p>";
+                } else {
+                    $html .= "<p><strong>Quels sont les avantages de faire appel à un professionnel pour " . esc_html(strtolower($service_name)) . " ?</strong></p>";
+                    $html .= "<p>Faire appel à un professionnel garantit une intervention de qualité, conforme aux normes en vigueur, avec des matériaux adaptés et une garantie sur les travaux réalisés. Un professionnel saura vous conseiller sur les meilleures solutions pour votre projet.</p>";
+                    
+                    $html .= "<p><strong>Comment obtenir un devis pour " . esc_html(strtolower($service_name)) . " à [VILLE] ?</strong></p>";
+                    if (!empty($devis_url)) {
+                        $html .= "<p>Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un <a href='" . esc_url($devis_url) . "' class='text-blue-600 hover:underline'>devis détaillé et gratuit</a> adapté à vos spécificités.</p>";
+                    } else {
+                        $html .= "<p>Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un devis détaillé et gratuit adapté à vos spécificités.</p>";
+                    }
+                    
+                    $html .= "<p><strong>Quelles garanties proposez-vous sur vos prestations de " . esc_html(strtolower($service_name)) . " ?</strong></p>";
+                    $html .= "<p>Nos interventions respectent les normes en vigueur et bénéficient des garanties légales associées aux travaux réalisés. Nous vous assurons également un suivi personnalisé pour garantir votre entière satisfaction.</p>";
+                    
+                    $html .= "<p><strong>Intervenez-vous uniquement à [VILLE] ?</strong></p>";
+                    $html .= "<p>Nous intervenons à [VILLE] et dans tout le département [DÉPARTEMENT], en [RÉGION]. Découvrez nos autres <a href='" . esc_url($site_url) . "' class='text-blue-600 hover:underline'>services disponibles</a> dans votre région.</p>";
+                }
             }
-            $html .= "<p><strong>Q2 : Intervenez-vous uniquement à [VILLE] ?</strong></p>";
-            $html .= "<p>A : Nous intervenons à [VILLE] et dans tout le département [DÉPARTEMENT], en [RÉGION]. Découvrez nos autres <a href='" . esc_url($site_url) . "' class='text-blue-600 hover:underline'>services disponibles</a> dans votre région.</p>";
-            $html .= "<p><strong>Q3 : Quelles garanties proposez-vous sur vos prestations de " . esc_html($service_name) . " ?</strong></p>";
-            $html .= "<p>A : Nos interventions respectent les normes en vigueur et bénéficient des garanties légales associées aux travaux réalisés. Pour plus d'informations, consultez notre <a href='" . esc_url($site_url) . "' class='text-blue-600 hover:underline'>site web</a>.</p>";
+            
             $html .= "</div>";
             $html .= "</div>";
         }
