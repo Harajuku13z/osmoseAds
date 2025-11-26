@@ -98,6 +98,7 @@ class Osmose_Ads_Activator {
             user_ip varchar(45),
             user_agent text,
             referrer varchar(500),
+            source varchar(50),
             call_time datetime DEFAULT CURRENT_TIMESTAMP,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
