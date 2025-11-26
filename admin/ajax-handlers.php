@@ -435,9 +435,12 @@ function osmose_ads_handle_create_template() {
     update_post_meta($template_id, 'is_active', true);
     update_post_meta($template_id, 'usage_count', 0);
     
+    $view_url = admin_url('admin.php?page=osmose-ads-templates&template_id=' . $template_id);
+    
     wp_send_json_success(array(
-        'message' => __('Template créé avec succès avec images et métadonnées SEO', 'osmose-ads'),
+        'message'     => __('Template créé avec succès avec images et métadonnées SEO', 'osmose-ads'),
         'template_id' => $template_id,
+        'view_url'    => $view_url,
     ));
 }
 
