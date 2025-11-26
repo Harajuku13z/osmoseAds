@@ -54,7 +54,7 @@ if (isset($save_success) && $save_success) {
         </div>
     </div>
 
-    <form method="post" action="" id="template-edit-form">
+    <form method="post" action="<?php echo admin_url('admin.php?page=osmose-ads-templates&template_id=' . $template_id); ?>" id="template-edit-form">
         <?php wp_nonce_field('osmose_ads_save_template_' . $template_id, '_wpnonce'); ?>
         <input type="hidden" name="template_id" value="<?php echo $template_id; ?>">
         <input type="hidden" name="save_template" value="1">

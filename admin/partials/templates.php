@@ -24,20 +24,7 @@ if (isset($_GET['action'], $_GET['template_id']) && $_GET['action'] === 'delete_
     exit;
 }
 
-// Gérer l'affichage/édition d'un template spécifique
-if (isset($_GET['template_id']) && !empty($_GET['template_id'])) {
-    $template_id = intval($_GET['template_id']);
-    $template = get_post($template_id);
-    
-    if ($template && $template->post_type === 'ad_template') {
-        // Afficher la page de visualisation/édition du template
-        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/template-view.php';
-        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
-        return;
-    }
-}
-
-// Traitement de la sauvegarde du template
+// Traitement de la sauvegarde du template (AVANT la vérification du template_id pour qu'il s'exécute)
 if (isset($_POST['save_template']) && isset($_POST['template_id'])) {
     check_admin_referer('osmose_ads_save_template_' . $_POST['template_id']);
     
@@ -55,13 +42,20 @@ if (isset($_POST['save_template']) && isset($_POST['template_id'])) {
         $meta_fields = array(
             'featured_image_id', 'realization_images', 'meta_title', 'meta_description',
             'meta_keywords', 'og_title', 'og_description', 'twitter_title',
-            'twitter_description', 'short_description', 'is_active'
+            'twitter_description', 'short_description'
         );
         
         foreach ($meta_fields as $field) {
             if (isset($_POST[$field])) {
                 update_post_meta($template_id, $field, sanitize_text_field($_POST[$field]));
             }
+        }
+        
+        // Gérer is_active (checkbox : si non coché, n'est pas dans POST)
+        if (isset($_POST['is_active']) && $_POST['is_active'] == '1') {
+            update_post_meta($template_id, 'is_active', '1');
+        } else {
+            update_post_meta($template_id, 'is_active', '0');
         }
         
         // Gérer l'image mise en avant
@@ -140,6 +134,29 @@ if (isset($_POST['save_template']) && isset($_POST['template_id'])) {
         
         $save_message = __('Template mis à jour avec succès', 'osmose-ads');
         $save_success = true;
+        
+        // Rediriger vers la page d'édition avec un message de succès
+        wp_safe_redirect(admin_url('admin.php?page=osmose-ads-templates&template_id=' . $template_id . '&saved=1'));
+        exit;
+    }
+}
+
+// Gérer l'affichage/édition d'un template spécifique
+if (isset($_GET['template_id']) && !empty($_GET['template_id'])) {
+    $template_id = intval($_GET['template_id']);
+    $template = get_post($template_id);
+    
+    if ($template && $template->post_type === 'ad_template') {
+        // Afficher le message de succès si la sauvegarde vient d'être effectuée
+        if (isset($_GET['saved']) && $_GET['saved'] == '1') {
+            $save_message = __('Template mis à jour avec succès', 'osmose-ads');
+            $save_success = true;
+        }
+        
+        // Afficher la page de visualisation/édition du template
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/template-view.php';
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
+        return;
     }
 }
 
