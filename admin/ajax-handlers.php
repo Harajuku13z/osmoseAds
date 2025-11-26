@@ -190,58 +190,133 @@ function osmose_ads_handle_create_template() {
     $ai_service = new AI_Service();
     
     // ========== ÉTAPE 1 : Générer un JSON structuré avec les données brutes ==========
+    $company_name = get_bloginfo('name');
     $step1_prompt = "Tu es un expert technique en {$service_name} avec une connaissance PROFONDE des prestations, techniques et matériaux spécifiques à ce domaine.\n\n";
-    $step1_prompt .= "GÉNÈRE UN JSON AVEC CES CHAMPS (données brutes, pas de HTML) :\n\n";
-    $step1_prompt .= "{\n";
-    $step1_prompt .= "  \"title\": \"Expert en {$service_name} à [VILLE] dans le département [DÉPARTEMENT]\",\n";
-    $step1_prompt .= "  \"title_subtitle\": \"[Une phrase d'accroche technique de 10-15 mots]\",\n";
-    $step1_prompt .= "  \"intro_paragraphs\": [\n";
-    $step1_prompt .= "    \"[Premier paragraphe d'introduction de 3-4 phrases, technique et spécifique à {$service_name}, mentionnant [ENTREPRISE]]\",\n";
-    $step1_prompt .= "    \"[Deuxième paragraphe d'introduction de 3-4 phrases, technique et spécifique à {$service_name}]\",\n";
-    $step1_prompt .= "    \"[Troisième paragraphe d'introduction de 3-4 phrases, technique et spécifique à {$service_name}]\",\n";
-    $step1_prompt .= "  ],\n";
-    $step1_prompt .= "  \"guarantee_title\": \"Garantie satisfaction et performances\",\n";
-    $step1_prompt .= "  \"guarantee_paragraphs\": [\n";
-    $step1_prompt .= "    \"[Premier paragraphe sur les garanties, suivi personnalisé, normes, propreté, sécurité]\",\n";
-    $step1_prompt .= "    \"[Deuxième paragraphe sur les garanties si nécessaire]\",\n";
-    $step1_prompt .= "  ],\n";
-    $step1_prompt .= "  \"prestations_title\": \"Nos Prestations " . strtolower($service_name) . "\",\n";
-    $step1_prompt .= "  \"prestations\": [\n";
-    for ($i = 1; $i <= 10; $i++) {
-        $step1_prompt .= "    {\n";
-        $step1_prompt .= "      \"name\": \"[Nom technique précis de la prestation {$i}, ex: 'Isolation combles perdus' pour isolation]\",\n";
-        $step1_prompt .= "      \"description\": \"[Description détaillée de 2-3 phrases expliquant la technique, les matériaux et les bénéfices pour {$service_name}]\",\n";
-        $step1_prompt .= "    }" . ($i < 10 ? ',' : '') . "\n";
-    }
-    $step1_prompt .= "  ],\n";
-    $step1_prompt .= "  \"faq_title\": \"FAQ " . strtolower($service_name) . "\",\n";
-    $step1_prompt .= "  \"faq_questions\": [\n";
-    for ($i = 1; $i <= 4; $i++) {
-        $step1_prompt .= "    {\n";
-        $step1_prompt .= "      \"question\": \"[Question technique et détaillée {$i} sur {$service_name}]\",\n";
-        $step1_prompt .= "      \"answer\": \"[Réponse complète de 2-3 phrases, technique et détaillée]\",\n";
-        $step1_prompt .= "    }" . ($i < 4 ? ',' : '') . "\n";
-    }
-    $step1_prompt .= "  ],\n";
-    $step1_prompt .= "  \"short_description\": \"[Résumé en une phrase claire et attractive le service {$service_name} à [VILLE], avec un angle technique et commercial fort]\",\n";
-    $step1_prompt .= "  \"long_description\": \"[Rédiger 2 à 3 phrases explicatives sur notre service de {$service_name} à [VILLE] et en [RÉGION], en insistant sur l'expertise technique, les types d'interventions, les matériaux utilisés et les garanties]\",\n";
-    $step1_prompt .= "  \"meta_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
-    $step1_prompt .= "  \"meta_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.\",\n";
-    $step1_prompt .= "  \"meta_keywords\": \"{$service_name}, [VILLE], [RÉGION], service professionnel, devis gratuit\",\n";
-    $step1_prompt .= "  \"og_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
-    $step1_prompt .= "  \"og_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.\",\n";
-    $step1_prompt .= "  \"twitter_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
-    $step1_prompt .= "  \"twitter_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.\",\n";
-    $step1_prompt .= "  \"icon\": \"fas fa-tools\"\n";
-    $step1_prompt .= "}\n\n";
-    $step1_prompt .= "IMPORTANT :\n";
-    $step1_prompt .= "- Utilise UNIQUEMENT les placeholders [VILLE], [RÉGION], [DÉPARTEMENT], [ENTREPRISE] dans les textes\n";
-    $step1_prompt .= "- Chaque prestation DOIT avoir un nom technique précis (pas 'Diagnostic' ou 'Conseil' générique)\n";
-    $step1_prompt .= "- Chaque description de prestation DOIT être détaillée (2-3 phrases) avec techniques, matériaux et bénéfices\n";
-    $step1_prompt .= "- Les prestations doivent être UNIQUES à {$service_name}\n";
-    $step1_prompt .= "- Réponds UNIQUEMENT avec le JSON, sans texte avant ou après\n";
+    $step1_prompt .= "GÉNÈRE UN JSON COMPLET avec du CONTENU RÉEL et TECHNIQUE pour {$service_name}.\n\n";
     
-    $step1_system = 'Tu es un expert technique en ' . $service_name . '. Tu génères des données structurées précises et techniques. Réponds UNIQUEMENT en JSON valide.';
+    // Construire un exemple JSON complet selon le type de service
+    $service_lower = strtolower($service_name);
+    $example_json = '';
+    
+    if (stripos($service_lower, 'couvreur') !== false || stripos($service_lower, 'toiture') !== false) {
+        $example_json = "{\n";
+        $example_json .= "  \"title\": \"Expert en {$service_name} à [VILLE] dans le département [DÉPARTEMENT]\",\n";
+        $example_json .= "  \"title_subtitle\": \"Expertise reconnue en réfection de toiture et zinguerie pour une protection durable\",\n";
+        $example_json .= "  \"intro_paragraphs\": [\n";
+        $example_json .= "    \"En tant que couvreur professionnel à [VILLE], {$company_name} intervient pour tous vos besoins en toiture. Notre équipe maîtrise les techniques de pose d'ardoise, de tuiles canal et de zinguerie, garantissant une étanchéité parfaite et une longévité optimale de votre toit.\",\n";
+        $example_json .= "    \"Nous utilisons exclusivement des matériaux de qualité supérieure, conformes aux normes en vigueur, pour assurer la résistance de votre toiture aux intempéries bretonnes. Chaque intervention est réalisée dans le respect des règles de l'art et des standards professionnels.\",\n";
+        $example_json .= "    \"Que vous ayez besoin d'une réfection complète, d'une réparation d'urgence ou d'un entretien préventif, nos artisans qualifiés vous proposent des solutions sur mesure adaptées à votre budget et à vos contraintes.\"\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"guarantee_title\": \"Garantie satisfaction et performances\",\n";
+        $example_json .= "  \"guarantee_paragraphs\": [\n";
+        $example_json .= "    \"Chez {$company_name}, nous vous assurons une garantie décennale sur tous nos travaux de couverture, conformément à la législation en vigueur. Chaque intervention bénéficie d'un suivi personnalisé pour garantir votre entière satisfaction et la pérennité de votre toiture.\"\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"prestations_title\": \"Nos Prestations " . strtolower($service_name) . "\",\n";
+        $example_json .= "  \"prestations\": [\n";
+        $example_json .= "    {\"name\": \"Réfection toiture ardoise\", \"description\": \"Nous réalisons la réfection complète de votre toiture en ardoise naturelle, matériau noble et durable. Notre équipe maîtrise les techniques de pose traditionnelle et moderne, garantissant une étanchéité parfaite et une esthétique soignée. L'ardoise offre une résistance exceptionnelle aux intempéries et une longévité de 50 à 100 ans.\"},\n";
+        $example_json .= "    {\"name\": \"Pose zinguerie\", \"description\": \"La zinguerie est essentielle pour protéger les points sensibles de votre toiture. Nous installons des éléments de zinguerie en zinc ou en aluminium, garantissant une étanchéité parfaite aux jonctions et une protection durable contre les infiltrations d'eau.\"},\n";
+        $example_json .= "    {\"name\": \"Réparation toiture d'urgence\", \"description\": \"En cas de fuite ou de dommage causé par une tempête, nous intervenons rapidement pour sécuriser votre toiture et éviter les dégâts des eaux. Notre équipe est disponible 24/7 pour les interventions d'urgence.\"}\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"faq_title\": \"FAQ " . strtolower($service_name) . "\",\n";
+        $example_json .= "  \"faq_questions\": [\n";
+        $example_json .= "    {\"question\": \"Quand faut-il refaire sa toiture ?\", \"answer\": \"Il est recommandé de refaire sa toiture lorsque les tuiles ou ardoises présentent des signes d'usure importants, des fuites récurrentes, ou après une tempête ayant causé des dommages. Une inspection régulière par un professionnel permet d'anticiper les travaux nécessaires.\"},\n";
+        $example_json .= "    {\"question\": \"Quelle est la durée de vie d'une toiture ?\", \"answer\": \"La durée de vie d'une toiture dépend du matériau utilisé : une toiture en ardoise peut durer 50 à 100 ans, une toiture en tuiles 30 à 50 ans. Un entretien régulier prolonge significativement la durée de vie de votre toiture.\"}\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"short_description\": \"Service professionnel de {$service_name} à [VILLE], spécialisé en réfection, réparation et entretien de toiture.\",\n";
+        $example_json .= "  \"long_description\": \"{$company_name} propose ses services de {$service_name} à [VILLE] et en [RÉGION]. Notre expertise couvre la réfection complète, la réparation d'urgence, la pose de zinguerie et l'entretien préventif. Nous utilisons des matériaux de qualité supérieure et respectons les normes en vigueur pour garantir la durabilité de votre toiture.\",\n";
+        $example_json .= "  \"meta_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+        $example_json .= "  \"meta_description\": \"Service professionnel de {$service_name} à [VILLE]. Réfection, réparation et entretien de toiture. Devis gratuit, intervention rapide, garantie décennale.\",\n";
+        $example_json .= "  \"meta_keywords\": \"{$service_name}, [VILLE], [RÉGION], réfection toiture, réparation toiture, zinguerie, ardoise, tuiles\",\n";
+        $example_json .= "  \"og_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+        $example_json .= "  \"og_description\": \"Service professionnel de {$service_name} à [VILLE]. Réfection, réparation et entretien de toiture. Devis gratuit, intervention rapide.\",\n";
+        $example_json .= "  \"twitter_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+        $example_json .= "  \"twitter_description\": \"Service professionnel de {$service_name} à [VILLE]. Réfection, réparation et entretien de toiture. Devis gratuit.\",\n";
+        $example_json .= "  \"icon\": \"fas fa-tools\"\n";
+        $example_json .= "}\n";
+    } elseif (stripos($service_lower, 'isolation') !== false) {
+        $example_json = "{\n";
+        $example_json .= "  \"title\": \"Expert en {$service_name} à [VILLE] dans le département [DÉPARTEMENT]\",\n";
+        $example_json .= "  \"title_subtitle\": \"Solutions d'isolation performantes pour réduire vos factures énergétiques\",\n";
+        $example_json .= "  \"intro_paragraphs\": [\n";
+        $example_json .= "    \"Spécialiste de l'isolation thermique à [VILLE], {$company_name} vous propose des solutions performantes pour améliorer le confort de votre habitation et réduire vos dépenses énergétiques. Nous intervenons sur tous types de bâtiments, en utilisant des matériaux écologiques et performants.\",\n";
+        $example_json .= "    \"Notre expertise couvre l'isolation des combles perdus, des murs, des sols et des toitures, avec des techniques adaptées à chaque configuration. Nous privilégions les matériaux naturels comme la ouate de cellulose, la laine de roche ou le polystyrène expansé pour garantir des performances optimales.\",\n";
+        $example_json .= "    \"Chaque intervention est précédée d'un diagnostic thermique approfondi pour identifier les ponts thermiques et les zones de déperdition. Nous vous proposons ensuite une solution sur mesure, respectueuse de l'environnement et conforme aux normes RT 2012 et RE 2020.\"\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"guarantee_title\": \"Garantie satisfaction et performances\",\n";
+        $example_json .= "  \"guarantee_paragraphs\": [\n";
+        $example_json .= "    \"Chez {$company_name}, nous garantissons des performances énergétiques optimales pour tous nos travaux d'isolation. Chaque intervention est suivie d'un contrôle qualité pour vérifier l'efficacité de l'isolation et vous assurer des économies d'énergie significatives.\"\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"prestations_title\": \"Nos Prestations " . strtolower($service_name) . "\",\n";
+        $example_json .= "  \"prestations\": [\n";
+        $example_json .= "    {\"name\": \"Isolation combles perdus\", \"description\": \"L'isolation des combles perdus est l'intervention la plus rentable pour réduire vos pertes de chaleur. Nous utilisons la technique d'insufflation de ouate de cellulose ou de laine de roche, garantissant une isolation homogène et performante. Cette solution permet de réduire jusqu'à 30% vos factures de chauffage.\"},\n";
+        $example_json .= "    {\"name\": \"Isolation murs par l'extérieur\", \"description\": \"L'isolation thermique par l'extérieur améliore l'efficacité énergétique de votre maison tout en préservant l'espace intérieur. Nous utilisons des panneaux isolants performants et un enduit de finition pour un résultat esthétique et durable.\"}\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"faq_title\": \"FAQ " . strtolower($service_name) . "\",\n";
+        $example_json .= "  \"faq_questions\": [\n";
+        $example_json .= "    {\"question\": \"Quels sont les avantages de l'isolation des combles perdus ?\", \"answer\": \"L'isolation des combles perdus permet de limiter les pertes de chaleur, de réduire les factures de chauffage et d'améliorer le confort thermique de votre maison. C'est une solution efficace et rentable qui peut réduire jusqu'à 30% vos dépenses énergétiques.\"}\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"short_description\": \"Service professionnel d'isolation thermique à [VILLE], pour améliorer votre confort et réduire vos factures énergétiques.\",\n";
+        $example_json .= "  \"long_description\": \"{$company_name} propose ses services d'isolation thermique à [VILLE] et en [RÉGION]. Notre expertise couvre l'isolation des combles, des murs, des sols et des toitures, avec des matériaux écologiques et performants conformes aux normes RT 2012 et RE 2020.\",\n";
+        $example_json .= "  \"meta_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+        $example_json .= "  \"meta_description\": \"Service professionnel d'isolation thermique à [VILLE]. Isolation combles, murs, sols. Devis gratuit, matériaux écologiques, conformité RT 2012.\",\n";
+        $example_json .= "  \"meta_keywords\": \"{$service_name}, [VILLE], [RÉGION], isolation thermique, isolation combles, isolation murs, économies d'énergie\",\n";
+        $example_json .= "  \"og_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+        $example_json .= "  \"og_description\": \"Service professionnel d'isolation thermique à [VILLE]. Isolation combles, murs, sols. Devis gratuit.\",\n";
+        $example_json .= "  \"twitter_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+        $example_json .= "  \"twitter_description\": \"Service professionnel d'isolation thermique à [VILLE]. Isolation combles, murs, sols. Devis gratuit.\",\n";
+        $example_json .= "  \"icon\": \"fas fa-tools\"\n";
+        $example_json .= "}\n";
+    } else {
+        // Exemple générique
+        $example_json = "{\n";
+        $example_json .= "  \"title\": \"Expert en {$service_name} à [VILLE] dans le département [DÉPARTEMENT]\",\n";
+        $example_json .= "  \"title_subtitle\": \"Service professionnel de qualité pour tous vos besoins en {$service_name}\",\n";
+        $example_json .= "  \"intro_paragraphs\": [\n";
+        $example_json .= "    \"En tant que spécialiste en {$service_name} à [VILLE], {$company_name} vous propose des solutions professionnelles adaptées à vos besoins. Notre équipe qualifiée maîtrise les techniques les plus récentes pour garantir des résultats optimaux.\",\n";
+        $example_json .= "    \"Nous intervenons sur tous types de projets, en utilisant des matériaux de qualité supérieure et en respectant les normes en vigueur. Chaque intervention est réalisée avec professionnalisme et précision pour assurer votre satisfaction.\",\n";
+        $example_json .= "    \"Que vous ayez besoin d'une intervention ponctuelle ou d'un suivi régulier, nos experts vous accompagnent dans tous vos projets de {$service_name} à [VILLE] et en [RÉGION].\"\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"guarantee_title\": \"Garantie satisfaction et performances\",\n";
+        $example_json .= "  \"guarantee_paragraphs\": [\n";
+        $example_json .= "    \"Chez {$company_name}, nous vous assurons une garantie sur tous nos travaux de {$service_name}. Chaque intervention bénéficie d'un suivi personnalisé pour garantir votre entière satisfaction et la qualité des prestations réalisées.\"\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"prestations_title\": \"Nos Prestations " . strtolower($service_name) . "\",\n";
+        $example_json .= "  \"prestations\": [\n";
+        $example_json .= "    {\"name\": \"Prestation technique 1\", \"description\": \"Description détaillée de la première prestation avec techniques et matériaux spécifiques pour garantir des résultats optimaux à [VILLE]. Cette prestation permet d'améliorer significativement la qualité et la performance.\"},\n";
+        $example_json .= "    {\"name\": \"Prestation technique 2\", \"description\": \"Description détaillée de la deuxième prestation avec techniques et matériaux spécifiques pour garantir des résultats optimaux à [VILLE]. Cette prestation offre des avantages significatifs en termes de durabilité.\"}\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"faq_title\": \"FAQ " . strtolower($service_name) . "\",\n";
+        $example_json .= "  \"faq_questions\": [\n";
+        $example_json .= "    {\"question\": \"Quels sont les avantages de faire appel à un professionnel pour {$service_name} ?\", \"answer\": \"Faire appel à un professionnel garantit une intervention de qualité, conforme aux normes en vigueur, avec des matériaux adaptés et une garantie sur les travaux réalisés. Un professionnel saura vous conseiller sur les meilleures solutions pour votre projet.\"}\n";
+        $example_json .= "  ],\n";
+        $example_json .= "  \"short_description\": \"Service professionnel de {$service_name} à [VILLE], pour tous vos besoins.\",\n";
+        $example_json .= "  \"long_description\": \"{$company_name} propose ses services de {$service_name} à [VILLE] et en [RÉGION]. Notre expertise technique et notre savoir-faire garantissent des interventions de qualité adaptées à vos besoins spécifiques.\",\n";
+        $example_json .= "  \"meta_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+        $example_json .= "  \"meta_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.\",\n";
+        $example_json .= "  \"meta_keywords\": \"{$service_name}, [VILLE], [RÉGION], service professionnel, devis gratuit\",\n";
+        $example_json .= "  \"og_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+        $example_json .= "  \"og_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide.\",\n";
+        $example_json .= "  \"twitter_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+        $example_json .= "  \"twitter_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit.\",\n";
+        $example_json .= "  \"icon\": \"fas fa-tools\"\n";
+        $example_json .= "}\n";
+    }
+    
+    $step1_prompt .= "VOICI UN EXEMPLE DE JSON (à adapter pour {$service_name}) :\n\n";
+    $step1_prompt .= $example_json . "\n\n";
+    $step1_prompt .= "GÉNÈRE UN JSON SIMILAIRE avec :\n";
+    $step1_prompt .= "- 3 paragraphes d'introduction techniques et spécifiques à {$service_name}, mentionnant {$company_name}\n";
+    $step1_prompt .= "- 10 prestations avec des noms techniques précis et des descriptions détaillées (2-3 phrases chacune)\n";
+    $step1_prompt .= "- 4 questions FAQ techniques avec des réponses complètes (2-3 phrases chacune)\n";
+    $step1_prompt .= "- Tous les autres champs remplis avec du contenu réel\n\n";
+    $step1_prompt .= "RÈGLES STRICTES :\n";
+    $step1_prompt .= "1. GÉNÈRE DU CONTENU RÉEL et TECHNIQUE, pas de placeholders ou d'instructions\n";
+    $step1_prompt .= "2. Utilise UNIQUEMENT les placeholders [VILLE], [RÉGION], [DÉPARTEMENT], [ENTREPRISE] pour les variables géographiques\n";
+    $step1_prompt .= "3. Chaque prestation DOIT avoir un nom technique précis et unique\n";
+    $step1_prompt .= "4. Chaque description DOIT être détaillée (2-3 phrases) avec techniques, matériaux et bénéfices\n";
+    $step1_prompt .= "5. Réponds UNIQUEMENT avec le JSON valide, sans texte avant ou après\n";
+    
+    $step1_system = 'Tu es un expert technique en ' . $service_name . '. Tu génères du CONTENU RÉEL et TECHNIQUE, pas des placeholders ou des instructions. Chaque champ du JSON doit contenir du texte réel et complet. Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.';
     
     // Premier appel IA
     $step1_response = $ai_service->call_ai($step1_prompt, $step1_system, array(
@@ -265,6 +340,78 @@ function osmose_ads_handle_create_template() {
     
     if (json_last_error() !== JSON_ERROR_NONE || !is_array($step1_data)) {
         wp_send_json_error(array('message' => 'Erreur de parsing JSON de la première étape : ' . json_last_error_msg()));
+    }
+    
+    // Validation : détecter si l'IA a généré des placeholders au lieu de contenu réel
+    $placeholder_patterns = array(
+        '/\[Premier paragraphe/i',
+        '/\[Deuxième paragraphe/i',
+        '/\[Troisième paragraphe/i',
+        '/\[Une phrase d\'accroche/i',
+        '/\[Nom technique précis/i',
+        '/\[Description détaillée/i',
+        '/\[Question technique/i',
+        '/\[Réponse complète/i',
+        '/\[Résumé en une phrase/i',
+        '/\[Rédiger 2 à 3 phrases/i',
+        '/Génère un premier paragraphe/i',
+        '/Génère un deuxième paragraphe/i',
+        '/Génère un troisième paragraphe/i',
+        '/Génère une phrase/i',
+        '/Génère 10 prestations/i',
+        '/Génère 4 questions/i',
+        '/Génère un résumé/i',
+        '/Génère 2 à 3 phrases/i',
+        '/Génère une description/i',
+        '/Génère 10 mots-clés/i',
+    );
+    
+    $has_placeholders = false;
+    $placeholder_fields = array();
+    
+    // Vérifier tous les champs texte du JSON
+    foreach ($step1_data as $key => $value) {
+        if (is_string($value)) {
+            foreach ($placeholder_patterns as $pattern) {
+                if (preg_match($pattern, $value)) {
+                    $has_placeholders = true;
+                    $placeholder_fields[] = $key;
+                    break;
+                }
+            }
+        } elseif (is_array($value)) {
+            // Vérifier les tableaux (intro_paragraphs, prestations, faq_questions, etc.)
+            foreach ($value as $item) {
+                if (is_string($item)) {
+                    foreach ($placeholder_patterns as $pattern) {
+                        if (preg_match($pattern, $item)) {
+                            $has_placeholders = true;
+                            $placeholder_fields[] = $key;
+                            break 2;
+                        }
+                    }
+                } elseif (is_array($item)) {
+                    // Pour les prestations et FAQ qui sont des tableaux d'objets
+                    foreach ($item as $sub_key => $sub_value) {
+                        if (is_string($sub_value)) {
+                            foreach ($placeholder_patterns as $pattern) {
+                                if (preg_match($pattern, $sub_value)) {
+                                    $has_placeholders = true;
+                                    $placeholder_fields[] = $key . '.' . $sub_key;
+                                    break 3;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    if ($has_placeholders) {
+        wp_send_json_error(array(
+            'message' => 'L\'IA a généré des placeholders au lieu de contenu réel. Champs concernés : ' . implode(', ', array_unique($placeholder_fields)) . '. Merci de relancer la génération.'
+        ));
     }
     
     // ========== ÉTAPE 2 : Convertir le JSON en HTML formaté ==========
