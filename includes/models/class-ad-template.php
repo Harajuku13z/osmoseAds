@@ -111,8 +111,20 @@ class Ad_Template {
                     continue;
                 }
                 
-                $alt = $focus_keyword ?: ($service_name ?: '') . (empty($city_name) ? '' : ' ' . $city_name);
-                $alt = trim($alt);
+                // Récupérer les mots-clés SEO spécifiques à cette image (définis lors de la création)
+                $image_keywords = get_post_meta($img_id, '_osmose_image_keywords', true);
+                $image_keywords = is_string($image_keywords) ? trim($image_keywords) : '';
+                
+                // Construire l'ALT en priorité avec: mots-clés image + ville
+                if (!empty($image_keywords) && !empty($city_name)) {
+                    $alt = trim($image_keywords . ' ' . $city_name);
+                } elseif (!empty($focus_keyword)) {
+                    // Sinon, utiliser le focus keyword (service + ville)
+                    $alt = $focus_keyword;
+                } else {
+                    // Dernier fallback : service + ville, ou titre du template
+                    $alt = trim(($service_name ?: '') . (empty($city_name) ? '' : ' ' . $city_name));
+                }
                 
                 if (empty($alt)) {
                     $alt = get_the_title($this->post_id);
