@@ -77,6 +77,14 @@ class Ad_Template {
             $final_content = $this->replace_variables($template_content, $city_id);
         }
         
+        // Nettoyage : supprimer toute ancienne galerie statique déjà présente dans le template
+        // (galeries ajoutées directement dans le contenu avant cette version)
+        $final_content = preg_replace(
+            '#<h2>Photos de.*?</h2>\s*<div class="osmose-realizations-gallery">.*?</div>#is',
+            '',
+            $final_content
+        );
+        
         // Ajouter les images de réalisations dans le contenu avec ALT optimisé (mot-clé + ville)
         $realization_images = get_post_meta($this->post_id, 'realization_images', true);
         if (!empty($realization_images) && is_array($realization_images)) {

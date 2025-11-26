@@ -433,6 +433,69 @@ function osmose_ads_handle_create_template() {
         $twitter_title        = $replace_cb($twitter_title);
         $twitter_description  = $replace_cb($twitter_description);
     }
+
+    // Normaliser meta_keywords : s'assurer d'avoir au moins 10 mots-clés pertinents autour du service
+    $base_keyword = strtolower(trim($service_name));
+    $keyword_items = array();
+    if (!empty($meta_keywords)) {
+        $parts = preg_split('/\s*,\s*/', strtolower($meta_keywords));
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if ($part !== '') {
+                $keyword_items[] = $part;
+            }
+        }
+    }
+
+    // Ensemble de mots-clés supplémentaires possibles (avec placeholders)
+    $extras = array();
+    if (!empty($base_keyword)) {
+        $extras = array(
+            $base_keyword,
+            $base_keyword . ' [VILLE]',
+            $base_keyword . ' [VILLE] [DÉPARTEMENT]',
+            $base_keyword . ' entreprise',
+            'entreprise ' . $base_keyword . ' [VILLE]',
+            $base_keyword . ' artisan [VILLE]',
+            $base_keyword . ' dépannage [VILLE]',
+            $base_keyword . ' urgence [VILLE]',
+            $base_keyword . ' devis gratuit [VILLE]',
+            $base_keyword . ' prix [VILLE]',
+            $base_keyword . ' professionnel [VILLE]',
+        );
+    }
+
+    foreach ($extras as $extra_kw) {
+        if (count($keyword_items) >= 10) {
+            break;
+        }
+        if (!in_array($extra_kw, $keyword_items, true)) {
+            $keyword_items[] = $extra_kw;
+        }
+    }
+
+    // Si toujours moins de 10 (cas sans service_name), compléter avec des combinaisons génériques
+    if (count($keyword_items) < 10) {
+        $fallbacks = array(
+            '[VILLE] [DÉPARTEMENT] artisan',
+            '[VILLE] [DÉPARTEMENT] entreprise',
+            '[VILLE] devis gratuit',
+            '[VILLE] prix travaux',
+            '[VILLE] professionnel',
+        );
+        foreach ($fallbacks as $fb) {
+            if (count($keyword_items) >= 10) {
+                break;
+            }
+            if (!in_array($fb, $keyword_items, true)) {
+                $keyword_items[] = $fb;
+            }
+        }
+    }
+
+    if (!empty($keyword_items)) {
+        $meta_keywords = implode(', ', $keyword_items);
+    }
     
     // Créer le post template
     $template_id = wp_insert_post(array(
@@ -476,54 +539,11 @@ function osmose_ads_handle_create_template() {
         }
         
         if (!empty($valid_images)) {
+            // On stocke uniquement les IDs et mots-clés en meta.
+            // L'injection de la galerie HTML est gérée dynamiquement au moment
+            // de la génération des annonces par ville (Ad_Template::get_content_for_city).
             update_post_meta($template_id, 'realization_images', $valid_images);
             update_post_meta($template_id, 'realization_images_keywords', $images_with_keywords);
-
-            // Important : injecter directement une galerie HTML dans le contenu du template
-            // pour que les photos soient visibles dès le template (et pas uniquement via la personnalisation par ville)
-            $gallery_html = '';
-            $service_label = !empty($service_name) ? $service_name : __('Nos réalisations', 'osmose-ads');
-
-            $gallery_html .= '<h2>' . esc_html('Photos de ' . $service_label) . '</h2>';
-            $gallery_html .= '<div class="osmose-realizations-gallery">';
-
-            foreach ($valid_images as $img_id) {
-                $img_url = wp_get_attachment_image_url($img_id, 'large');
-                if (!$img_url) {
-                    continue;
-                }
-
-                $alt = trim($service_label);
-                if (empty($alt)) {
-                    $alt = get_the_title($template_id);
-                }
-
-                $gallery_html .= '<figure class="osmose-realization-image">';
-                $gallery_html .= '<img src="' . esc_url($img_url) . '" alt="' . esc_attr($alt) . '">';
-                $gallery_html .= '</figure>';
-            }
-
-            $gallery_html .= '</div>';
-
-            if (!empty($gallery_html)) {
-                $current_content = get_post_field('post_content', $template_id);
-
-                // Si le contenu contient déjà une liste de prestations (<ul>), on insère la galerie juste après
-                $marker = '</ul>';
-                $pos = strpos($current_content, $marker);
-                if ($pos !== false) {
-                    $pos_after = $pos + strlen($marker);
-                    $new_content = substr($current_content, 0, $pos_after) . "\n\n" . $gallery_html . substr($current_content, $pos_after);
-                } else {
-                    // Sinon, on ajoute la galerie à la fin du contenu
-                    $new_content = $current_content . "\n\n" . $gallery_html;
-                }
-
-                wp_update_post(array(
-                    'ID' => $template_id,
-                    'post_content' => $new_content,
-                ));
-            }
         }
     }
     
