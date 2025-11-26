@@ -39,9 +39,9 @@ function osmose_ads_build_template_prompt($service_name, $ai_prompt = '') {
 
     $base_prompt .= "GÉNÈRE UN JSON AVEC CES CHAMPS:\n\n";
     $base_prompt .= "{\n";
-    $base_prompt .= "  \"description\": \"<div class='space-y-6'><div class='space-y-4'><h1 class='text-3xl font-bold'>{$service_name} à [VILLE]</h1><p class='text-lg leading-relaxed'>Service professionnel de {$service_name} à [VILLE], une expertise reconnue dans [RÉGION].</p><p class='text-lg leading-relaxed'>Spécialistes en travaux de {$service_name} pour une qualité supérieure. Nous maîtrisons les techniques modernes garantissant des résultats durables.</p></div><div class='bg-blue-50 p-6 rounded-lg'><h2 class='text-xl font-bold text-gray-900 mb-3'>Notre Engagement Qualité</h2><p class='leading-relaxed mb-3'>Nous garantissons la satisfaction totale de nos clients à [VILLE] et dans toute la région de [RÉGION].</p><p class='leading-relaxed'>Chaque intervention de {$service_name} est réalisée selon les normes professionnelles les plus strictes.</p></div><div class='space-y-4'><h2 class='text-2xl font-bold text-gray-900 mb-4'>Nos Prestations {$service_name}</h2><ul class='space-y-3'>[GÉNÈRE 10 PRESTATIONS SPÉCIFIQUES À {$service_name} SOUS FORME DE &lt;li&gt; AVEC UNE ICÔNE &lt;i class='fas fa-check text-green-600 mr-2'&gt;&lt;/i&gt; ET UN TEXTE DÉTAILLÉ]</ul></div><div class='space-y-4'><h2 class='text-2xl font-bold text-gray-900 mb-4'>FAQ sur {$service_name} à [VILLE]</h2><div class='space-y-2'><p><strong>Q1: Combien coûte un service de {$service_name} à [VILLE]?</strong></p><p>A: Le prix dépend de la complexité et de l'ampleur des travaux. Nous proposons des devis gratuits et personnalisés.</p><p><strong>Q2: Quel est le délai d'intervention pour {$service_name}?</strong></p><p>A: Nous nous engageons à intervenir rapidement, généralement sous 24-48h selon l'urgence de votre demande.</p><p><strong>Q3: Proposez-vous une garantie sur vos services de {$service_name}?</strong></p><p>A: Oui, tous nos travaux sont garantis selon les normes professionnelles en vigueur.</p></div></div></div>\",\n";
-    $base_prompt .= "  \"short_description\": \"Service professionnel de {$service_name} à [VILLE] - Devis gratuit et intervention rapide\",\n";
-    $base_prompt .= "  \"long_description\": \"Notre entreprise spécialisée en {$service_name} intervient sur [VILLE] et dans toute la région de [RÉGION]. Nous proposons des services complets incluant diagnostic, réparation, installation et maintenance. Notre équipe d'experts maîtrise les techniques les plus modernes pour garantir des résultats durables et performants. Nous nous adaptons aux spécificités climatiques locales et respectons toutes les normes professionnelles en vigueur.\",\n";
+    $base_prompt .= "  \"description\": \"[GÉNÈRE ICI UN HTML COMPLET POUR UNE PAGE DE SERVICE WORDPRESS EN {$service_name}. LE HTML DOIT INCLURE: (1) 2 À 3 PARAGRAPHES D'INTRODUCTION ORIGINAUX, TECHNIQUES ET SPÉCIFIQUES À {$service_name}, QUI EXPLIQUENT LE CONTEXTE, LES ENJEUX ET LES BÉNÉFICES POUR LE CLIENT À [VILLE] ET EN [RÉGION]; (2) UNE SECTION 'Nos prestations {$service_name}' AVEC UNE LISTE &lt;ul&gt; DE 10 PRESTATIONS TRÈS SPÉCIFIQUES AU SERVICE, CHAQUE &lt;li&gt; CONTENANT UNE ICÔNE &lt;i class='fas fa-check text-green-600 mr-2'&gt;&lt;/i&gt; ET UN TEXTE DÉTAILLÉ; (3) UNE SECTION FAQ DÉDIÉE À {$service_name} À [VILLE], AVEC DES QUESTIONS/RÉPONSES PRÉCISES ET TECHNIQUES. UTILISE UNE STRUCTURE MODERNE AVEC &lt;div class='space-y-6'&gt;, &lt;h1&gt;, &lt;h2&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;p&gt;, MAIS TU DOIS RÉDIGER TOUS LES TEXTES TOI-MÊME, SANS REPRENDRE D'EXEMPLES GÉNÉRIQUES.]\"," . "\n";
+    $base_prompt .= "  \"short_description\": \"[RÉSUME EN UNE PHRASE CLAIRE ET ATTRACTIVE LE SERVICE {$service_name} À [VILLE], AVEC UN ANGLE TECHNIQUE ET COMMERCIAL FORT, SANS ÊTRE GÉNÉRIQUE]\",\n";
+    $base_prompt .= "  \"long_description\": \"[RÉDIGER 2 À 3 PHRASES EXPLICATIVES SUR NOTRE SERVICE DE {$service_name} À [VILLE] ET EN [RÉGION], EN INSISTANT SUR L'EXPERTISE TECHNIQUE, LES TYPES D'INTERVENTIONS, LES MATÉRIAUX UTILISÉS ET LES GARANTIES. LE TEXTE DOIT ÊTRE UNIQUE ET SPÉCIFIQUE À {$service_name}, PAS UN TEXTE GÉNÉRIQUE APPLICABLE À TOUS LES MÉTIERS.]\",\n";
     $base_prompt .= "  \"icon\": \"fas fa-tools\",\n";
     $base_prompt .= "  \"meta_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
     $base_prompt .= "  \"meta_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.\",\n";
@@ -271,6 +271,17 @@ function osmose_ads_handle_create_template() {
             if (!empty($description_html)) {
                 // Utiliser la description HTML comme contenu du template
                 $ai_response = $description_html;
+
+                // Si une long_description est fournie, l'injecter dans le HTML du template
+                if (!empty($long_description)) {
+                    $about_html  = "<section class='osmose-service-about space-y-4'>\n";
+                    $about_html .= "  <h2 class='text-2xl font-bold text-gray-900'>À propos de notre service de {$service_name}</h2>\n";
+                    $about_html .= "  <p class='leading-relaxed'>" . esc_html($long_description) . "</p>\n";
+                    $about_html .= "</section>\n";
+
+                    // Par défaut, on ajoute cette section à la fin du contenu généré
+                    $ai_response .= "\n\n" . $about_html;
+                }
             }
         }
     }
