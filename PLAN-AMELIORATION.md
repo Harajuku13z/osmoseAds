@@ -264,3 +264,4 @@ Avant de déployer chaque fonctionnalité :
 
 **Dernière mise à jour** : 24 novembre 2025
 
+

@@ -89,7 +89,7 @@ class Ad_Template {
             $service_name = get_post_meta($this->post_id, 'service_name', true);
             $focus_keyword = trim($service_name . ' ' . $city_name);
             
-            // Construire une petite section HTML pour les photos
+            // Construire une section HTML pour les photos (après la liste des prestations)
             $gallery_html = '';
             
             // Titre de section incluant le mot-clé et la ville pour le SEO
@@ -99,7 +99,7 @@ class Ad_Template {
                 $gallery_html .= '<h2>' . esc_html('Nos réalisations à ' . $city_name) . '</h2>';
             }
             
-            $gallery_html .= '<div class=\"osmose-realizations-gallery\">';
+            $gallery_html .= '<div class="osmose-realizations-gallery">';
             
             foreach ($realization_images as $img_id) {
                 if (!wp_attachment_is_image($img_id)) {
@@ -118,15 +118,25 @@ class Ad_Template {
                     $alt = get_the_title($this->post_id);
                 }
                 
-                $gallery_html .= '<figure class=\"osmose-realization-image\">';
-                $gallery_html .= '<img src=\"' . esc_url($img_url) . '\" alt=\"' . esc_attr($alt) . '\">';
+                $gallery_html .= '<figure class="osmose-realization-image">';
+                $gallery_html .= '<img src="' . esc_url($img_url) . '" alt="' . esc_attr($alt) . '">';
                 $gallery_html .= '</figure>';
             }
             
             $gallery_html .= '</div>';
             
-            // Ajouter la galerie à la fin du contenu
-            if (!empty($gallery_html)) {
+            // Tenter d'insérer la galerie juste après la liste des prestations
+            $inserted = false;
+            $marker = '</ul>';
+            $pos = strpos($final_content, $marker);
+            if ($pos !== false) {
+                $pos_after = $pos + strlen($marker);
+                $final_content = substr($final_content, 0, $pos_after) . "\n\n" . $gallery_html . substr($final_content, $pos_after);
+                $inserted = true;
+            }
+            
+            // Fallback : ajouter la galerie à la fin du contenu si aucun <ul> trouvé
+            if (!$inserted && !empty($gallery_html)) {
                 $final_content .= "\n\n" . $gallery_html;
             }
         }

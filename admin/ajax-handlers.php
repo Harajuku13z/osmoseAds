@@ -7,6 +7,75 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Construire le prompt pour un template d'annonce (sans ville spécifique)
+ * Inspiré directement de la version Laravel fournie, adapté au service WordPress.
+ */
+function osmose_ads_build_template_prompt($service_name, $ai_prompt = '') {
+    $base_prompt = "Tu es un expert technique en {$service_name} avec une connaissance PROFONDE des prestations, techniques et matériaux spécifiques à ce domaine. Crée un template d'annonce TOTALEMENT personnalisé pour {$service_name}.\n\n";
+
+    $base_prompt .= "⚠️⚠️⚠️ SERVICE À PERSONNALISER: {$service_name} ⚠️⚠️⚠️\n\n";
+
+    $base_prompt .= "🚫 INTERDICTIONS ABSOLUES:\n";
+    $base_prompt .= "- INTERDIT d'utiliser des prestations génériques comme 'Diagnostic', 'Conseil', 'Maintenance générale', 'Installation professionnelle'\n";
+    $base_prompt .= "- INTERDIT de copier du contenu générique applicable à tous les services\n";
+    $base_prompt .= "- INTERDIT d'utiliser un vocabulaire vague ou général\n\n";
+
+    $base_prompt .= "✅ OBLIGATIONS ABSOLUES POUR {$service_name}:\n";
+    $base_prompt .= "- Chaque prestation DOIT être TECHNIQUE et SPÉCIFIQUE UNIQUEMENT à {$service_name}\n";
+    $base_prompt .= "- Utilise le vocabulaire PROFESSIONNEL du métier de {$service_name}\n";
+    $base_prompt .= "- Les prestations doivent mentionner des techniques, matériaux ou méthodes PRÉCISES liés à {$service_name}\n";
+    $base_prompt .= "- Chaque description doit expliquer QUOI, COMMENT et POURQUOI spécifiquement pour {$service_name}\n\n";
+
+    $base_prompt .= "EXEMPLES DE PRESTATIONS SPÉCIFIQUES:\n";
+    $base_prompt .= "- Pour 'Rénovation de toiture': 'Diagnostic et inspection de toiture', 'Nettoyage et démoussage', 'Réparation partielle de toiture', 'Réfection complète de toiture', 'Isolation de toiture', 'Étanchéité et traitement hydrofuge', 'Réparation de zinguerie', 'Pose de charpente', 'Installation de fenêtres de toit', 'Entretien annuel et maintenance préventive'\n";
+    $base_prompt .= "- Pour 'Plomberie': 'Installation de chauffe-eau', 'Réparation de fuites', 'Débouchage de canalisations', 'Pose de robinetterie', 'Installation de WC', 'Rénovation de salle de bain', 'Détection de fuites', 'Installation de radiateurs', 'Raccordement gaz', 'Maintenance préventive'\n\n";
+
+    $base_prompt .= "GÉNÈRE UN JSON AVEC CES CHAMPS:\n\n";
+    $base_prompt .= "{\n";
+    $base_prompt .= "  \"description\": \"<div class='grid md:grid-cols-2 gap-8'><div class='space-y-6'><div class='space-y-4'><p class='text-lg leading-relaxed'>Service professionnel de {$service_name} à [VILLE], une expertise reconnue dans [RÉGION].</p><p class='text-lg leading-relaxed'>Spécialistes en travaux de {$service_name} pour une qualité supérieure. Nous maîtrisons les techniques modernes garantissant des résultats durables.</p></div><div class='bg-blue-50 p-6 rounded-lg'><h3 class='text-xl font-bold text-gray-900 mb-3'>Notre Engagement Qualité</h3><p class='leading-relaxed mb-3'>Nous garantissons la satisfaction totale de nos clients à [VILLE] et dans toute la région de [RÉGION].</p><p class='leading-relaxed'>Chaque intervention de {$service_name} est réalisée selon les normes professionnelles les plus strictes.</p></div><h3 class='text-2xl font-bold text-gray-900 mb-4'>Nos Prestations {$service_name}</h3><ul class='space-y-3'>[GÉNÈRE 10 PRESTATIONS SPÉCIFIQUES À {$service_name} SOUS FORME DE &lt;li&gt; AVEC UNE ICÔNE &lt;i class='fas fa-check text-green-600 mr-2'&gt;&lt;/i&gt; ET UN TEXTE DÉTAILLÉ]</ul><div class='bg-gray-50 p-6 rounded-lg mt-6'><h4 class='text-xl font-bold text-gray-900 mb-3'>FAQ</h4><div class='space-y-2'><p><strong>Q1: Combien coûte un service de {$service_name} à [VILLE]?</strong></p><p>A: Le prix dépend de la complexité et de l'ampleur des travaux. Nous proposons des devis gratuits et personnalisés.</p><p><strong>Q2: Quel est le délai d'intervention pour {$service_name}?</strong></p><p>A: Nous nous engageons à intervenir rapidement, généralement sous 24-48h selon l'urgence de votre demande.</p><p><strong>Q3: Proposez-vous une garantie sur vos services de {$service_name}?</strong></p><p>A: Oui, tous nos travaux sont garantis selon les normes professionnelles en vigueur.</p></div></div></div><div class='space-y-6'><div class='bg-green-50 p-6 rounded-lg'><h3 class='text-xl font-bold text-gray-900 mb-3'>Pourquoi choisir ce service</h3><p class='leading-relaxed'>Notre expertise locale à [VILLE] nous permet de comprendre les spécificités de votre région et d'adapter nos services en conséquence.</p></div><h3 class='text-2xl font-bold text-gray-900 mb-4'>Notre Expertise Locale</h3><p class='leading-relaxed'>Depuis plusieurs années, nous intervenons sur [VILLE] et sa région, développant une connaissance approfondie des besoins locaux en {$service_name}.</p><div class='bg-yellow-50 p-6 rounded-lg border-l-4 border-yellow-600'><h4 class='text-xl font-bold text-gray-900 mb-3'>Financement et aides</h4><p>Nous vous accompagnons dans vos démarches pour bénéficier des aides financières disponibles pour vos travaux de {$service_name}.</p></div><div class='bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-lg border-l-4 border-blue-600'><h4 class='text-xl font-bold text-gray-900 mb-3'>Besoin d'un devis?</h4><p class='mb-4'>Contactez-nous pour un devis gratuit pour {$service_name} à [VILLE].</p><a href='[FORM_URL]' class='inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-300'>Demande de devis</a></div><div class='bg-gray-50 p-6 rounded-lg'><h4 class='text-lg font-bold text-gray-900 mb-3'>Informations Pratiques</h4><ul class='space-y-2 text-sm'><li class='flex items-center'><i class='fas fa-check text-green-600 mr-3 flex-shrink-0'></i><span>Devis gratuit et sans engagement</span></li><li class='flex items-center'><i class='fas fa-check text-green-600 mr-3 flex-shrink-0'></i><span>Intervention rapide sur [VILLE]</span></li><li class='flex items-center'><i class='fas fa-check text-green-600 mr-3 flex-shrink-0'></i><span>Garantie sur tous nos travaux</span></li></ul></div><div class='mt-8 pt-6 border-t border-gray-200'><div class='text-center'><h4 class='text-lg font-semibold text-gray-800 mb-4'>Partager ce service</h4><div class='flex justify-center items-center space-x-4'><a href='https://www.facebook.com/sharer/sharer.php?u=[URL]&quote=[TITRE]' target='_blank' rel='noopener noreferrer' class='bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full transition-all durée-300 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:-translate-y-1'><i class='fab fa-facebook-f text-lg'></i><span class='font-medium' style='color:#ffffff;'>Facebook</span></a><a href='https://wa.me/?text=[TITRE] - [URL]' target='_blank' rel='noopener noreferrer' class='bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-full transition-all durée-300 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:-translate-y-1'><i class='fab fa-whatsapp text-lg'></i><span class='font-medium' style='color:#ffffff;'>WhatsApp</span></a><a href='mailto:?subject=[TITRE]&body=Je vous partage ce service intéressant : [URL]' class='bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-full transition-all durée-300 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:-translate-y-1'><i class='fas fa-envelope text-lg'></i><span class='font-medium' style='color:#ffffff;'>Email</span></a></div></div></div></div>\",\n";
+    $base_prompt .= "  \"short_description\": \"Service professionnel de {$service_name} à [VILLE] - Devis gratuit et intervention rapide\",\n";
+    $base_prompt .= "  \"long_description\": \"Notre entreprise spécialisée en {$service_name} intervient sur [VILLE] et dans toute la région de [RÉGION]. Nous proposons des services complets incluant diagnostic, réparation, installation et maintenance. Notre équipe d'experts maîtrise les techniques les plus modernes pour garantir des résultats durables et performants. Nous nous adaptons aux spécificités climatiques locales et respectons toutes les normes professionnelles en vigueur.\",\n";
+    $base_prompt .= "  \"icon\": \"fas fa-tools\",\n";
+    $base_prompt .= "  \"meta_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+    $base_prompt .= "  \"meta_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.\",\n";
+    $base_prompt .= "  \"og_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+    $base_prompt .= "  \"og_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.\",\n";
+    $base_prompt .= "  \"twitter_title\": \"{$service_name} à [VILLE] - Service professionnel\",\n";
+    $base_prompt .= "  \"twitter_description\": \"Service professionnel de {$service_name} à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.\",\n";
+    $base_prompt .= "  \"meta_keywords\": \"{$service_name}, [VILLE], [RÉGION], service professionnel, devis gratuit\"\n";
+    $base_prompt .= "}\n\n";
+
+    $base_prompt .= "⚠️⚠️⚠️ INSTRUCTIONS CRITIQUES - FORMAT JSON ⚠️⚠️⚠️:\n";
+    $base_prompt .= "- TU DOIS RÉPONDRE UNIQUEMENT AVEC UN JSON VALIDE\n";
+    $base_prompt .= "- COMMENCE DIRECTEMENT PAR { (accolade ouvrante)\n";
+    $base_prompt .= "- TERMINE DIRECTEMENT PAR } (accolade fermante)\n";
+    $base_prompt .= "- PAS de texte avant le JSON\n";
+    $base_prompt .= "- PAS de texte après le JSON\n";
+    $base_prompt .= "- PAS de ```json ou ``` autour du JSON\n";
+    $base_prompt .= "- PAS de commentaires ou explications\n";
+    $base_prompt .= "- JUSTE le JSON brut\n\n";
+
+    $base_prompt .= "⚠️⚠️⚠️ INSTRUCTIONS CRITIQUES - CONTENU ⚠️⚠️⚠️:\n";
+    $base_prompt .= "- REMPLACE TOUT le contenu par du contenu VRAIMENT spécifique à {$service_name}\n";
+    $base_prompt .= "- REMPLACE [GÉNÈRE 10 PRESTATIONS SPÉCIFIQUES À {$service_name}] par 10 prestations TECHNIQUES RÉELLES pour {$service_name}\n";
+    $base_prompt .= "- Chaque prestation doit avoir un NOM TECHNIQUE précis et une DESCRIPTION détaillée avec techniques/matériaux pour {$service_name}\n";
+    $base_prompt .= "- PERSONNALISE les descriptions, FAQ, et tous les textes pour {$service_name} spécifiquement\n";
+    $base_prompt .= "- Utilise [VILLE], [RÉGION], [DÉPARTEMENT] comme placeholders pour les variables dynamiques\n";
+    $base_prompt .= "- Le contenu HTML doit être COMPLET et PERSONNALISÉ, pas un template copié-collé\n\n";
+
+    $base_prompt .= "EXEMPLES CONCRETS POUR {$service_name}:\n";
+    $base_prompt .= "- Si {$service_name} = 'Désamiantage' → prestations: 'Dépollution amiante', 'Retrait amiante sous confinement', 'Gestion déchets amiante'\n";
+    $base_prompt .= "- Si {$service_name} = 'Traitement humidité' → prestations: 'Diagnostic humidité par imagerie thermique', 'Injection résine anti-humidité', 'Installation VMC double flux'\n";
+    $base_prompt .= "- Si {$service_name} = 'Rénovation toiture' → prestations: 'Diagnostic toiture par drone', 'Réfection tuiles ardoise', 'Installation écran de sous-toiture'\n";
+
+    if (!empty($ai_prompt)) {
+        $base_prompt .= "\nINSTRUCTIONS PERSONNALISÉES SUPPLÉMENTAIRES:\n" . $ai_prompt;
+    }
+
+    return $base_prompt;
+}
+
 function osmose_ads_handle_create_template() {
     // Vérifier que les classes existent
     if (!class_exists('Ad_Template')) {
@@ -74,80 +143,8 @@ function osmose_ads_handle_create_template() {
     $ai_service = new AI_Service();
     
     if (empty($prompt)) {
-        // Construire la liste des mots-clés pour le prompt
-        $keywords_list = '';
-        if (!empty($service_keywords)) {
-            $keywords_array = array_map('trim', explode(',', $service_keywords));
-            $keywords_list = implode(', ', $keywords_array);
-        }
-        
-        // Construire un prompt simplifié, 100% orienté résultat
-        $company_address = get_option('osmose_ads_company_address', '');
-        
-        $prompt  = "Tu es un rédacteur web SEO senior spécialisé en couverture.\n";
-        $prompt .= "Génère UNIQUEMENT du HTML (pas de markdown), sans wrapper <html> ni <body>.\n";
-        $prompt .= "Utilise OBLIGATOIREMENT ces variables : [VILLE], [DÉPARTEMENT], [CODE_POSTAL], [RÉGION].\n";
-        $prompt .= "NE JAMAIS mettre de ville réelle en dur (toujours [VILLE], [DÉPARTEMENT], etc.).\n\n";
-        
-        $prompt .= "Contexte :\n";
-        $prompt .= "- Service principal (focus keyword) : " . $service_name . "\n";
-        if (!empty($keywords_list)) {
-            $prompt .= "- Mots-clés secondaires : " . $keywords_list . "\n";
-        }
-        $prompt .= "- Entreprise : " . ($company_name ?: '[ENTREPRISE]') . "\n";
-        $prompt .= "- Adresse : " . ($company_address ?: '[ADRESSE]') . "\n";
-        $prompt .= "- Site : " . $site_url . "\n\n";
-
-        $prompt .= "OBJECTIF :\n";
-        $prompt .= "- Créer un contenu premium pour un " . strtolower($service_name) . " à [VILLE] ([DÉPARTEMENT], [CODE_POSTAL]).\n";
-        $prompt .= "- Respecter les bonnes pratiques SEO : focus keyword dans l'intro, H2, FAQ, etc.\n";
-        $prompt .= "- Longueur cible : 1800 à 2600 mots.\n\n";
-
-        $prompt .= "CONTRAINTES HTML IMPORTANTES :\n";
-        $prompt .= "- Balises autorisées : <h2>, <h3>, <p>, <strong>, <em>, <br> uniquement.\n";
-        $prompt .= "- INTERDIT : titres 'Introduction', 'Description courte', 'Présentation', 'FAQ " . strtolower($service_name) . "'.\n";
-        $prompt .= "- Ne mets AUCUN emoji, AUCUN titre du type 'Article ... Premium'.\n\n";
-
-        $prompt .= "STRUCTURE EXACTE À PRODUIRE :\n\n";
-
-        // 1) INTRODUCTION
-        $prompt .= "1/ INTRODUCTION (200–250 mots)\n";
-        $prompt .= "- Pas de titre, commence directement par un paragraphe <p>.\n";
-        $prompt .= "- Première phrase : doit contenir le focus keyword \"" . strtolower($service_name) . "\" + [VILLE] + [DÉPARTEMENT].\n";
-        $prompt .= "- 2 à 3 paragraphes <p>, ton commercial mais concret, orienté bénéfices client.\n\n";
-
-        // 2) GARANTIES
-        $prompt .= "2/ GARANTIES (120–180 mots)\n";
-        $prompt .= "- Un seul <h2> clair, par exemple : \"Une entreprise de couverture de confiance à [VILLE]\".\n";
-        $prompt .= "- 1 ou 2 <p> qui parlent : garantie décennale, assurance, sérieux, sécurité, propreté de chantier.\n\n";
-
-        // 3) PRESTATIONS
-        $prompt .= "3/ PRESTATIONS (OBLIGATOIRE : au moins 10 services)\n";
-        $prompt .= "- Un seul <h2> : \"Nos prestations de " . strtolower($service_name) . " à [VILLE]\".\n";
-        $prompt .= "- Liste de 10 à 14 prestations.\n";
-        $prompt .= "- Format STRICT pour CHAQUE prestation :\n";
-        $prompt .= "  <p><strong>[Nom de la prestation]</strong> – [Description de 25 à 40 mots expliquant ce que l'on fait, les bénéfices pour le client, et en liant si possible au climat / contexte de [VILLE], [DÉPARTEMENT]].</p>\n";
-        $prompt .= "- Les prestations doivent couvrir : pose, rénovation, réparation urgente, isolation, démoussage, hydrofuge, zinguerie, urgence intempéries, etc.\n\n";
-
-        // 4) FAQ
-        $prompt .= "4/ FAQ (3 à 4 questions)\n";
-        $prompt .= "- Un seul <h2> : \"Questions fréquentes sur " . strtolower($service_name) . " à [VILLE]\".\n";
-        $prompt .= "- Pour chaque question :\n";
-        $prompt .= "  <h3>[Question complète avec le mot \""
-                 . strtolower($service_name) . "\" et [VILLE]] ?</h3>\n";
-        $prompt .= "  <p>[Réponse de 40 à 60 mots, claire, pédagogique, avec focus sur la pratique réelle d'un artisan à [VILLE]].</p>\n\n";
-
-        // 5) RÈGLES SEO
-        $prompt .= "5/ RÈGLES SEO DANS LE TEXTE :\n";
-        $prompt .= "- \""
-                 . strtolower($service_name) . "\" doit apparaître naturellement dans l'introduction, dans au moins un H2, plusieurs prestations et plusieurs FAQ.\n";
-        $prompt .= "- Utiliser beaucoup de mots de liaison : \"D'abord\", \"Ensuite\", \"De plus\", \"Par ailleurs\", \"Cependant\", \"En revanche\", \"Ainsi\", \"Enfin\", \"Par conséquent\".\n";
-        $prompt .= "- Paragraphes courts (2–4 phrases), lisibles.\n";
-        $prompt .= "- Intégrer au moins 2 liens internes sous forme d'ancres (par ex. <a href=\"/contact\">contact</a>, <a href=\"/devis\">devis</a>).\n";
-        $prompt .= "- Intégrer au moins 1 lien externe utile (ex. <a href=\"https://www.service-public.fr/\">service-public.fr</a>) dans un contexte informatif.\n";
-        $prompt .= "- Ne PAS générer de meta title/description ici (c'est géré à part).\n\n";
-
-        $prompt .= "Produis UNIQUEMENT le contenu HTML final, sans explication autour, sans commentaires, sans texte avant/après.\n";
+        // Utiliser le nouveau prompt JSON inspiré de la version Laravel
+        $prompt = osmose_ads_build_template_prompt($service_name, '');
     }
     
     $system_message = 'Tu es un rédacteur web senior spécialisé en BTP/couverture avec 10+ ans d\'expérience. Tu maîtrises parfaitement le vocabulaire technique du métier, les enjeux clients et les standards WordPress/SEO 2025.';
@@ -197,47 +194,115 @@ function osmose_ads_handle_create_template() {
     
     // Mettre à jour la réponse
     $ai_response = trim($content);
-    
-    // Demander à l'IA de générer les meta SEO selon les normes All in One SEO
-    $meta_prompt = "Pour le service '$service_name' dans une ville [VILLE] du département [DÉPARTEMENT], génère des métadonnées SEO optimisées selon les normes All in One SEO. Réponds UNIQUEMENT au format JSON suivant (sans texte avant ou après) :\n\n";
-    $meta_prompt .= "{\n";
-    $meta_prompt .= "  \"meta_title\": \"titre SEO optimisé avec mot-clé principal en début (50-60 caractères max), format: [Service] [VILLE] [DÉPARTEMENT] | [Entreprise]\",\n";
-    $meta_prompt .= "  \"meta_description\": \"description SEO engageante (150-160 caractères) incluant [VILLE] et [DÉPARTEMENT], avec bénéfice principal et CTA implicite\",\n";
-    $meta_prompt .= "  \"meta_keywords\": \"mot-clé1, mot-clé2, mot-clé3 (optionnel, peu recommandé)\",\n";
-    $meta_prompt .= "  \"og_title\": \"titre Open Graph (60-90 caractères)\",\n";
-    $meta_prompt .= "  \"og_description\": \"description Open Graph (200-300 caractères) incluant [VILLE] et [DÉPARTEMENT]\",\n";
-    $meta_prompt .= "  \"twitter_title\": \"titre Twitter (70 caractères max)\",\n";
-    $meta_prompt .= "  \"twitter_description\": \"description Twitter (200 caractères max) incluant [VILLE] et [DÉPARTEMENT]\"\n";
-    $meta_prompt .= "}\n\n";
-    $meta_prompt .= "IMPORTANT : Les descriptions DOIVENT inclure [VILLE] et [DÉPARTEMENT] de manière naturelle. Le meta_title doit placer le mot-clé principal en début (poids SEO maximal).";
-    
-    $meta_response = $ai_service->call_ai($meta_prompt, 'Tu es un expert SEO spécialisé dans les normes All in One SEO. Tu génères des métadonnées optimisées au format JSON strict, en respectant les longueurs recommandées et en incluant systématiquement la localisation ([VILLE] et [DÉPARTEMENT]) dans les descriptions.', array(
-        'temperature' => 0.7,
-        'max_tokens' => 500,
-    ));
-    
-    $meta_data = array();
-    if (!is_wp_error($meta_response)) {
-        // Essayer d'extraire le JSON de la réponse
-        $json_start = strpos($meta_response, '{');
-        $json_end = strrpos($meta_response, '}');
-        if ($json_start !== false && $json_end !== false) {
-            $json_str = substr($meta_response, $json_start, $json_end - $json_start + 1);
-            $decoded = json_decode($json_str, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $meta_data = $decoded;
+
+    // Essayer d'extraire un JSON complet (nouvelle logique inspirée de Laravel)
+    $meta_title = '';
+    $meta_description = '';
+    $meta_keywords = '';
+    $og_title = '';
+    $og_description = '';
+    $twitter_title = '';
+    $twitter_description = '';
+    $short_description = '';
+    $long_description = '';
+    $icon = '';
+    $template_json_raw = '';
+
+    $json_start = strpos($ai_response, '{');
+    $json_end   = strrpos($ai_response, '}');
+    if ($json_start !== false && $json_end !== false && $json_end > $json_start) {
+        $json_str = substr($ai_response, $json_start, $json_end - $json_start + 1);
+        $decoded  = json_decode($json_str, true);
+
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $template_json_raw = $json_str;
+
+            // Récupérer les champs principaux du JSON
+            $description_html   = isset($decoded['description']) ? $decoded['description'] : '';
+            $short_description  = isset($decoded['short_description']) ? $decoded['short_description'] : '';
+            $long_description   = isset($decoded['long_description']) ? $decoded['long_description'] : '';
+            $icon               = isset($decoded['icon']) ? $decoded['icon'] : '';
+            $meta_title         = isset($decoded['meta_title']) ? $decoded['meta_title'] : '';
+            $meta_description   = isset($decoded['meta_description']) ? $decoded['meta_description'] : '';
+            $meta_keywords      = isset($decoded['meta_keywords']) ? $decoded['meta_keywords'] : '';
+            $og_title           = isset($decoded['og_title']) ? $decoded['og_title'] : '';
+            $og_description     = isset($decoded['og_description']) ? $decoded['og_description'] : '';
+            $twitter_title      = isset($decoded['twitter_title']) ? $decoded['twitter_title'] : '';
+            $twitter_description= isset($decoded['twitter_description']) ? $decoded['twitter_description'] : '';
+
+            if (!empty($description_html)) {
+                // Utiliser la description HTML comme contenu du template
+                $ai_response = $description_html;
             }
         }
     }
-    
-    // Valeurs par défaut si l'IA n'a pas généré de meta (avec [VILLE] et [DÉPARTEMENT])
-    $meta_title = $meta_data['meta_title'] ?? $service_name . ' [VILLE] [DÉPARTEMENT] | Service professionnel';
-    $meta_description = $meta_data['meta_description'] ?? 'Service professionnel ' . strtolower($service_name) . ' à [VILLE] ([DÉPARTEMENT]). Intervention rapide et de qualité. Devis gratuit.';
-    $meta_keywords = $meta_data['meta_keywords'] ?? strtolower($service_name) . ', [VILLE], [DÉPARTEMENT], service professionnel';
-    $og_title = $meta_data['og_title'] ?? $meta_title;
-    $og_description = $meta_data['og_description'] ?? ($meta_description ?: 'Service professionnel ' . strtolower($service_name) . ' à [VILLE] ([DÉPARTEMENT]). Intervention rapide et de qualité.');
-    $twitter_title = $meta_data['twitter_title'] ?? $og_title;
-    $twitter_description = $meta_data['twitter_description'] ?? $og_description;
+
+    // Si aucune meta extraite depuis le JSON, fallback sur l'ancienne logique (2e appel IA dédié aux méta)
+    if (empty($meta_title) && empty($meta_description)) {
+        // Demander à l'IA de générer les meta SEO selon les normes All in One SEO
+        $meta_prompt = "Pour le service '$service_name' dans une ville [VILLE] du département [DÉPARTEMENT], génère des métadonnées SEO optimisées selon les normes All in One SEO. Réponds UNIQUEMENT au format JSON suivant (sans texte avant ou après) :\n\n";
+        $meta_prompt .= "{\n";
+        $meta_prompt .= "  \"meta_title\": \"titre SEO optimisé avec mot-clé principal en début (50-60 caractères max), format: [Service] [VILLE] [DÉPARTEMENT] | [Entreprise]\",\n";
+        $meta_prompt .= "  \"meta_description\": \"description SEO engageante (150-160 caractères) incluant [VILLE] et [DÉPARTEMENT], avec bénéfice principal et CTA implicite\",\n";
+        $meta_prompt .= "  \"meta_keywords\": \"mot-clé1, mot-clé2, mot-clé3 (optionnel, peu recommandé)\",\n";
+        $meta_prompt .= "  \"og_title\": \"titre Open Graph (60-90 caractères)\",\n";
+        $meta_prompt .= "  \"og_description\": \"description Open Graph (200-300 caractères) incluant [VILLE] et [DÉPARTEMENT]\",\n";
+        $meta_prompt .= "  \"twitter_title\": \"titre Twitter (70 caractères max)\",\n";
+        $meta_prompt .= "  \"twitter_description\": \"description Twitter (200 caractères max) incluant [VILLE] et [DÉPARTEMENT]\"\n";
+        $meta_prompt .= "}\n\n";
+        $meta_prompt .= "IMPORTANT : Les descriptions DOIVENT inclure [VILLE] et [DÉPARTEMENT] de manière naturelle. Le meta_title doit placer le mot-clé principal en début (poids SEO maximal).";
+
+        $meta_response = $ai_service->call_ai($meta_prompt, 'Tu es un expert SEO spécialisé dans les normes All in One SEO. Tu génères des métadonnées optimisées au format JSON strict, en respectant les longueurs recommandées et en incluant systématiquement la localisation ([VILLE] et [DÉPARTEMENT]) dans les descriptions.', array(
+            'temperature' => 0.7,
+            'max_tokens' => 500,
+        ));
+
+        $meta_data = array();
+        if (!is_wp_error($meta_response)) {
+            // Essayer d'extraire le JSON de la réponse
+            $json_start = strpos($meta_response, '{');
+            $json_end = strrpos($meta_response, '}');
+            if ($json_start !== false && $json_end !== false) {
+                $json_str = substr($meta_response, $json_start, $json_end - $json_start + 1);
+                $decoded = json_decode($json_str, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $meta_data = $decoded;
+                }
+            }
+        }
+
+        // Valeurs par défaut si l'IA n'a pas généré de meta (avec [VILLE] et [DÉPARTEMENT])
+        $meta_title = $meta_data['meta_title'] ?? $service_name . ' [VILLE] [DÉPARTEMENT] | Service professionnel';
+        $meta_description = $meta_data['meta_description'] ?? 'Service professionnel ' . strtolower($service_name) . ' à [VILLE] ([DÉPARTEMENT]). Intervention rapide et de qualité. Devis gratuit.';
+        $meta_keywords = $meta_data['meta_keywords'] ?? strtolower($service_name) . ', [VILLE], [DÉPARTEMENT], service professionnel';
+        $og_title = $meta_data['og_title'] ?? $meta_title;
+        $og_description = $meta_data['og_description'] ?? ($meta_description ?: 'Service professionnel ' . strtolower($service_name) . ' à [VILLE] ([DÉPARTEMENT]). Intervention rapide et de qualité.');
+        $twitter_title = $meta_data['twitter_title'] ?? $og_title;
+        $twitter_description = $meta_data['twitter_description'] ?? $og_description;
+    } else {
+        // Compléter les champs manquants avec des valeurs par défaut cohérentes
+        if (empty($meta_title)) {
+            $meta_title = $service_name . ' à [VILLE] - Service professionnel';
+        }
+        if (empty($meta_description)) {
+            $meta_description = 'Service professionnel de ' . $service_name . ' à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.';
+        }
+        if (empty($meta_keywords)) {
+            $meta_keywords = strtolower($service_name) . ', [VILLE], [RÉGION], service professionnel, devis gratuit';
+        }
+        if (empty($og_title)) {
+            $og_title = $meta_title;
+        }
+        if (empty($og_description)) {
+            $og_description = $meta_description;
+        }
+        if (empty($twitter_title)) {
+            $twitter_title = $og_title;
+        }
+        if (empty($twitter_description)) {
+            $twitter_description = $og_description;
+        }
+    }
     
     // Créer le post template
     $template_id = wp_insert_post(array(

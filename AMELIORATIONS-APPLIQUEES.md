@@ -372,3 +372,4 @@ $template->clear_cache(); // Supprime tous les caches de ce template
 **Version du plugin** : 1.1.0  
 **Auteur** : Assistant IA + Utilisateur
 
+
