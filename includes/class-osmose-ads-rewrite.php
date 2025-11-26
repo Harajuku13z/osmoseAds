@@ -87,22 +87,55 @@ class Osmose_Ads_Rewrite {
         $user_agent = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
         $referrer = esc_url_raw($_SERVER['HTTP_REFERER'] ?? $page_url);
         
+        // Vérifier que la colonne 'source' existe avant d'insérer
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM $table_name");
+        $has_source_column = false;
+        foreach ($columns as $column) {
+            if ($column->Field === 'source') {
+                $has_source_column = true;
+                break;
+            }
+        }
+        
+        // Préparer les données à insérer
+        $insert_data = array(
+            'ad_id' => $ad_id ?: null,
+            'ad_slug' => $ad_slug ?: '',
+            'page_url' => $page_url ?: $referrer,
+            'phone_number' => $phone ?: '',
+            'user_ip' => $user_ip ?: '',
+            'user_agent' => $user_agent ?: '',
+            'referrer' => $referrer ?: '',
+            'call_time' => current_time('mysql'),
+            'created_at' => current_time('mysql')
+        );
+        
+        $insert_format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');
+        
+        // Ajouter 'source' seulement si la colonne existe
+        if ($has_source_column) {
+            $insert_data['source'] = $source;
+            $insert_format[] = '%s';
+        } else {
+            // Si la colonne n'existe pas, essayer de l'ajouter
+            error_log('Osmose ADS: WARNING - Column "source" missing, attempting to add it');
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN source varchar(50) DEFAULT NULL");
+            // Re-vérifier
+            $columns = $wpdb->get_results("SHOW COLUMNS FROM $table_name");
+            foreach ($columns as $column) {
+                if ($column->Field === 'source') {
+                    $insert_data['source'] = $source;
+                    $insert_format[] = '%s';
+                    break;
+                }
+            }
+        }
+        
         // Enregistrer l'appel
         $result = $wpdb->insert(
             $table_name,
-            array(
-                'ad_id' => $ad_id ?: null,
-                'ad_slug' => $ad_slug ?: '',
-                'page_url' => $page_url ?: $referrer,
-                'phone_number' => $phone ?: '',
-                'user_ip' => $user_ip ?: '',
-                'user_agent' => $user_agent ?: '',
-                'referrer' => $referrer ?: '',
-                'source' => $source,
-                'call_time' => current_time('mysql'),
-                'created_at' => current_time('mysql')
-            ),
-            array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+            $insert_data,
+            $insert_format
         );
         
         if ($result === false) {
