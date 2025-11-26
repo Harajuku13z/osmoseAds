@@ -75,11 +75,6 @@ $nav_items = array(
         'icon' => 'dashicons-megaphone',
         'url' => admin_url('admin.php?page=osmose-ads-ads'),
     ),
-    'osmose-ads-bulk' => array(
-        'title' => __('Génération en Masse', 'osmose-ads'),
-        'icon' => 'dashicons-admin-generic',
-        'url' => admin_url('admin.php?page=osmose-ads-bulk'),
-    ),
     'osmose-ads-cities' => array(
         'title' => __('Villes', 'osmose-ads'),
         'icon' => 'dashicons-location-alt',

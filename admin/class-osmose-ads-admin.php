@@ -153,15 +153,6 @@ class Osmose_Ads_Admin {
         
         add_submenu_page(
             'osmose-ads',
-            __('Génération en Masse', 'osmose-ads'),
-            __('Génération en Masse', 'osmose-ads'),
-            'manage_options',
-            'osmose-ads-bulk',
-            array($this, 'display_bulk_generation')
-        );
-        
-        add_submenu_page(
-            'osmose-ads',
             __('Villes', 'osmose-ads'),
             __('Villes', 'osmose-ads'),
             'manage_options',
@@ -246,9 +237,6 @@ class Osmose_Ads_Admin {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/ads.php';
     }
 
-    public function display_bulk_generation() {
-        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/bulk-generation.php';
-    }
 
     public function display_cities() {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/cities.php';
