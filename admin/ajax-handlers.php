@@ -300,7 +300,59 @@ function osmose_ads_handle_create_template() {
             }
 
             if (!empty($description_html)) {
-                // Utiliser la description HTML comme contenu du template
+                // Si la "description" renvoyée par l'IA ne contient aucun HTML (simple texte),
+                // construire un HTML complet standard à partir de ce texte (intro + prestations + FAQ)
+                if (strpos($description_html, '<') === false) {
+                    $intro_blocks = preg_split('/\n{2,}/', trim($description_html));
+                    $intro_html = '';
+                    foreach ($intro_blocks as $block) {
+                        $block = trim($block);
+                        if ($block !== '') {
+                            $intro_html .= '<p class="text-lg leading-relaxed">' . esc_html($block) . '</p>';
+                        }
+                    }
+
+                    if ($intro_html === '') {
+                        $intro_html = '<p class="text-lg leading-relaxed">Nous mettons à votre disposition notre expertise en ' . esc_html($service_name) . ' à [VILLE] et dans toute la région de [RÉGION].</p>';
+                    }
+
+                    $html  = "<div class='space-y-6'>";
+                    $html .= "<div class='space-y-4'>";
+                    $html .= "<h1 class='text-3xl font-bold'>" . esc_html($service_name) . " à [VILLE]</h1>";
+                    $html .= $intro_html;
+                    $html .= "</div>";
+
+                    // Bloc prestations génériques mais structurées
+                    $html .= "<div class='space-y-4'>";
+                    $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>Nos prestations " . esc_html($service_name) . "</h2>";
+                    $html .= "<ul class='space-y-3'>";
+                    $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Diagnostic complet de vos besoins en " . esc_html($service_name) . " à [VILLE].</li>";
+                    $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Mise en œuvre de solutions conformes aux normes en vigueur en [RÉGION].</li>";
+                    $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Utilisation de matériaux adaptés au climat local et à votre bâtiment.</li>";
+                    $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Accompagnement personnalisé avant, pendant et après l’intervention.</li>";
+                    $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Entretien et suivi pour garantir la durabilité de vos travaux.</li>";
+                    $html .= "</ul>";
+                    $html .= "</div>";
+
+                    // Bloc FAQ générique
+                    $html .= "<div class='space-y-4'>";
+                    $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>FAQ sur " . esc_html($service_name) . " à [VILLE]</h2>";
+                    $html .= "<div class='space-y-2'>";
+                    $html .= "<p><strong>Q1 : Comment obtenir un devis pour " . esc_html($service_name) . " à [VILLE] ?</strong></p>";
+                    $html .= "<p>A : Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un devis détaillé et gratuit.</p>";
+                    $html .= "<p><strong>Q2 : Intervenez-vous uniquement à [VILLE] ?</strong></p>";
+                    $html .= "<p>A : Nous intervenons à [VILLE] et dans tout le département [DÉPARTEMENT], en [RÉGION].</p>";
+                    $html .= "<p><strong>Q3 : Quelles garanties proposez-vous sur vos prestations de " . esc_html($service_name) . " ?</strong></p>";
+                    $html .= "<p>A : Nos interventions respectent les normes en vigueur et bénéficient des garanties légales associées aux travaux réalisés.</p>";
+                    $html .= "</div>";
+                    $html .= "</div>";
+
+                    $html .= "</div>";
+
+                    $description_html = $html;
+                }
+
+                // Utiliser la description HTML (originale ou fallback) comme contenu du template
                 $ai_response = $description_html;
 
                 // Si une long_description explicite est fournie par l'IA, l'injecter dans le HTML du template
