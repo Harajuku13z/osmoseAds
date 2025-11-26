@@ -624,8 +624,25 @@ function osmose_ads_handle_create_template() {
     $long_description_is_fallback = false;
     $icon = isset($step1_data['icon']) ? $step1_data['icon'] : 'fas fa-tools';
     
-    // Si le HTML n'a pas été généré correctement, utiliser les données de l'étape 1 pour construire le HTML
-    if (empty($description_html) || strlen($description_html) < 100) {
+    // Vérifier si le HTML contient les prestations
+    $has_prestations_in_html = false;
+    if (!empty($description_html) && strlen($description_html) >= 100) {
+        // Vérifier s'il y a une liste (ul ou ol) avec au moins 8 items (pour les 10 prestations)
+        preg_match_all('/<li[^>]*>/i', $description_html, $li_matches);
+        $li_count = count($li_matches[0]);
+        // Vérifier aussi s'il y a un titre de section prestations
+        $has_prestations_title = (stripos($description_html, 'prestation') !== false || stripos($description_html, 'prestations') !== false);
+        // Les prestations sont présentes si on a au moins 8 items dans une liste ET un titre de section prestations
+        $has_prestations_in_html = ($li_count >= 8 && $has_prestations_title);
+        
+        // Si les prestations sont manquantes, reconstruire le HTML complet depuis l'étape 1
+        if (!$has_prestations_in_html) {
+            error_log('Osmose ADS: Prestations manquantes dans le HTML de l\'étape 2 (seulement ' . $li_count . ' items trouvés). Reconstruction depuis l\'étape 1.');
+        }
+    }
+    
+    // Si le HTML n'a pas été généré correctement OU si les prestations sont manquantes, utiliser les données de l'étape 1
+    if (empty($description_html) || strlen($description_html) < 100 || !$has_prestations_in_html) {
         // Construire le HTML à partir des données de l'étape 1
         $description_html = "<div class='space-y-6'>";
         $description_html .= "<div class='space-y-4'>";
