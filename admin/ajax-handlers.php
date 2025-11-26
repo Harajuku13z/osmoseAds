@@ -39,7 +39,7 @@ function osmose_ads_build_template_prompt($service_name, $ai_prompt = '') {
 
     $base_prompt .= "GÉNÈRE UN JSON AVEC CES CHAMPS:\n\n";
     $base_prompt .= "{\n";
-    $base_prompt .= "  \"description\": \"[GÉNÈRE ICI UN HTML COMPLET POUR UNE PAGE DE SERVICE WORDPRESS EN {$service_name}. LE HTML DOIT INCLURE: (1) 2 À 3 PARAGRAPHES D'INTRODUCTION ORIGINAUX, TECHNIQUES ET SPÉCIFIQUES À {$service_name}, QUI EXPLIQUENT LE CONTEXTE, LES ENJEUX ET LES BÉNÉFICES POUR LE CLIENT À [VILLE] ET EN [RÉGION]; (2) UNE SECTION 'Nos prestations {$service_name}' AVEC UNE LISTE &lt;ul&gt; DE 10 PRESTATIONS TRÈS SPÉCIFIQUES AU SERVICE, CHAQUE &lt;li&gt; CONTENANT UNE ICÔNE &lt;i class='fas fa-check text-green-600 mr-2'&gt;&lt;/i&gt; ET UN TEXTE DÉTAILLÉ; (3) UNE SECTION FAQ DÉDIÉE À {$service_name} À [VILLE], AVEC DES QUESTIONS/RÉPONSES PRÉCISES ET TECHNIQUES. UTILISE UNE STRUCTURE MODERNE AVEC &lt;div class='space-y-6'&gt;, &lt;h1&gt;, &lt;h2&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;p&gt;, MAIS TU DOIS RÉDIGER TOUS LES TEXTES TOI-MÊME, SANS REPRENDRE D'EXEMPLES GÉNÉRIQUES.]\"," . "\n";
+    $base_prompt .= "  \"description\": \"[GÉNÈRE ICI UN HTML COMPLET POUR UNE PAGE DE SERVICE WORDPRESS EN {$service_name}. LE HTML DOIT INCLURE: (1) 2 À 3 PARAGRAPHES D'INTRODUCTION ORIGINAUX, TECHNIQUES ET SPÉCIFIQUES À {$service_name}, QUI EXPLIQUENT LE CONTEXTE, LES ENJEUX ET LES BÉNÉFICES POUR LE CLIENT À [VILLE] ET EN [RÉGION]; (2) UNE SECTION 'Nos prestations {$service_name}' AVEC UNE LISTE &lt;ul&gt; DE 10 PRESTATIONS TRÈS SPÉCIFIQUES AU SERVICE, CHAQUE &lt;li&gt; CONTENANT UNE ICÔNE &lt;i class='fas fa-check text-green-600 mr-2'&gt;&lt;/i&gt; ET UN TEXTE DÉTAILLÉ; (3) UNE SECTION FAQ DÉDIÉE À {$service_name} À [VILLE], AVEC DES QUESTIONS/RÉPONSES PRÉCISES ET TECHNIQUES. IMPORTANT: INCLUS AU MOINS 2-3 LIENS INTERNES (vers d'autres pages du site) OU EXTERNES (vers des ressources pertinentes) DANS LE CONTENU POUR AMÉLIORER LE SEO. UTILISE UNE STRUCTURE MODERNE AVEC &lt;div class='space-y-6'&gt;, &lt;h1&gt;, &lt;h2&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;p&gt;, &lt;a href='...'&gt;, MAIS TU DOIS RÉDIGER TOUS LES TEXTES TOI-MÊME, SANS REPRENDRE D'EXEMPLES GÉNÉRIQUES.]\"," . "\n";
     $base_prompt .= "  \"short_description\": \"[RÉSUME EN UNE PHRASE CLAIRE ET ATTRACTIVE LE SERVICE {$service_name} À [VILLE], AVEC UN ANGLE TECHNIQUE ET COMMERCIAL FORT, SANS ÊTRE GÉNÉRIQUE]\",\n";
     $base_prompt .= "  \"long_description\": \"[RÉDIGER 2 À 3 PHRASES EXPLICATIVES SUR NOTRE SERVICE DE {$service_name} À [VILLE] ET EN [RÉGION], EN INSISTANT SUR L'EXPERTISE TECHNIQUE, LES TYPES D'INTERVENTIONS, LES MATÉRIAUX UTILISÉS ET LES GARANTIES. LE TEXTE DOIT ÊTRE UNIQUE ET SPÉCIFIQUE À {$service_name}, PAS UN TEXTE GÉNÉRIQUE APPLICABLE À TOUS LES MÉTIERS.]\",\n";
     $base_prompt .= "  \"icon\": \"fas fa-tools\",\n";
@@ -334,16 +334,22 @@ function osmose_ads_handle_create_template() {
                     $html .= "</ul>";
                     $html .= "</div>";
 
-                    // Bloc FAQ générique
+                    // Bloc FAQ générique avec liens
+                    $devis_url = get_option('osmose_ads_devis_url', '');
+                    $site_url = get_site_url();
                     $html .= "<div class='space-y-4'>";
                     $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>FAQ sur " . esc_html($service_name) . " à [VILLE]</h2>";
                     $html .= "<div class='space-y-2'>";
                     $html .= "<p><strong>Q1 : Comment obtenir un devis pour " . esc_html($service_name) . " à [VILLE] ?</strong></p>";
-                    $html .= "<p>A : Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un devis détaillé et gratuit.</p>";
+                    if (!empty($devis_url)) {
+                        $html .= "<p>A : Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un <a href='" . esc_url($devis_url) . "' class='text-blue-600 hover:underline'>devis détaillé et gratuit</a>.</p>";
+                    } else {
+                        $html .= "<p>A : Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un devis détaillé et gratuit.</p>";
+                    }
                     $html .= "<p><strong>Q2 : Intervenez-vous uniquement à [VILLE] ?</strong></p>";
-                    $html .= "<p>A : Nous intervenons à [VILLE] et dans tout le département [DÉPARTEMENT], en [RÉGION].</p>";
+                    $html .= "<p>A : Nous intervenons à [VILLE] et dans tout le département [DÉPARTEMENT], en [RÉGION]. Découvrez nos autres <a href='" . esc_url($site_url) . "' class='text-blue-600 hover:underline'>services disponibles</a> dans votre région.</p>";
                     $html .= "<p><strong>Q3 : Quelles garanties proposez-vous sur vos prestations de " . esc_html($service_name) . " ?</strong></p>";
-                    $html .= "<p>A : Nos interventions respectent les normes en vigueur et bénéficient des garanties légales associées aux travaux réalisés.</p>";
+                    $html .= "<p>A : Nos interventions respectent les normes en vigueur et bénéficient des garanties légales associées aux travaux réalisés. Pour plus d'informations, consultez notre <a href='" . esc_url($site_url) . "' class='text-blue-600 hover:underline'>site web</a>.</p>";
                     $html .= "</div>";
                     $html .= "</div>";
 
@@ -453,7 +459,7 @@ function osmose_ads_handle_create_template() {
         $meta_placeholders = array(
             '[Entreprise]',
             'Nom de l\'entreprise',
-            'Nom de l’entreprise',
+            'Nom de l\'entreprise',
         );
 
         $replace_cb = function($value) use ($meta_placeholders, $company_name_for_meta) {
@@ -470,6 +476,22 @@ function osmose_ads_handle_create_template() {
         $og_description       = $replace_cb($og_description);
         $twitter_title        = $replace_cb($twitter_title);
         $twitter_description  = $replace_cb($twitter_description);
+    }
+
+    // S'assurer qu'une meta_description existe toujours (fallback si vide)
+    if (empty($meta_description)) {
+        $meta_description = 'Service professionnel de ' . $service_name . ' à [VILLE]. Devis gratuit, intervention rapide, garantie sur tous nos travaux.';
+    }
+
+    // Limiter meta_description à 160 caractères (norme SEO)
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        if (mb_strlen($meta_description) > 160) {
+            $meta_description = mb_substr($meta_description, 0, 157) . '...';
+        }
+    } else {
+        if (strlen($meta_description) > 160) {
+            $meta_description = substr($meta_description, 0, 157) . '...';
+        }
     }
 
     // Normaliser meta_keywords : s'assurer d'avoir au moins 10 mots-clés pertinents autour du service

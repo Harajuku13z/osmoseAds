@@ -160,6 +160,47 @@ class Ad_Template {
                 $final_content .= "\n\n" . $gallery_html;
             }
         }
+
+        // Ajouter des liens internes/externes si le contenu n'en contient pas assez
+        $link_count = substr_count($final_content, '<a ');
+        if ($link_count < 2) {
+            $site_url = get_site_url();
+            $devis_url = get_option('osmose_ads_devis_url', '');
+            
+            // Chercher des opportunités pour ajouter des liens dans le contenu
+            // Lien vers la page d'accueil ou autres services
+            if (strpos($final_content, 'nos services') !== false || strpos($final_content, 'autres services') !== false) {
+                $final_content = preg_replace(
+                    '/(nos services|autres services)/i',
+                    '<a href="' . esc_url($site_url) . '" class="text-blue-600 hover:underline">$1</a>',
+                    $final_content,
+                    1
+                );
+            }
+            
+            // Lien vers devis si mentionné
+            if (!empty($devis_url) && strpos($final_content, 'devis') !== false) {
+                $final_content = preg_replace(
+                    '/(devis (?:gratuit|détaillé|personnalisé)?)/i',
+                    '<a href="' . esc_url($devis_url) . '" class="text-blue-600 hover:underline">$1</a>',
+                    $final_content,
+                    1
+                );
+            }
+            
+            // Si toujours pas assez de liens, ajouter une section avec liens à la fin
+            if (substr_count($final_content, '<a ') < 2) {
+                $links_section = '<div class="osmose-internal-links space-y-2 mt-6">';
+                $links_section .= '<p class="text-sm text-gray-600">En savoir plus : ';
+                $links_section .= '<a href="' . esc_url($site_url) . '" class="text-blue-600 hover:underline">Nos services</a>';
+                if (!empty($devis_url)) {
+                    $links_section .= ' | <a href="' . esc_url($devis_url) . '" class="text-blue-600 hover:underline">Demander un devis</a>';
+                }
+                $links_section .= '</p>';
+                $links_section .= '</div>';
+                $final_content .= "\n\n" . $links_section;
+            }
+        }
         
         // Mettre en cache pour 30 jours (2592000 secondes)
         set_transient($cache_key, $final_content, 2592000);
@@ -219,6 +260,28 @@ class Ad_Template {
         foreach ($meta as $key => $value) {
             if ($value) {
                 $meta[$key] = $this->replace_variables($value, $city_id);
+            }
+        }
+
+        // S'assurer qu'une meta_description existe toujours (fallback si vide)
+        if (empty($meta['meta_description'])) {
+            $service_name = get_post_meta($this->post_id, 'service_name', true);
+            $city = get_post($city_id);
+            $city_name = '';
+            if ($city) {
+                $city_name = get_post_meta($city_id, 'name', true) ?: $city->post_title;
+            }
+            $meta['meta_description'] = 'Service professionnel de ' . $service_name . ' à ' . $city_name . '. Devis gratuit, intervention rapide, garantie sur tous nos travaux.';
+        }
+
+        // Limiter meta_description à 160 caractères (norme SEO)
+        if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+            if (mb_strlen($meta['meta_description']) > 160) {
+                $meta['meta_description'] = mb_substr($meta['meta_description'], 0, 157) . '...';
+            }
+        } else {
+            if (strlen($meta['meta_description']) > 160) {
+                $meta['meta_description'] = substr($meta['meta_description'], 0, 157) . '...';
             }
         }
         
