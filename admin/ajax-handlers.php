@@ -33,9 +33,9 @@ function osmose_ads_build_template_prompt($service_name, $ai_prompt = '') {
     $base_prompt .= "- Les prestations doivent mentionner des techniques, matériaux ou méthodes PRÉCISES liés à {$service_name}\n";
     $base_prompt .= "- Chaque description doit expliquer QUOI, COMMENT et POURQUOI spécifiquement pour {$service_name}\n\n";
 
-    $base_prompt .= "EXEMPLES DE PRESTATIONS SPÉCIFIQUES:\n";
-    $base_prompt .= "- Pour 'Rénovation de toiture': 'Diagnostic et inspection de toiture', 'Nettoyage et démoussage', 'Réparation partielle de toiture', 'Réfection complète de toiture', 'Isolation de toiture', 'Étanchéité et traitement hydrofuge', 'Réparation de zinguerie', 'Pose de charpente', 'Installation de fenêtres de toit', 'Entretien annuel et maintenance préventive'\n";
-    $base_prompt .= "- Pour 'Plomberie': 'Installation de chauffe-eau', 'Réparation de fuites', 'Débouchage de canalisations', 'Pose de robinetterie', 'Installation de WC', 'Rénovation de salle de bain', 'Détection de fuites', 'Installation de radiateurs', 'Raccordement gaz', 'Maintenance préventive'\n\n";
+    $base_prompt .= "IMPORTANT:\n";
+    $base_prompt .= "- TU NE DOIS PAS REPRENDRE D'EXEMPLES DE PRESTATIONS GÉNÉRIQUES QUE TU CONNAIS DÉJÀ (comme ceux utilisés pour la toiture ou la plomberie).\n";
+    $base_prompt .= "- POUR CHAQUE SERVICE, TU DOIS INVENTER DES PRESTATIONS UNIQUES, TRÈS SPÉCIFIQUES ET ADAPTÉES UNIQUEMENT À {$service_name}.\n\n";
 
     $base_prompt .= "GÉNÈRE UN JSON AVEC CES CHAMPS:\n\n";
     $base_prompt .= "{\n";
@@ -223,6 +223,7 @@ function osmose_ads_handle_create_template() {
     $twitter_description = '';
     $short_description = '';
     $long_description = '';
+    $long_description_is_fallback = false;
     $icon = '';
     $template_json_raw = '';
 
@@ -248,7 +249,7 @@ function osmose_ads_handle_create_template() {
             $twitter_title      = isset($decoded['twitter_title']) ? $decoded['twitter_title'] : '';
             $twitter_description= isset($decoded['twitter_description']) ? $decoded['twitter_description'] : '';
 
-            // Filet de sécurité : si long_description n'est pas fourni, le construire à partir du HTML
+            // Filet de sécurité : si long_description n'est pas fourni, le construire à partir du HTML (fallback SEO uniquement)
             if (empty($long_description) && !empty($description_html)) {
                 $plain_text = wp_strip_all_tags($description_html);
                 $plain_text = trim(preg_replace('/\s+/', ' ', $plain_text));
@@ -257,6 +258,8 @@ function osmose_ads_handle_create_template() {
                 } else {
                     $long_description = substr($plain_text, 0, 500);
                 }
+                // Marquer que cette long_description est un fallback auto-généré (éviter de la réinjecter dans le HTML pour ne pas dupliquer/couper le contenu)
+                $long_description_is_fallback = true;
             }
 
             // Même chose pour la short_description
@@ -272,8 +275,9 @@ function osmose_ads_handle_create_template() {
                 // Utiliser la description HTML comme contenu du template
                 $ai_response = $description_html;
 
-                // Si une long_description est fournie, l'injecter dans le HTML du template
-                if (!empty($long_description)) {
+                // Si une long_description explicite est fournie par l'IA, l'injecter dans le HTML du template
+                // (mais ne PAS réinjecter la version fallback auto-générée qui est déjà un résumé du contenu)
+                if (!empty($long_description) && !$long_description_is_fallback) {
                     $about_html  = "<section class='osmose-service-about space-y-4'>\n";
                     $about_html .= "  <h2 class='text-2xl font-bold text-gray-900'>À propos de notre service de {$service_name}</h2>\n";
                     $about_html .= "  <p class='leading-relaxed'>" . esc_html($long_description) . "</p>\n";

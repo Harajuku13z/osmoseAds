@@ -74,6 +74,69 @@ if (isset($_POST['save_template']) && isset($_POST['template_id'])) {
             $images = array_map('intval', $_POST['realization_images']);
             update_post_meta($template_id, 'realization_images', $images);
         }
+
+        // Si des images de réalisations sont associées, injecter une galerie HTML dans le contenu du template
+        $realization_images = get_post_meta($template_id, 'realization_images', true);
+        if (!empty($realization_images) && is_array($realization_images)) {
+            $current_content = get_post_field('post_content', $template_id);
+
+            // Éviter de dupliquer la galerie si elle existe déjà
+            if (strpos($current_content, 'osmose-realizations-gallery') === false) {
+                $valid_images = array();
+                foreach ($realization_images as $img_id) {
+                    if (wp_attachment_is_image($img_id)) {
+                        $valid_images[] = $img_id;
+                    }
+                }
+
+                if (!empty($valid_images)) {
+                    $gallery_html = '';
+                    $service_label = get_post_meta($template_id, 'service_name', true);
+                    if (empty($service_label)) {
+                        $service_label = __('Nos réalisations', 'osmose-ads');
+                    }
+
+                    $gallery_html .= '<h2>' . esc_html('Photos de ' . $service_label) . '</h2>';
+                    $gallery_html .= '<div class=\"osmose-realizations-gallery\">';
+
+                    foreach ($valid_images as $img_id) {
+                        $img_url = wp_get_attachment_image_url($img_id, 'large');
+                        if (!$img_url) {
+                            continue;
+                        }
+
+                        $alt = trim($service_label);
+                        if (empty($alt)) {
+                            $alt = get_the_title($template_id);
+                        }
+
+                        $gallery_html .= '<figure class=\"osmose-realization-image\">';
+                        $gallery_html .= '<img src=\"' . esc_url($img_url) . '\" alt=\"' . esc_attr($alt) . '\">';
+                        $gallery_html .= '</figure>';
+                    }
+
+                    $gallery_html .= '</div>';
+
+                    if (!empty($gallery_html)) {
+                        // Si le contenu contient une liste de prestations (<ul>), insérer la galerie juste après
+                        $marker = '</ul>';
+                        $pos = strpos($current_content, $marker);
+                        if ($pos !== false) {
+                            $pos_after = $pos + strlen($marker);
+                            $new_content = substr($current_content, 0, $pos_after) . "\n\n" . $gallery_html . substr($current_content, $pos_after);
+                        } else {
+                            // Sinon, ajouter la galerie à la fin
+                            $new_content = $current_content . "\n\n" . $gallery_html;
+                        }
+
+                        wp_update_post(array(
+                            'ID' => $template_id,
+                            'post_content' => $new_content,
+                        ));
+                    }
+                }
+            }
+        }
         
         $save_message = __('Template mis à jour avec succès', 'osmose-ads');
         $save_success = true;
