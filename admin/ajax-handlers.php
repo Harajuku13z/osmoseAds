@@ -181,29 +181,30 @@ function osmose_ads_handle_create_template() {
         $prompt .= "- Ancres géographiques : \"à [VILLE]\", \"dans le [DÉPARTEMENT]\", \"en [RÉGION]\"\n\n\n";
         $prompt .= "---\n\n\n";
         $prompt .= "## 📐 STRUCTURE EXACTE À SUIVRE\n\n\n";
-        $prompt .= "### 🎯 SECTION 1 : DESCRIPTION COURTE (50-80 mots)\n\n";
+        $prompt .= "### 🎯 SECTION 1 : INTRODUCTION (150-220 mots)\n\n";
+        $prompt .= "BUT : écrire directement une introduction sans titre 'Description courte' ni mot 'Présentation'.\n";
         $prompt .= "Format :\n";
-        $prompt .= "<p>Expert en " . strtolower($service_name) . " à [VILLE] dans le département [DÉPARTEMENT] ([CODE_POSTAL]). [1 phrase sur les solutions/bénéfices].</p>\n\n";
-        $prompt .= "Exemple :\n";
-        $prompt .= "<p>Expert en isolation à [VILLE] dans le département [DÉPARTEMENT] ([CODE_POSTAL]). Solutions efficaces pour une habitation confortable et économe en énergie.</p>\n\n\n";
+        $prompt .= "- 2 à 3 paragraphes <p> consécutifs, courts (2 à 4 phrases chacun).\n";
+        $prompt .= "- Le tout doit introduire le service de " . strtolower($service_name) . " à [VILLE] ([DÉPARTEMENT], [CODE_POSTAL]) et les bénéfices pour le client.\n\n";
+        $prompt .= "NE PAS écrire de titre 'Description', 'Description courte', 'Présentation'. Écris directement les paragraphes.\n\n\n";
         
-        $prompt .= "### 📝 SECTION 2 : PRÉSENTATION (150-200 mots)\n\n";
-        $prompt .= "<p>" . ($company_name ?: '[ENTREPRISE]') . " propose ses services de " . strtolower($service_name) . " à [VILLE] dans le département [DÉPARTEMENT], garantissant des solutions sur mesure pour [objectif principal]. Notre équipe qualifiée utilise des techniques modernes et des matériaux de qualité pour assurer [résultat]. Bénéficiez d'une intervention professionnelle, respectueuse de l'environnement et durable.</p>\n\n\n";
+        $prompt .= "### ✅ SECTION 2 : GARANTIES ET RÉASSURANCE (120-180 mots)\n\n";
+        $prompt .= "Format :\n";
+        $prompt .= "- Ajoute un titre H2 descriptif (par exemple : \"Une entreprise de couverture de confiance à [VILLE]\").\n";
+        $prompt .= "- Puis 1 à 2 paragraphes <p> décrivant les garanties (décennale, assurance, sérieux, sécurité, propreté de chantier).\n\n";
+        $prompt .= "NE PAS afficher un titre isolé 'Garantie' ou 'Garantie satisfaction et performances'. Utilise un titre plus naturel.\n\n\n";
         
-        $prompt .= "### ✅ SECTION 3 : GARANTIE (80-120 mots)\n\n";
-        $prompt .= "<h2>Garantie satisfaction et performances</h2>\n";
-        $prompt .= "<p>Chez " . ($company_name ?: '[ENTREPRISE]') . ", nous vous assurons une garantie décennale sur nos travaux de " . strtolower($service_name) . ", ainsi qu'un suivi personnalisé pour garantir votre entière satisfaction. Nous respectons les normes en vigueur et travaillons dans le souci de la propreté et de la sécurité sur chaque chantier.</p>\n\n\n";
-        $prompt .= "### 🔧 SECTION 4 : NOS PRESTATIONS (OBLIGATOIRE - AU MOINS 10 services)\n\n";
+        $prompt .= "### 🔧 SECTION 3 : NOS PRESTATIONS (OBLIGATOIRE - AU MOINS 10 services)\n\n";
         $prompt .= "Format EXACT à respecter :\n\n";
-        $prompt .= "<h2>Nos Prestations " . strtolower($service_name) . "</h2>\n\n";
-        $prompt .= "**Listez AU MOINS 10 prestations (10 à 14)** au format :\n";
+        $prompt .= "<h2>Nos prestations de " . strtolower($service_name) . " à [VILLE]</h2>\n\n";
+        $prompt .= "**Liste AU MOINS 10 prestations (10 à 14)** au format :\n";
         $prompt .= "<p><strong>[Nom prestation]</strong> - [Description courte 25-40 mots expliquant les bénéfices]</p>\n\n";
         $prompt .= "Exemple pour isolation :\n";
         $prompt .= "<p><strong>Isolation combles perdus</strong> - Nous intervenons pour isoler vos combles perdus en utilisant des matériaux performants pour réduire les pertes de chaleur et améliorer le confort thermique de votre maison.</p>\n\n";
         $prompt .= "⚠️ PAS de <ul>, <ol> ou <li> - UNIQUEMENT des paragraphes <p>\n\n\n";
-        $prompt .= "### ❓ SECTION 5 : FAQ (3-4 questions)\n\n";
+        $prompt .= "### ❓ SECTION 4 : FAQ (3-4 questions)\n\n";
         $prompt .= "Format :\n";
-        $prompt .= "<h2>FAQ " . strtolower($service_name) . "</h2>\n\n";
+        $prompt .= "<h2>Questions fréquentes sur " . strtolower($service_name) . " à [VILLE]</h2>\n\n";
         $prompt .= "Pour chaque question :\n";
         $prompt .= "<h3>[Question pertinente sur le service] ?</h3>\n";
         $prompt .= "<p>[Réponse détaillée 40-60 mots]</p>\n\n\n";
@@ -313,7 +314,7 @@ function osmose_ads_handle_create_template() {
     
     // Convertir le Markdown en HTML si l'IA a généré du Markdown
     $content = preg_replace('/^####\s+(.+)$/m', '<h4>$1</h4>', $content);
-    $content = preg_replace('/^###\s+(.+)$/m', '<h3>$1</h3>', $content);
+    $content = preg_replace('/^###\s+(.+)$/m', '<h3>$1</3>', $content);
     $content = preg_replace('/^##\s+(.+)$/m', '<h2>$1</h2>', $content);
     $content = preg_replace('/^#\s+(.+)$/m', '<h2>$1</h2>', $content);
     
@@ -324,6 +325,13 @@ function osmose_ads_handle_create_template() {
     // Convertir l'italique Markdown en HTML
     $content = preg_replace('/\*(.+?)\*/s', '<em>$1</em>', $content);
     $content = preg_replace('/_(.+?)_/s', '<em>$1</em>', $content);
+    
+    // Nettoyages spécifiques pour éviter les doublons de titres ou libellés techniques
+    // Supprimer les paragraphes ou lignes qui ne contiennent que ces libellés
+    $content = preg_replace('/(<p>)?\s*(Description\s+courte|Présentation|Garantie\s+satisfaction\s+et\s+performances|FAQ\s+' . preg_quote(strtolower($service_name), '/') . ')\s*(<\/p>)?/iu', '', $content);
+    
+    // Éviter les doublons immédiats de H2/H3 identiques
+    $content = preg_replace('/(<h[23][^>]*>[^<]+<\/h[23]>)\s*(\1)+/i', '$1', $content);
     
     // Mettre à jour la réponse
     $ai_response = trim($content);
