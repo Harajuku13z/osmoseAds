@@ -204,7 +204,7 @@ function osmose_ads_handle_create_template() {
         $example_json .= "  \"title_subtitle\": \"Expertise reconnue en réfection de toiture et zinguerie pour une protection durable\",\n";
         $example_json .= "  \"intro_paragraphs\": [\n";
         $example_json .= "    \"En tant que couvreur professionnel à [VILLE], {$company_name} intervient pour tous vos besoins en toiture. Notre équipe maîtrise les techniques de pose d'ardoise, de tuiles canal et de zinguerie, garantissant une étanchéité parfaite et une longévité optimale de votre toit.\",\n";
-        $example_json .= "    \"Nous utilisons exclusivement des matériaux de qualité supérieure, conformes aux normes en vigueur, pour assurer la résistance de votre toiture aux intempéries bretonnes. Chaque intervention est réalisée dans le respect des règles de l'art et des standards professionnels.\",\n";
+        $example_json .= "    \"Nous utilisons exclusivement des matériaux de qualité supérieure, conformes aux normes en vigueur, pour assurer la résistance de votre toiture aux intempéries de [RÉGION]. Chaque intervention est réalisée dans le respect des règles de l'art et des standards professionnels.\",\n";
         $example_json .= "    \"Que vous ayez besoin d'une réfection complète, d'une réparation d'urgence ou d'un entretien préventif, nos artisans qualifiés vous proposent des solutions sur mesure adaptées à votre budget et à vos contraintes.\"\n";
         $example_json .= "  ],\n";
         $example_json .= "  \"guarantee_title\": \"Garantie satisfaction et performances\",\n";
@@ -432,7 +432,7 @@ function osmose_ads_handle_create_template() {
     }
     
     // Validation : détecter si l'IA a utilisé des noms de villes/départements/régions réels au lieu des placeholders
-    // Utilisation d'une détection contextuelle pour éviter les faux positifs (ex: "Var" dans "variable")
+    // Utilisation d'une détection contextuelle pour éviter les faux positifs
     $real_places = array(
         // Villes françaises courantes (minimum 4 caractères pour éviter les faux positifs)
         'Rennes', 'Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier', 'Bordeaux',
@@ -444,8 +444,8 @@ function osmose_ads_handle_create_template() {
         'Bas-Rhin', 'Hérault', 'Gironde', 'Seine-Maritime', 'Marne', 'Seine-et-Marne', 'Isère', 'Puy-de-Dôme',
         'Finistère', 'Haute-Vienne', 'Indre-et-Loire', 'Somme', 'Pyrénées-Orientales', 'Moselle', 'Doubs',
         'Hauts-de-Seine', 'Loiret', 'Haut-Rhin', 'Calvados', 'Pas-de-Calais',
-        // Régions françaises
-        'Bretagne', 'Île-de-France', 'Auvergne-Rhône-Alpes', 'Provence-Alpes-Côte d\'Azur', 'Occitanie', 'Nouvelle-Aquitaine',
+        // Régions françaises (excluant "Bretagne" qui peut apparaître dans "bretonnes", "breton", etc.)
+        'Île-de-France', 'Auvergne-Rhône-Alpes', 'Provence-Alpes-Côte d\'Azur', 'Occitanie', 'Nouvelle-Aquitaine',
         'Hauts-de-France', 'Normandie', 'Grand Est', 'Pays de la Loire', 'Centre-Val de Loire', 'Bourgogne-Franche-Comté'
     );
     
@@ -473,6 +473,13 @@ function osmose_ads_handle_create_template() {
     if (preg_match('/(?:département\s+du\s+|région\s+du\s+|dans\s+le\s+)\bNord\b/i', $json_string)) {
         $has_real_places = true;
         $real_places_found[] = 'Nord';
+    }
+    
+    // Détection spéciale pour "Bretagne" uniquement dans un contexte géographique clair
+    // Éviter les faux positifs avec "bretonnes", "breton", "bretonne", etc.
+    if (preg_match('/(?:en\s+|région\s+|de\s+|dans\s+la\s+région\s+|en\s+région\s+)\bBretagne\b/i', $json_string)) {
+        $has_real_places = true;
+        $real_places_found[] = 'Bretagne';
     }
     
     if ($has_real_places) {
