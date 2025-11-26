@@ -99,14 +99,41 @@ function osmose_ads_handle_create_template() {
     $service_slug = sanitize_title($service_name);
     $prompt = sanitize_textarea_field($_POST['ai_prompt'] ?? '');
     $featured_image_id = intval($_POST['featured_image_id'] ?? 0);
-    $realization_images = isset($_POST['realization_images']) && is_array($_POST['realization_images']) 
-        ? array_map('intval', $_POST['realization_images']) 
-        : array();
+
+    // Gérer les images de réalisations envoyées soit comme tableau (modal de création rapide),
+    // soit comme chaîne CSV (page de création simplifiée)
+    $realization_images = array();
+    if (isset($_POST['realization_images'])) {
+        if (is_array($_POST['realization_images'])) {
+            $realization_images = array_map('intval', $_POST['realization_images']);
+        } else {
+            $csv = sanitize_text_field($_POST['realization_images']);
+            if (!empty($csv)) {
+                $realization_images = array_filter(array_map('intval', explode(',', $csv)));
+            }
+        }
+    }
     
-    // Récupérer les mots-clés associés aux images de réalisations
-    $realization_keywords = isset($_POST['realization_keywords']) && is_array($_POST['realization_keywords'])
-        ? array_map('sanitize_text_field', $_POST['realization_keywords'])
-        : array();
+    // Récupérer les mots-clés associés aux images de réalisations (deux formats possibles)
+    $realization_keywords = array();
+    // Format 1: tableau associatif envoyé sous le nom realization_keywords[image_id] (modal avancée)
+    if (isset($_POST['realization_keywords']) && is_array($_POST['realization_keywords'])) {
+        foreach ($_POST['realization_keywords'] as $img_id => $kw) {
+            $realization_keywords[intval($img_id)] = sanitize_text_field($kw);
+        }
+    }
+    // Format 2: chaîne CSV parallèle (ids dans realization_images, mots-clés dans realization_images_keywords)
+    if (empty($realization_keywords) && isset($_POST['realization_images_keywords']) && !empty($realization_images)) {
+        $keywords_csv = sanitize_text_field($_POST['realization_images_keywords']);
+        if (!empty($keywords_csv)) {
+            $keywords_list = explode('|||', $keywords_csv);
+            foreach ($realization_images as $index => $img_id) {
+                if (isset($keywords_list[$index])) {
+                    $realization_keywords[$img_id] = sanitize_text_field($keywords_list[$index]);
+                }
+            }
+        }
+    }
     
     // Gestion des services préconfigurés
     $service_keywords = '';
