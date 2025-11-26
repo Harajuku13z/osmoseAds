@@ -337,11 +337,14 @@ class Ad_Template {
         $company_phone = get_option('osmose_ads_company_phone', '');
         $company_phone_raw = get_option('osmose_ads_company_phone_raw', $company_phone);
         
+        $company_name = get_bloginfo('name');
+        
         $replacements = array(
             '[VILLE]' => $city_name,
             '[RÉGION]' => $region ?: '',
             '[DÉPARTEMENT]' => $department ?: '',
             '[CODE_POSTAL]' => $postal_code ?: '',
+            '[ENTREPRISE]' => $company_name,
             '[FORM_URL]' => $site_url . '/devis',
             '[URL]' => $site_url . '/ads/[SLUG]', // Sera remplacé plus tard
             '[PHONE]' => $company_phone,

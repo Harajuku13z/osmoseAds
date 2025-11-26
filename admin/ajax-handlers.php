@@ -37,9 +37,12 @@ function osmose_ads_build_template_prompt($service_name, $ai_prompt = '') {
     $base_prompt .= "- TU NE DOIS PAS REPRENDRE D'EXEMPLES DE PRESTATIONS GÉNÉRIQUES QUE TU CONNAIS DÉJÀ (comme ceux utilisés pour la toiture ou la plomberie).\n";
     $base_prompt .= "- POUR CHAQUE SERVICE, TU DOIS INVENTER DES PRESTATIONS UNIQUES, TRÈS SPÉCIFIQUES ET ADAPTÉES UNIQUEMENT À {$service_name}.\n\n";
 
+    // Récupérer le nom de l'entreprise pour l'inclure dans le prompt
+    $company_name = get_bloginfo('name');
+    
     $base_prompt .= "GÉNÈRE UN JSON AVEC CES CHAMPS:\n\n";
     $base_prompt .= "{\n";
-    $base_prompt .= "  \"description\": \"[GÉNÈRE ICI UN HTML COMPLET POUR UNE PAGE DE SERVICE WORDPRESS EN {$service_name}. LE HTML DOIT INCLURE: (1) 2 À 3 PARAGRAPHES D'INTRODUCTION ORIGINAUX, TECHNIQUES ET SPÉCIFIQUES À {$service_name}, QUI EXPLIQUENT LE CONTEXTE, LES ENJEUX ET LES BÉNÉFICES POUR LE CLIENT À [VILLE] ET EN [RÉGION]; (2) UNE SECTION 'Nos prestations {$service_name}' AVEC UNE LISTE &lt;ul&gt; DE 10 PRESTATIONS TRÈS SPÉCIFIQUES AU SERVICE, CHAQUE &lt;li&gt; CONTENANT UNE ICÔNE &lt;i class='fas fa-check text-green-600 mr-2'&gt;&lt;/i&gt; ET UN TEXTE DÉTAILLÉ; (3) UNE SECTION FAQ DÉDIÉE À {$service_name} À [VILLE], AVEC DES QUESTIONS/RÉPONSES PRÉCISES ET TECHNIQUES. IMPORTANT: INCLUS AU MOINS 2-3 LIENS INTERNES (vers d'autres pages du site) OU EXTERNES (vers des ressources pertinentes) DANS LE CONTENU POUR AMÉLIORER LE SEO. UTILISE UNE STRUCTURE MODERNE AVEC &lt;div class='space-y-6'&gt;, &lt;h1&gt;, &lt;h2&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;p&gt;, &lt;a href='...'&gt;, MAIS TU DOIS RÉDIGER TOUS LES TEXTES TOI-MÊME, SANS REPRENDRE D'EXEMPLES GÉNÉRIQUES.]\"," . "\n";
+    $base_prompt .= "  \"description\": \"[GÉNÈRE ICI UN HTML COMPLET POUR UNE PAGE DE SERVICE WORDPRESS EN {$service_name}. LE HTML DOIT INCLURE: (1) UN TITRE &lt;h1&gt; avec le format: 'Expert en {$service_name} à [VILLE] dans le département [DÉPARTEMENT]' suivi d'une phrase d'accroche technique; (2) 2 À 3 PARAGRAPHES D'INTRODUCTION ORIGINAUX, TECHNIQUES ET SPÉCIFIQUES À {$service_name}, qui mentionnent le nom de l'entreprise [ENTREPRISE] et expliquent le contexte, les enjeux et les bénéfices pour le client à [VILLE] et en [RÉGION]. Les paragraphes doivent être détaillés (minimum 2-3 phrases chacun) et mentionner des techniques, matériaux ou méthodes spécifiques; (3) UNE SECTION 'Garantie satisfaction et performances' avec 1-2 paragraphes sur les garanties, le suivi personnalisé, le respect des normes, la propreté et la sécurité; (4) UNE SECTION 'Nos Prestations {$service_name}' AVEC UNE LISTE &lt;ul&gt; DE 10 PRESTATIONS TRÈS SPÉCIFIQUES ET TECHNIQUES AU SERVICE. CHAQUE PRESTATION DOIT AVOIR UN NOM TECHNIQUE PRÉCIS (ex: 'Isolation combles perdus', 'Isolation toiture', 'Traitement ponts thermiques' pour isolation) ET UNE DESCRIPTION DÉTAILLÉE DE 2-3 PHRASES EXPLIQUANT LA TECHNIQUE, LES MATÉRIAUX ET LES BÉNÉFICES. Format: &lt;li&gt;&lt;strong&gt;Nom technique de la prestation&lt;/strong&gt; - Description détaillée technique avec matériaux et bénéfices.&lt;/li&gt;; (5) UNE SECTION 'FAQ {$service_name}' AVEC 4 QUESTIONS TECHNIQUES ET DÉTAILLÉES avec des réponses complètes (minimum 2-3 phrases par réponse). IMPORTANT: INCLUS AU MOINS 2-3 LIENS INTERNES (vers d'autres pages du site) OU EXTERNES (vers des ressources pertinentes) DANS LE CONTENU POUR AMÉLIORER LE SEO. UTILISE UNE STRUCTURE MODERNE AVEC &lt;div class='space-y-6'&gt;, &lt;h1&gt;, &lt;h2&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;p&gt;, &lt;strong&gt;, &lt;a href='...'&gt;, MAIS TU DOIS RÉDIGER TOUS LES TEXTES TOI-MÊME, SANS REPRENDRE D'EXEMPLES GÉNÉRIQUES. REMPLACE [ENTREPRISE] par le nom de l'entreprise dans le contenu.]\"," . "\n";
     $base_prompt .= "  \"short_description\": \"[RÉSUME EN UNE PHRASE CLAIRE ET ATTRACTIVE LE SERVICE {$service_name} À [VILLE], AVEC UN ANGLE TECHNIQUE ET COMMERCIAL FORT, SANS ÊTRE GÉNÉRIQUE]\",\n";
     $base_prompt .= "  \"long_description\": \"[RÉDIGER 2 À 3 PHRASES EXPLICATIVES SUR NOTRE SERVICE DE {$service_name} À [VILLE] ET EN [RÉGION], EN INSISTANT SUR L'EXPERTISE TECHNIQUE, LES TYPES D'INTERVENTIONS, LES MATÉRIAUX UTILISÉS ET LES GARANTIES. LE TEXTE DOIT ÊTRE UNIQUE ET SPÉCIFIQUE À {$service_name}, PAS UN TEXTE GÉNÉRIQUE APPLICABLE À TOUS LES MÉTIERS.]\",\n";
     $base_prompt .= "  \"icon\": \"fas fa-tools\",\n";
@@ -65,16 +68,26 @@ function osmose_ads_build_template_prompt($service_name, $ai_prompt = '') {
     $base_prompt .= "⚠️⚠️⚠️ INSTRUCTIONS CRITIQUES - CONTENU ⚠️⚠️⚠️:\n";
     $base_prompt .= "- REMPLACE TOUT le contenu par du contenu VRAIMENT spécifique à {$service_name}\n";
     $base_prompt .= "- REMPLACE [GÉNÈRE 10 PRESTATIONS SPÉCIFIQUES À {$service_name}] par 10 prestations TECHNIQUES RÉELLES pour {$service_name}\n";
-    $base_prompt .= "- Chaque prestation doit avoir un NOM TECHNIQUE précis et une DESCRIPTION détaillée avec techniques/matériaux pour {$service_name}\n";
+    $base_prompt .= "- Chaque prestation doit avoir un NOM TECHNIQUE précis (ex: 'Isolation combles perdus', 'Isolation toiture', 'Traitement ponts thermiques' pour isolation) et une DESCRIPTION DÉTAILLÉE de 2-3 phrases avec techniques/matériaux/bénéfices pour {$service_name}\n";
     $base_prompt .= "- PERSONNALISE les descriptions, FAQ, et tous les textes pour {$service_name} spécifiquement\n";
-    $base_prompt .= "- Utilise [VILLE], [RÉGION], [DÉPARTEMENT] comme placeholders pour les variables dynamiques\n";
+    $base_prompt .= "- Utilise [VILLE], [RÉGION], [DÉPARTEMENT], [ENTREPRISE] comme placeholders pour les variables dynamiques\n";
     $base_prompt .= "- Le contenu HTML doit être COMPLET et PERSONNALISÉ, pas un template copié-collé\n";
+    $base_prompt .= "- INCLUS le nom de l'entreprise [ENTREPRISE] dans l'introduction (ex: '[ENTREPRISE] propose ses services...')\n";
+    $base_prompt .= "- INCLUS une section 'Garantie satisfaction et performances' avec 1-2 paragraphes sur les garanties, suivi personnalisé, normes, propreté, sécurité\n";
     $base_prompt .= "- NE PAS ajouter de sections supplémentaires comme 'Pourquoi choisir ce service', 'Notre Expertise Locale', 'Financement et aides', 'Informations pratiques' ou des blocs de partage (Facebook, WhatsApp, Email...). Ces éléments sont gérés par le thème WordPress.\n\n";
 
-    $base_prompt .= "EXEMPLES CONCRETS POUR {$service_name}:\n";
-    $base_prompt .= "- Si {$service_name} = 'Désamiantage' → prestations: 'Dépollution amiante', 'Retrait amiante sous confinement', 'Gestion déchets amiante'\n";
-    $base_prompt .= "- Si {$service_name} = 'Traitement humidité' → prestations: 'Diagnostic humidité par imagerie thermique', 'Injection résine anti-humidité', 'Installation VMC double flux'\n";
-    $base_prompt .= "- Si {$service_name} = 'Rénovation toiture' → prestations: 'Diagnostic toiture par drone', 'Réfection tuiles ardoise', 'Installation écran de sous-toiture'\n";
+    $base_prompt .= "EXEMPLES CONCRETS DE PRESTATIONS TECHNIQUES SPÉCIFIQUES:\n";
+    $base_prompt .= "- Si {$service_name} = 'Isolation' → prestations: 'Isolation combles perdus - Description technique avec matériaux', 'Isolation toiture - Description technique', 'Traitement ponts thermiques - Description technique', 'Isolation murs - Description technique', 'Isolation sols - Description technique', 'Isolation phonique - Description technique', 'Isolation thermique par l'extérieur - Description technique', 'Isolation écologique - Description technique', 'Isolation sous rampant - Description technique', 'Isolation par insufflation - Description technique'\n";
+    $base_prompt .= "- Si {$service_name} = 'Couvreur' → prestations: 'Réfection toiture ardoise - Description technique', 'Pose tuiles canal - Description technique', 'Installation écran de sous-toiture - Description technique', 'Traitement charpente - Description technique', 'Pose zinguerie - Description technique', etc.\n";
+    $base_prompt .= "- Si {$service_name} = 'Désamiantage' → prestations: 'Dépollution amiante sous confinement - Description technique', 'Retrait amiante friable - Description technique', 'Gestion déchets amiante - Description technique', etc.\n";
+    $base_prompt .= "\n";
+    $base_prompt .= "⚠️ CRITIQUE - QUALITÉ DES PRESTATIONS:\n";
+    $base_prompt .= "- Chaque prestation DOIT avoir un NOM TECHNIQUE PRÉCIS (pas 'Diagnostic' ou 'Conseil' générique)\n";
+    $base_prompt .= "- Chaque prestation DOIT avoir une DESCRIPTION DÉTAILLÉE de 2-3 phrases expliquant:\n";
+    $base_prompt .= "  * LA TECHNIQUE utilisée\n";
+    $base_prompt .= "  * LES MATÉRIAUX employés\n";
+    $base_prompt .= "  * LES BÉNÉFICES pour le client\n";
+    $base_prompt .= "- Les prestations doivent être UNIQUES à {$service_name}, pas applicables à d'autres services\n";
 
     if (!empty($ai_prompt)) {
         $base_prompt .= "\nINSTRUCTIONS PERSONNALISÉES SUPPLÉMENTAIRES:\n" . $ai_prompt;
