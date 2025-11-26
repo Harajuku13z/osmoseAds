@@ -25,7 +25,10 @@ if (!class_exists('Ad')) {
     require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-ad.php';
 }
 if (!class_exists('City')) {
-    require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-city.php';
+    $city_file = OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-city.php';
+    if (file_exists($city_file)) {
+        require_once $city_file;
+    }
 }
 if (!class_exists('Ad_Template')) {
     require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-ad-template.php';
