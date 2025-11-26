@@ -302,26 +302,36 @@ function osmose_ads_handle_create_template() {
         $example_json .= "}\n";
     }
     
-    $step1_prompt .= "VOICI UN EXEMPLE DE JSON (à adapter pour {$service_name}) :\n\n";
+    $step1_prompt .= "VOICI UN EXEMPLE DE STRUCTURE JSON (l'exemple montre seulement 2-3 prestations, mais tu DOIS en générer 10) :\n\n";
     $step1_prompt .= $example_json . "\n\n";
-    $step1_prompt .= "GÉNÈRE UN JSON SIMILAIRE avec :\n";
+    $step1_prompt .= "IMPORTANT : L'exemple ci-dessus montre la STRUCTURE, mais tu DOIS générer un JSON COMPLET avec :\n\n";
+    $step1_prompt .= "OBLIGATOIRE - PRESTATIONS :\n";
+    $step1_prompt .= "- Génère EXACTEMENT 10 prestations différentes et spécifiques à {$service_name}\n";
+    $step1_prompt .= "- Chaque prestation DOIT avoir un nom technique précis et unique (ex: 'Réfection toiture ardoise', 'Pose zinguerie', 'Isolation combles perdus')\n";
+    $step1_prompt .= "- Chaque description DOIT être détaillée (2-3 phrases) expliquant : la technique utilisée, les matériaux employés, et les bénéfices pour le client\n";
+    $step1_prompt .= "- Les prestations doivent être ADAPTÉES au service {$service_name} (pas génériques)\n";
+    $step1_prompt .= "- Exemples de prestations pour {$service_name} : réfléchis aux interventions réelles d'un professionnel de ce domaine\n\n";
+    $step1_prompt .= "OBLIGATOIRE - FAQ :\n";
+    $step1_prompt .= "- Génère EXACTEMENT 4 questions différentes et spécifiques à {$service_name}\n";
+    $step1_prompt .= "- Chaque question DOIT être technique et détaillée, adaptée au service {$service_name}\n";
+    $step1_prompt .= "- Chaque réponse DOIT être complète (2-3 phrases) avec des informations techniques et pratiques\n";
+    $step1_prompt .= "- Les questions doivent couvrir différents aspects : prix, délais, matériaux, garanties, techniques, etc.\n\n";
+    $step1_prompt .= "AUTRES CHAMPS :\n";
     $step1_prompt .= "- 3 paragraphes d'introduction techniques et spécifiques à {$service_name}, mentionnant {$company_name}\n";
-    $step1_prompt .= "- 10 prestations avec des noms techniques précis et des descriptions détaillées (2-3 phrases chacune)\n";
-    $step1_prompt .= "- 4 questions FAQ techniques avec des réponses complètes (2-3 phrases chacune)\n";
-    $step1_prompt .= "- Tous les autres champs remplis avec du contenu réel\n\n";
+    $step1_prompt .= "- Tous les autres champs remplis avec du contenu réel et adapté à {$service_name}\n\n";
     $step1_prompt .= "RÈGLES STRICTES :\n";
-    $step1_prompt .= "1. GÉNÈRE DU CONTENU RÉEL et TECHNIQUE, pas de placeholders ou d'instructions\n";
+    $step1_prompt .= "1. GÉNÈRE DU CONTENU RÉEL et TECHNIQUE spécifique à {$service_name}, pas de placeholders ou d'instructions\n";
     $step1_prompt .= "2. Utilise UNIQUEMENT les placeholders [VILLE], [RÉGION], [DÉPARTEMENT], [ENTREPRISE] pour les variables géographiques\n";
-    $step1_prompt .= "3. Chaque prestation DOIT avoir un nom technique précis et unique\n";
-    $step1_prompt .= "4. Chaque description DOIT être détaillée (2-3 phrases) avec techniques, matériaux et bénéfices\n";
-    $step1_prompt .= "5. Réponds UNIQUEMENT avec le JSON valide, sans texte avant ou après\n";
+    $step1_prompt .= "3. Les 10 prestations DOIVENT être différentes et adaptées à {$service_name}\n";
+    $step1_prompt .= "4. Les 4 questions FAQ DOIVENT être différentes et adaptées à {$service_name}\n";
+    $step1_prompt .= "5. Réponds UNIQUEMENT avec le JSON valide complet, sans texte avant ou après\n";
     
-    $step1_system = 'Tu es un expert technique en ' . $service_name . '. Tu génères du CONTENU RÉEL et TECHNIQUE, pas des placeholders ou des instructions. Chaque champ du JSON doit contenir du texte réel et complet. Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.';
+    $step1_system = 'Tu es un expert technique en ' . $service_name . '. Tu génères du CONTENU RÉEL et TECHNIQUE spécifique à ' . $service_name . ', pas des placeholders ou des instructions. OBLIGATOIRE : génère EXACTEMENT 10 prestations différentes et 4 questions FAQ différentes, toutes adaptées au service ' . $service_name . '. Chaque champ du JSON doit contenir du texte réel et complet. Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.';
     
     // Premier appel IA
     $step1_response = $ai_service->call_ai($step1_prompt, $step1_system, array(
         'temperature' => 0.8,
-        'max_tokens' => 3000,
+        'max_tokens' => 4000, // Augmenté pour permettre 10 prestations + 4 FAQ
     ));
     
     if (is_wp_error($step1_response)) {
@@ -411,6 +421,29 @@ function osmose_ads_handle_create_template() {
     if ($has_placeholders) {
         wp_send_json_error(array(
             'message' => 'L\'IA a généré des placeholders au lieu de contenu réel. Champs concernés : ' . implode(', ', array_unique($placeholder_fields)) . '. Merci de relancer la génération.'
+        ));
+    }
+    
+    // Validation : vérifier que l'IA a généré 10 prestations et 4 FAQ
+    $prestations_count = 0;
+    if (isset($step1_data['prestations']) && is_array($step1_data['prestations'])) {
+        $prestations_count = count($step1_data['prestations']);
+    }
+    
+    $faq_count = 0;
+    if (isset($step1_data['faq_questions']) && is_array($step1_data['faq_questions'])) {
+        $faq_count = count($step1_data['faq_questions']);
+    }
+    
+    if ($prestations_count < 10) {
+        wp_send_json_error(array(
+            'message' => "L'IA n'a généré que {$prestations_count} prestation(s) au lieu de 10. Merci de relancer la génération pour obtenir toutes les prestations."
+        ));
+    }
+    
+    if ($faq_count < 4) {
+        wp_send_json_error(array(
+            'message' => "L'IA n'a généré que {$faq_count} question(s) FAQ au lieu de 4. Merci de relancer la génération pour obtenir toutes les questions."
         ));
     }
     
