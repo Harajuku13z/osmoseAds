@@ -21,6 +21,12 @@ function osmose_ads_build_template_prompt($service_name, $ai_prompt = '') {
     $base_prompt .= "- INTERDIT de copier du contenu générique applicable à tous les services\n";
     $base_prompt .= "- INTERDIT d'utiliser un vocabulaire vague ou général\n\n";
 
+    // Forcer l'utilisation exclusive des placeholders ville/région pour éviter les cas comme "Paris" ou "Île-de-France"
+    $base_prompt .= "⚠️ VILLES ET RÉGIONS ⚠️\n";
+    $base_prompt .= "- INTERDIT ABSOLUMENT d'utiliser des noms de villes ou régions RÉELS (ex: Paris, Lyon, Marseille, Île-de-France, Bretagne, Normandie, etc.).\n";
+    $base_prompt .= "- TU DOIS TOUJOURS utiliser UNIQUEMENT les placeholders [VILLE], [RÉGION], [DÉPARTEMENT], [CODE_POSTAL] dans tout le texte.\n";
+    $base_prompt .= "- Si tu veux donner un exemple de lieu, tu utilises [VILLE] ou [RÉGION], JAMAIS une ville réelle.\n\n";
+
     $base_prompt .= "✅ OBLIGATIONS ABSOLUES POUR {$service_name}:\n";
     $base_prompt .= "- Chaque prestation DOIT être TECHNIQUE et SPÉCIFIQUE UNIQUEMENT à {$service_name}\n";
     $base_prompt .= "- Utilise le vocabulaire PROFESSIONNEL du métier de {$service_name}\n";
@@ -191,6 +197,17 @@ function osmose_ads_handle_create_template() {
     // Supprimer un éventuel H2 d'ouverture de type \"Article ...\" ou avec emoji qui ne sert à rien pour l'utilisateur
     // Exemple : <h2>🎯 Article Couvreur Premium à [VILLE]</h2>
     $content = preg_replace('/^<h2[^>]*>[^<]*(Article|Premium|🎯)[^<]*<\/h2>\s*/iu', '', $content);
+
+    // Dernier filet de sécurité : remplacer les mentions directes de grandes villes ou régions par les placeholders
+    $forbidden_cities = array('Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier', 'Lille');
+    $forbidden_regions = array('Île-de-France', 'Ile-de-France', 'Bretagne', 'Normandie', 'Occitanie', 'Nouvelle-Aquitaine', 'PACA', 'Provence-Alpes-Côte d\'Azur', 'Grand Est', 'Hauts-de-France', 'Auvergne-Rhône-Alpes', 'Centre-Val de Loire', 'Pays de la Loire', 'Bourgogne-Franche-Comté');
+
+    foreach ($forbidden_cities as $city_name) {
+        $content = str_ireplace($city_name, '[VILLE]', $content);
+    }
+    foreach ($forbidden_regions as $region_name) {
+        $content = str_ireplace($region_name, '[RÉGION]', $content);
+    }
     
     // Mettre à jour la réponse
     $ai_response = trim($content);
@@ -229,6 +246,26 @@ function osmose_ads_handle_create_template() {
             $og_description     = isset($decoded['og_description']) ? $decoded['og_description'] : '';
             $twitter_title      = isset($decoded['twitter_title']) ? $decoded['twitter_title'] : '';
             $twitter_description= isset($decoded['twitter_description']) ? $decoded['twitter_description'] : '';
+
+            // Filet de sécurité : si long_description n'est pas fourni, le construire à partir du HTML
+            if (empty($long_description) && !empty($description_html)) {
+                $plain_text = wp_strip_all_tags($description_html);
+                $plain_text = trim(preg_replace('/\s+/', ' ', $plain_text));
+                if (function_exists('mb_substr')) {
+                    $long_description = mb_substr($plain_text, 0, 500);
+                } else {
+                    $long_description = substr($plain_text, 0, 500);
+                }
+            }
+
+            // Même chose pour la short_description
+            if (empty($short_description) && !empty($long_description)) {
+                if (function_exists('mb_substr')) {
+                    $short_description = mb_substr($long_description, 0, 160);
+                } else {
+                    $short_description = substr($long_description, 0, 160);
+                }
+            }
 
             if (!empty($description_html)) {
                 // Utiliser la description HTML comme contenu du template
