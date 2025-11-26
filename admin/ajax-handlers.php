@@ -261,9 +261,13 @@ function osmose_ads_handle_create_template() {
         $prompt .= "### SEO et Géolocalisation\n\n";
         $prompt .= "- [ ] [VILLE] présente 12-18 fois naturellement\n\n";
         $prompt .= "- [ ] [DÉPARTEMENT] présent 4-6 fois\n\n";
-        $prompt .= "- [ ] Mots-clés intégrés fluidement\n\n";
-        $prompt .= "- [ ] Variations sémantiques multiples\n\n";
-        $prompt .= "- [ ] Title H2 principal optimisé\n\n\n";
+        $prompt .= "- [ ] Mots-clés intégrés fluidement, sans sur-optimisation\n\n";
+        $prompt .= "- [ ] Variations sémantiques multiples autour du mot-clé principal\n\n";
+        $prompt .= "- [ ] Focus keyword utilisé dans le titre principal, l'introduction, la meta description et au moins un H2\n\n";
+        $prompt .= "- [ ] Au moins 2 liens internes vers d'autres pages du site (ex: /contact, /devis, /services)\n\n";
+        $prompt .= "- [ ] Au moins 1 lien externe vers une source officielle (ex: service-public.fr, ademe.fr)\n\n";
+        $prompt .= "- [ ] Utilisation généreuse de mots de liaison/transition (par exemple : \"d'abord\", \"ensuite\", \"de plus\", \"par ailleurs\", \"en revanche\", \"enfin\", \"ainsi\", \"par conséquent\") pour atteindre un bon score de lisibilité\n\n";
+        $prompt .= "- [ ] Title H2 principal optimisé avec le mot-clé principal et [VILLE]\n\n\n";
         $prompt .= "### HTML et Format\n\n";
         $prompt .= "- [ ] HTML pur, valide, sémantique\n\n";
         $prompt .= "- [ ] Aucune balise interdite\n\n";
@@ -415,6 +419,10 @@ function osmose_ads_handle_create_template() {
     // Enregistrer les meta
     update_post_meta($template_id, 'service_name', $service_name);
     update_post_meta($template_id, 'service_slug', $service_slug);
+    // Sauvegarder aussi les mots-clés du service pour les utiliser plus tard (tags, SEO, etc.)
+    if (!empty($service_keywords)) {
+        update_post_meta($template_id, 'service_keywords', $service_keywords);
+    }
     update_post_meta($template_id, 'ai_prompt_used', $prompt);
     update_post_meta($template_id, 'ai_response_data', $ai_response);
     update_post_meta($template_id, 'meta_title', $meta_title);
@@ -625,6 +633,77 @@ function osmose_ads_handle_bulk_generate() {
         if (is_wp_error($ad_id)) {
             $errors++;
             continue;
+        }
+        
+        // Générer automatiquement des étiquettes (tags) SEO pour l'annonce
+        $tags = array();
+        
+        // Mot-clé principal = nom du service
+        if (!empty($service_name)) {
+            $tags[] = $service_name;
+        }
+        
+        // Service + ville
+        if (!empty($service_name) && !empty($city_name)) {
+            $tags[] = $service_name . ' ' . $city_name;
+        }
+        
+        // Ville seule
+        if (!empty($city_name)) {
+            $tags[] = $city_name;
+        }
+        
+        // Récupérer les mots-clés du template (si définis)
+        $template_keywords = get_post_meta($template_id, 'service_keywords', true);
+        if (!empty($template_keywords)) {
+            $keywords_array = array_map('trim', explode(',', $template_keywords));
+            foreach ($keywords_array as $kw) {
+                if (!empty($kw)) {
+                    $tags[] = $kw;
+                    // Variante avec ville
+                    if (!empty($city_name)) {
+                        $tags[] = $kw . ' ' . $city_name;
+                    }
+                }
+            }
+        }
+        
+        // Ajouter quelques tags génériques basés sur le service et la ville
+        if (!empty($service_name) && !empty($city_name)) {
+            $tags[] = 'artisan ' . $city_name;
+            $tags[] = 'entreprise ' . strtolower($service_name);
+            $tags[] = strtolower($service_name) . ' ' . $city_name . ' devis';
+            $tags[] = strtolower($service_name) . ' ' . $city_name . ' prix';
+        }
+        
+        // Nettoyer et dédupliquer
+        $tags = array_filter(array_unique(array_map('sanitize_text_field', $tags)));
+        
+        // S'assurer qu'on a au moins 10 tags (compléter avec des combinaisons si nécessaire)
+        if (count($tags) < 10 && !empty($service_name) && !empty($city_name)) {
+            $base = strtolower($service_name);
+            $ville = $city_name;
+            $extras = array(
+                $base . ' professionnel ' . $ville,
+                $base . ' pas cher ' . $ville,
+                'entreprise ' . $base . ' ' . $ville,
+                'spécialiste ' . $base . ' ' . $ville,
+                'travaux ' . $base . ' ' . $ville,
+                'devis ' . $base . ' ' . $ville,
+                'réparation ' . $base . ' ' . $ville,
+                'installation ' . $base . ' ' . $ville,
+            );
+            foreach ($extras as $extra) {
+                if (count($tags) >= 10) {
+                    break;
+                }
+                $tags[] = sanitize_text_field($extra);
+            }
+        }
+        
+        if (!empty($tags)) {
+            // Assigner les tags à l'annonce (créera les termes si nécessaire)
+            wp_set_post_terms($ad_id, $tags, 'post_tag', false);
         }
         
         // Enregistrer les meta

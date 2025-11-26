@@ -77,6 +77,60 @@ class Ad_Template {
             $final_content = $this->replace_variables($template_content, $city_id);
         }
         
+        // Ajouter les images de réalisations dans le contenu avec ALT optimisé (mot-clé + ville)
+        $realization_images = get_post_meta($this->post_id, 'realization_images', true);
+        if (!empty($realization_images) && is_array($realization_images)) {
+            $city = get_post($city_id);
+            $city_name = '';
+            if ($city) {
+                $city_name = get_post_meta($city_id, 'name', true) ?: $city->post_title;
+            }
+            
+            $service_name = get_post_meta($this->post_id, 'service_name', true);
+            $focus_keyword = trim($service_name . ' ' . $city_name);
+            
+            // Construire une petite section HTML pour les photos
+            $gallery_html = '';
+            
+            // Titre de section incluant le mot-clé et la ville pour le SEO
+            if (!empty($focus_keyword)) {
+                $gallery_html .= '<h2>' . esc_html('Photos de ' . $focus_keyword) . '</h2>';
+            } elseif (!empty($city_name)) {
+                $gallery_html .= '<h2>' . esc_html('Nos réalisations à ' . $city_name) . '</h2>';
+            }
+            
+            $gallery_html .= '<div class=\"osmose-realizations-gallery\">';
+            
+            foreach ($realization_images as $img_id) {
+                if (!wp_attachment_is_image($img_id)) {
+                    continue;
+                }
+                
+                $img_url = wp_get_attachment_image_url($img_id, 'large');
+                if (!$img_url) {
+                    continue;
+                }
+                
+                $alt = $focus_keyword ?: ($service_name ?: '') . (empty($city_name) ? '' : ' ' . $city_name);
+                $alt = trim($alt);
+                
+                if (empty($alt)) {
+                    $alt = get_the_title($this->post_id);
+                }
+                
+                $gallery_html .= '<figure class=\"osmose-realization-image\">';
+                $gallery_html .= '<img src=\"' . esc_url($img_url) . '\" alt=\"' . esc_attr($alt) . '\">';
+                $gallery_html .= '</figure>';
+            }
+            
+            $gallery_html .= '</div>';
+            
+            // Ajouter la galerie à la fin du contenu
+            if (!empty($gallery_html)) {
+                $final_content .= "\n\n" . $gallery_html;
+            }
+        }
+        
         // Mettre en cache pour 30 jours (2592000 secondes)
         set_transient($cache_key, $final_content, 2592000);
         
