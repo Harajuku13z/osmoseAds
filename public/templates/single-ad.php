@@ -222,6 +222,15 @@ get_header();
                             
                             <!-- Colonne Gauche - Contenu -->
                             <div class="osmose-content-left">
+                                <!-- Image mise en avant -->
+                                <?php if ($featured_image_url): ?>
+                                    <div class="osmose-featured-image-container">
+                                        <img src="<?php echo esc_url($featured_image_url); ?>" 
+                                             alt="<?php echo esc_attr(get_the_title()); ?>" 
+                                             class="osmose-featured-image-content">
+                                    </div>
+                                <?php endif; ?>
+                                
                                 <div class="osmose-content-text">
                                     <?php 
                                     if ($content) {

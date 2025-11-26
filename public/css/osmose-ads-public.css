@@ -225,6 +225,28 @@
     space-y: 1.5rem;
 }
 
+/* Image mise en avant dans le contenu */
+.osmose-featured-image-container {
+    margin-bottom: 2rem;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.osmose-featured-image-content {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    max-height: 500px;
+}
+
+@media (min-width: 768px) {
+    .osmose-featured-image-content {
+        max-height: 600px;
+    }
+}
+
 .osmose-content-text {
     space-y: 1rem;
 }
