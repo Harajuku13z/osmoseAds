@@ -432,17 +432,18 @@ function osmose_ads_handle_create_template() {
     }
     
     // Validation : détecter si l'IA a utilisé des noms de villes/départements/régions réels au lieu des placeholders
+    // Utilisation d'une détection contextuelle pour éviter les faux positifs (ex: "Var" dans "variable")
     $real_places = array(
-        // Villes françaises courantes
+        // Villes françaises courantes (minimum 4 caractères pour éviter les faux positifs)
         'Rennes', 'Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier', 'Bordeaux',
         'Lille', 'Rouen', 'Reims', 'Le Havre', 'Saint-Étienne', 'Toulon', 'Grenoble', 'Dijon', 'Angers', 'Nîmes',
         'Villeurbanne', 'Saint-Denis', 'Le Mans', 'Aix-en-Provence', 'Clermont-Ferrand', 'Brest', 'Limoges', 'Tours',
         'Amiens', 'Perpignan', 'Metz', 'Besançon', 'Boulogne-Billancourt', 'Orléans', 'Mulhouse', 'Caen', 'Roubaix',
-        // Départements français
-        'Ille-et-Vilaine', 'Paris', 'Rhône', 'Bouches-du-Rhône', 'Haute-Garonne', 'Alpes-Maritimes', 'Loire-Atlantique',
-        'Bas-Rhin', 'Hérault', 'Gironde', 'Nord', 'Seine-Maritime', 'Marne', 'Seine-et-Marne', 'Isère', 'Var', 'Puy-de-Dôme',
-        'Finistère', 'Haute-Vienne', 'Indre-et-Loire', 'Somme', 'Pyrénées-Orientales', 'Moselle', 'Doubs', 'Hauts-de-Seine',
-        'Loiret', 'Haut-Rhin', 'Calvados', 'Pas-de-Calais',
+        // Départements français (excluant "Var" et "Nord" qui sont trop courts et causent des faux positifs)
+        'Ille-et-Vilaine', 'Rhône', 'Bouches-du-Rhône', 'Haute-Garonne', 'Alpes-Maritimes', 'Loire-Atlantique',
+        'Bas-Rhin', 'Hérault', 'Gironde', 'Seine-Maritime', 'Marne', 'Seine-et-Marne', 'Isère', 'Puy-de-Dôme',
+        'Finistère', 'Haute-Vienne', 'Indre-et-Loire', 'Somme', 'Pyrénées-Orientales', 'Moselle', 'Doubs',
+        'Hauts-de-Seine', 'Loiret', 'Haut-Rhin', 'Calvados', 'Pas-de-Calais',
         // Régions françaises
         'Bretagne', 'Île-de-France', 'Auvergne-Rhône-Alpes', 'Provence-Alpes-Côte d\'Azur', 'Occitanie', 'Nouvelle-Aquitaine',
         'Hauts-de-France', 'Normandie', 'Grand Est', 'Pays de la Loire', 'Centre-Val de Loire', 'Bourgogne-Franche-Comté'
@@ -452,12 +453,26 @@ function osmose_ads_handle_create_template() {
     $real_places_found = array();
     $json_string = json_encode($step1_data);
     
+    // Détection avec word boundaries pour éviter les faux positifs
     foreach ($real_places as $place) {
-        // Rechercher le nom de lieu dans le JSON (insensible à la casse)
-        if (stripos($json_string, $place) !== false) {
+        // Utiliser des word boundaries pour éviter les matches partiels
+        if (preg_match('/\b' . preg_quote($place, '/') . '\b/i', $json_string)) {
             $has_real_places = true;
             $real_places_found[] = $place;
         }
+    }
+    
+    // Détection spéciale pour "Var" et "Nord" uniquement dans un contexte géographique
+    // Var : uniquement si précédé de "département du", "dans le", etc.
+    if (preg_match('/(?:département\s+du\s+|dans\s+le\s+|du\s+département\s+du\s+|le\s+département\s+du\s+)\bVar\b/i', $json_string)) {
+        $has_real_places = true;
+        $real_places_found[] = 'Var';
+    }
+    
+    // Nord : uniquement si précédé de "département du", "région", etc. (éviter "nord" comme direction)
+    if (preg_match('/(?:département\s+du\s+|région\s+du\s+|dans\s+le\s+)\bNord\b/i', $json_string)) {
+        $has_real_places = true;
+        $real_places_found[] = 'Nord';
     }
     
     if ($has_real_places) {
