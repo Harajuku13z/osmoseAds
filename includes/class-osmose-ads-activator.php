@@ -13,6 +13,10 @@ class Osmose_Ads_Activator {
         $post_types = new Osmose_Ads_Post_Types();
         $post_types->register_post_types();
         
+        // Enregistrer les rewrite rules pour le sitemap
+        add_rewrite_rule('^sitemap-ads\.xml$', 'index.php?osmose_ads_sitemap=1', 'top');
+        add_rewrite_tag('%osmose_ads_sitemap%', '([0-9]+)');
+        
         // Flush rewrite rules pour appliquer les nouvelles règles IMMÉDIATEMENT
         flush_rewrite_rules(false);
         

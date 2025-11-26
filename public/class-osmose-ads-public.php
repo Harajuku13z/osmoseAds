@@ -102,9 +102,22 @@ class Osmose_Ads_Public {
      * Générer et afficher le sitemap XML
      */
     public function generate_sitemap() {
-        global $wp_query;
+        // Vérifier l'URL directement (plus fiable que les query vars)
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+        $is_sitemap = false;
         
-        if (!isset($wp_query->query_vars['osmose_ads_sitemap'])) {
+        // Vérifier si l'URL contient sitemap-ads.xml
+        if (strpos($request_uri, 'sitemap-ads.xml') !== false) {
+            $is_sitemap = true;
+        }
+        
+        // Vérifier aussi via query vars (si les rewrite rules sont flushées)
+        global $wp_query;
+        if (isset($wp_query->query_vars['osmose_ads_sitemap'])) {
+            $is_sitemap = true;
+        }
+        
+        if (!$is_sitemap) {
             return;
         }
 

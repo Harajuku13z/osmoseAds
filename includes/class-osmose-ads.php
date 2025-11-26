@@ -160,6 +160,9 @@ class Osmose_Ads {
         // Flush rewrite rules une fois après la modification du CPT
         $this->loader->add_action('init', $this, 'flush_rewrite_rules_once', 999);
         
+        // Forcer le flush des rewrite rules pour le sitemap si nécessaire
+        $this->loader->add_action('admin_init', $this, 'maybe_flush_sitemap_rewrite_rules');
+        
         // Inclure les annonces dans les requêtes principales du blog
         $this->loader->add_action('pre_get_posts', $this, 'include_ads_in_main_query');
         
@@ -495,6 +498,25 @@ class Osmose_Ads {
         if (get_option('osmose_ads_flush_rewrite_rules')) {
             flush_rewrite_rules(false); // false = hard flush
             delete_option('osmose_ads_flush_rewrite_rules');
+        }
+    }
+    
+    /**
+     * Forcer le flush des rewrite rules pour le sitemap si nécessaire
+     */
+    public function maybe_flush_sitemap_rewrite_rules() {
+        // Vérifier si on est dans l'admin et si l'option est définie
+        if (!is_admin()) {
+            return;
+        }
+        
+        // Vérifier si les rewrite rules pour le sitemap ont été flushées
+        $sitemap_flushed = get_option('osmose_ads_sitemap_flushed', false);
+        
+        if (!$sitemap_flushed) {
+            // Forcer le flush des rewrite rules
+            flush_rewrite_rules(false);
+            update_option('osmose_ads_sitemap_flushed', true);
         }
     }
     
