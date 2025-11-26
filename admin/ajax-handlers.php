@@ -557,10 +557,31 @@ function osmose_ads_handle_create_template() {
         $meta_keywords = implode(', ', $keyword_items);
     }
     
+    // Préparer l'extrait pour le template (utiliser short_description ou meta_description)
+    $template_excerpt = '';
+    if (!empty($short_description)) {
+        $template_excerpt = $short_description;
+    } elseif (!empty($meta_description)) {
+        $template_excerpt = $meta_description;
+    }
+    // Limiter l'extrait à 160 caractères
+    if (!empty($template_excerpt)) {
+        if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+            if (mb_strlen($template_excerpt) > 160) {
+                $template_excerpt = mb_substr($template_excerpt, 0, 157) . '...';
+            }
+        } else {
+            if (strlen($template_excerpt) > 160) {
+                $template_excerpt = substr($template_excerpt, 0, 157) . '...';
+            }
+        }
+    }
+
     // Créer le post template
     $template_id = wp_insert_post(array(
         'post_title' => $service_name,
         'post_content' => $ai_response,
+        'post_excerpt' => $template_excerpt,
         'post_type' => 'ad_template',
         'post_status' => 'publish',
     ));
@@ -804,6 +825,27 @@ function osmose_ads_handle_bulk_generate() {
         // Générer les métadonnées
         $meta = $template->get_meta_for_city($city_id);
         
+        // Préparer l'extrait pour l'annonce (utiliser meta_description)
+        $ad_excerpt = '';
+        if (!empty($meta['meta_description'])) {
+            $ad_excerpt = $meta['meta_description'];
+        } else {
+            // Fallback si meta_description est vide
+            $ad_excerpt = 'Service professionnel de ' . $service_name . ' à ' . $city_name . '. Devis gratuit, intervention rapide, garantie sur tous nos travaux.';
+        }
+        // L'extrait est déjà limité à 160 caractères dans get_meta_for_city, mais on s'assure quand même
+        if (!empty($ad_excerpt)) {
+            if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+                if (mb_strlen($ad_excerpt) > 160) {
+                    $ad_excerpt = mb_substr($ad_excerpt, 0, 157) . '...';
+                }
+            } else {
+                if (strlen($ad_excerpt) > 160) {
+                    $ad_excerpt = substr($ad_excerpt, 0, 157) . '...';
+                }
+            }
+        }
+        
         // Récupérer l'ID de la catégorie "Annonces"
         $category_id = get_option('osmose_ads_category_id');
         if (!$category_id) {
@@ -819,6 +861,7 @@ function osmose_ads_handle_bulk_generate() {
             'post_title' => $service_name . ' à ' . $city_name,
             'post_name' => $slug,
             'post_content' => $content,
+            'post_excerpt' => $ad_excerpt,
             'post_type' => 'ad',
             'post_status' => 'publish',
             'post_category' => $category_id ? array($category_id) : array(), // Assigner la catégorie "Annonces"
