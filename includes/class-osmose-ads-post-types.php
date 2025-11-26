@@ -66,6 +66,16 @@ class Osmose_Ads_Post_Types {
         // Configuration pour que les annonces utilisent exactement la même structure que les posts
         // sans préfixe /ad/
         
+        // Utiliser la structure de permalien WordPress standard
+        $permalink_structure = get_option('permalink_structure');
+        $rewrite_slug = '';
+        
+        // Si les permaliens sont activés, utiliser la même structure que les posts
+        if (!empty($permalink_structure)) {
+            // Extraire le slug de base (généralement vide pour les posts)
+            $rewrite_slug = '';
+        }
+        
         $args = array(
             'labels'              => $labels,
             'public'              => true,
@@ -78,7 +88,12 @@ class Osmose_Ads_Post_Types {
             'has_archive'         => true,
             'hierarchical'        => false,
             'supports'            => array('title', 'editor', 'custom-fields', 'thumbnail', 'excerpt', 'comments', 'author', 'trackbacks', 'revisions'),
-            'rewrite'             => false,  // Désactivé pour gérer manuellement les URLs
+            'rewrite'             => array(
+                'slug'       => $rewrite_slug, // Utiliser la même structure que les posts
+                'with_front' => false,
+                'feeds'      => true,
+                'pages'     => true,
+            ),
             'query_var'           => 'ad',
             'show_in_rest'        => true, // Support Gutenberg
             'taxonomies'          => array('category', 'post_tag'), // Support des catégories et tags WordPress

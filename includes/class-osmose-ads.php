@@ -369,7 +369,7 @@ class Osmose_Ads {
     }
     
     /**
-     * Rediriger les anciennes URLs /ad/slug vers /slug
+     * Rediriger les anciennes URLs /ad/slug et ?ad=slug vers /slug
      */
     public function redirect_old_ad_urls() {
         if (is_admin() || is_feed() || is_robots() || is_trackback()) {
@@ -398,6 +398,26 @@ class Osmose_Ads {
                     exit;
                 }
             }
+            
+            // Si l'URL contient ?ad=slug, rediriger vers /slug
+            if (isset($_GET['ad']) && !empty($_GET['ad'])) {
+                $slug = sanitize_text_field($_GET['ad']);
+                
+                // Vérifier si c'est bien une annonce
+                $ad_posts = get_posts(array(
+                    'post_type' => 'ad',
+                    'name' => $slug,
+                    'posts_per_page' => 1,
+                    'post_status' => 'publish',
+                ));
+                
+                if (!empty($ad_posts)) {
+                    // Rediriger vers l'URL propre
+                    $new_url = home_url('/' . $slug . '/');
+                    wp_redirect($new_url, 301);
+                    exit;
+                }
+            }
         }
     }
     
@@ -410,6 +430,24 @@ class Osmose_Ads {
             return $wp;
         }
         
+        // Rediriger les URLs avec ?ad= vers l'URL propre
+        if (isset($_GET['ad']) && !empty($_GET['ad'])) {
+            $slug = sanitize_text_field($_GET['ad']);
+            $ad_posts = get_posts(array(
+                'post_type' => 'ad',
+                'name' => $slug,
+                'posts_per_page' => 1,
+                'post_status' => 'publish',
+            ));
+            
+            if (!empty($ad_posts)) {
+                // Rediriger vers l'URL propre
+                $clean_url = home_url('/' . $slug . '/');
+                wp_redirect($clean_url, 301);
+                exit;
+            }
+        }
+        
         // Vérifier si on a un name dans la requête (slug)
         $slug = '';
         
@@ -420,6 +458,8 @@ class Osmose_Ads {
             $request_uri = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
             // Supprimer les préfixes comme /ad/ si présents
             $request_uri = preg_replace('#^ad/#', '', $request_uri);
+            // Supprimer les query strings
+            $request_uri = preg_replace('#\?.*$#', '', $request_uri);
             $path_parts = explode('/', $request_uri);
             $slug = end($path_parts);
         }
