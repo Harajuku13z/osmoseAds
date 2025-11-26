@@ -385,6 +385,52 @@ function osmose_ads_handle_create_template() {
         if (!empty($valid_images)) {
             update_post_meta($template_id, 'realization_images', $valid_images);
             update_post_meta($template_id, 'realization_images_keywords', $images_with_keywords);
+
+            // Important : injecter directement une galerie HTML dans le contenu du template
+            // pour que les photos soient visibles dès le template (et pas uniquement via la personnalisation par ville)
+            $gallery_html = '';
+            $service_label = !empty($service_name) ? $service_name : __('Nos réalisations', 'osmose-ads');
+
+            $gallery_html .= '<h2>' . esc_html('Photos de ' . $service_label) . '</h2>';
+            $gallery_html .= '<div class="osmose-realizations-gallery">';
+
+            foreach ($valid_images as $img_id) {
+                $img_url = wp_get_attachment_image_url($img_id, 'large');
+                if (!$img_url) {
+                    continue;
+                }
+
+                $alt = trim($service_label);
+                if (empty($alt)) {
+                    $alt = get_the_title($template_id);
+                }
+
+                $gallery_html .= '<figure class="osmose-realization-image">';
+                $gallery_html .= '<img src="' . esc_url($img_url) . '" alt="' . esc_attr($alt) . '">';
+                $gallery_html .= '</figure>';
+            }
+
+            $gallery_html .= '</div>';
+
+            if (!empty($gallery_html)) {
+                $current_content = get_post_field('post_content', $template_id);
+
+                // Si le contenu contient déjà une liste de prestations (<ul>), on insère la galerie juste après
+                $marker = '</ul>';
+                $pos = strpos($current_content, $marker);
+                if ($pos !== false) {
+                    $pos_after = $pos + strlen($marker);
+                    $new_content = substr($current_content, 0, $pos_after) . "\n\n" . $gallery_html . substr($current_content, $pos_after);
+                } else {
+                    // Sinon, on ajoute la galerie à la fin du contenu
+                    $new_content = $current_content . "\n\n" . $gallery_html;
+                }
+
+                wp_update_post(array(
+                    'ID' => $template_id,
+                    'post_content' => $new_content,
+                ));
+            }
         }
     }
     
