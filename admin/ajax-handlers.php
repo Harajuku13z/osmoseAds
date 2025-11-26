@@ -277,20 +277,6 @@ function osmose_ads_handle_create_template() {
             $twitter_title      = isset($decoded['twitter_title']) ? $decoded['twitter_title'] : '';
             $twitter_description= isset($decoded['twitter_description']) ? $decoded['twitter_description'] : '';
 
-            // Validation supplémentaire : s'assurer que la description HTML contient bien
-            // une intro + une liste de prestations + une FAQ, sinon on considère la réponse IA comme incomplète
-            if (empty($description_html)
-                || stripos($description_html, '<ul') === false
-                || stripos($description_html, 'FAQ') === false
-            ) {
-                wp_send_json_error(array(
-                    'message' => __(
-                        'La génération IA n\'a pas produit un contenu complet (intro + liste de prestations + FAQ). Aucune annonce n\'a été créée. Merci de relancer la génération pour obtenir un texte de page de service complet.',
-                        'osmose-ads'
-                    ),
-                ));
-            }
-
             // Filet de sécurité : si long_description n'est pas fourni, le construire à partir du HTML (fallback SEO uniquement)
             if (empty($long_description) && !empty($description_html)) {
                 $plain_text = wp_strip_all_tags($description_html);
