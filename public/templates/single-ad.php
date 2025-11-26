@@ -335,6 +335,30 @@ get_header();
                         </div>
                     </div>
                     
+                    <!-- Section Avis Clients (Widgets for Google Reviews) -->
+                    <div class="osmose-reviews-section">
+                        <h3 class="osmose-reviews-title"><?php _e('Nos avis clients', 'osmose-ads'); ?></h3>
+                        <p class="osmose-reviews-text">
+                            <?php _e('Découvrez les avis de nos clients sur la qualité de nos interventions et notre accompagnement.', 'osmose-ads'); ?>
+                        </p>
+                        <div class="osmose-reviews-widget">
+                            <?php
+                            /**
+                             * Intégration Widgets for Google Reviews
+                             * Par défaut, on utilise le shortcode principal du plugin.
+                             * Vous pouvez filtrer ou surcharger ce shortcode via le hook
+                             * "osmose_ads_google_reviews_shortcode" si besoin.
+                             */
+                            $default_reviews_shortcode = '[trustindex no-registration=google]';
+                            $google_reviews_shortcode = apply_filters('osmose_ads_google_reviews_shortcode', $default_reviews_shortcode);
+                            
+                            if (!empty($google_reviews_shortcode)) {
+                                echo do_shortcode($google_reviews_shortcode);
+                            }
+                            ?>
+                        </div>
+                    </div>
+                    
                     <!-- CTA Section -->
                     <div class="osmose-cta-section">
                         <h3 class="osmose-cta-title"><?php _e('Prêt à Démarrer Votre Projet', 'osmose-ads'); ?> <?php if ($city_name): echo esc_html('à ' . $city_name); endif; ?> ?</h3>

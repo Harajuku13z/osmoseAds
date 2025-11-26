@@ -558,6 +558,35 @@
     }
 }
 
+/* ========== AVIS CLIENTS (GOOGLE REVIEWS) ========== */
+.osmose-reviews-section {
+    margin-top: 3rem;
+    margin-bottom: 3rem;
+    padding: 2rem;
+    border-radius: 1rem;
+    background: #ffffff;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    border: 1px solid var(--gray-200);
+}
+
+.osmose-reviews-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 0.75rem;
+}
+
+.osmose-reviews-text {
+    font-size: 1rem;
+    color: var(--gray-600);
+    margin-bottom: 1.5rem;
+}
+
+.osmose-reviews-widget {
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
 /* ========== ANNONCES SIMILAIRES ========== */
 .osmose-related-section {
     padding: 4rem 0;
