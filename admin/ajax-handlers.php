@@ -550,6 +550,7 @@ function osmose_ads_handle_create_template() {
     if (!empty($company_name_for_meta)) {
         $meta_placeholders = array(
             '[Entreprise]',
+            '[ENTREPRISE]',
             'Nom de l\'entreprise',
             'Nom de l\'entreprise',
         );
@@ -561,6 +562,7 @@ function osmose_ads_handle_create_template() {
             return str_replace($meta_placeholders, $company_name_for_meta, $value);
         };
 
+        // Remplacer dans les métadonnées
         $meta_title           = $replace_cb($meta_title);
         $meta_description     = $replace_cb($meta_description);
         $meta_keywords        = $replace_cb($meta_keywords);
@@ -568,6 +570,9 @@ function osmose_ads_handle_create_template() {
         $og_description       = $replace_cb($og_description);
         $twitter_title        = $replace_cb($twitter_title);
         $twitter_description  = $replace_cb($twitter_description);
+        
+        // Remplacer aussi dans le contenu HTML
+        $ai_response = $replace_cb($ai_response);
     }
 
     // S'assurer qu'une meta_description existe toujours (fallback si vide)
