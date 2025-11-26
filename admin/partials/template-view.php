@@ -94,41 +94,7 @@ if (isset($save_success) && $save_success) {
                     </div>
                 </div>
 
-                <!-- Images de réalisations -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-images me-2"></i><?php _e('Photos des Réalisations', 'osmose-ads'); ?></h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="realization-images-container" class="d-flex flex-wrap gap-3 mb-3">
-                            <?php if (!empty($realization_images)): ?>
-                                <?php foreach ($realization_images as $img_id): ?>
-                                    <?php $img = wp_get_attachment_image_src($img_id, 'thumbnail'); ?>
-                                    <?php if ($img): ?>
-                                        <div class="realization-image-item position-relative" data-image-id="<?php echo $img_id; ?>">
-                                            <img src="<?php echo esc_url($img[0]); ?>" class="img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;">
-                                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 remove-image" style="margin: 5px;">
-                                                <i class="bi bi-x"></i>
-                                            </button>
-                                            <input type="hidden" name="realization_images[]" value="<?php echo $img_id; ?>">
-                                        </div>
-                                    <?php endif; ?>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
-                        <button type="button" class="btn btn-primary" id="add-realization-image">
-                            <i class="bi bi-plus-circle me-1"></i>
-                            <?php _e('Ajouter une photo', 'osmose-ads'); ?>
-                        </button>
-                        <button type="button" class="btn btn-secondary ms-2" id="save-realization-images">
-                            <i class="bi bi-save me-1"></i>
-                            <?php _e('Enregistrer les modifications', 'osmose-ads'); ?>
-                        </button>
-                        <p class="text-muted mt-2 mb-0">
-                            <small><?php _e('Après avoir ajouté ou supprimé des photos, cliquez sur "Enregistrer les modifications" pour sauvegarder.', 'osmose-ads'); ?></small>
-                        </p>
-                    </div>
-                </div>
+                <!-- Images de réalisations (section désactivée pour le moment) -->
             </div>
 
             <!-- Colonne latérale -->
@@ -283,61 +249,7 @@ jQuery(document).ready(function($) {
         $(this).hide();
     });
     
-    // WordPress Media Library pour les images de réalisations
-    var realizationImageFrame;
-    $('#add-realization-image').on('click', function(e) {
-        e.preventDefault();
-        
-        // Sécurité : vérifier que la médiathèque WordPress est disponible
-        if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
-            alert('<?php echo esc_js(__('La bibliothèque média WordPress n\'est pas disponible sur cette page. Veuillez recharger la page et vérifier que vous êtes bien connecté(e).', 'osmose-ads')); ?>');
-            return;
-        }
-        
-        if (realizationImageFrame) {
-            realizationImageFrame.open();
-            return;
-        }
-        
-        realizationImageFrame = wp.media({
-            title: '<?php _e('Ajouter des photos de réalisations', 'osmose-ads'); ?>',
-            button: {
-                text: '<?php _e('Ajouter les images sélectionnées', 'osmose-ads'); ?>'
-            },
-            multiple: true
-        });
-        
-        realizationImageFrame.on('select', function() {
-            var attachments = realizationImageFrame.state().get('selection').toJSON();
-            
-            attachments.forEach(function(attachment) {
-                var imageId = attachment.id;
-                // Vérifier si l'image n'est pas déjà ajoutée
-                if ($('#realization-images-container').find('[data-image-id="' + imageId + '"]').length === 0) {
-                    var thumbUrl = (attachment.sizes && attachment.sizes.thumbnail) ? attachment.sizes.thumbnail.url : attachment.url;
-                    var imageHtml = '<div class="realization-image-item position-relative" data-image-id="' + imageId + '">' +
-                        '<img src="' + thumbUrl + '" class="img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;">' +
-                        '<button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 remove-image" style="margin: 5px;"><i class="bi bi-x"></i></button>' +
-                        '<input type="hidden" name="realization_images[]" value="' + imageId + '">' +
-                        '</div>';
-                    $('#realization-images-container').append(imageHtml);
-                }
-            });
-        });
-        
-        realizationImageFrame.open();
-    });
-    
-    // Supprimer une image de réalisation
-    $(document).on('click', '.remove-image', function() {
-        $(this).closest('.realization-image-item').remove();
-    });
-
-    // Bouton rapide pour sauvegarder après modification des photos
-    $('#save-realization-images').on('click', function(e) {
-        e.preventDefault();
-        $('#template-edit-form').trigger('submit');
-    });
+    // Gestion des images de réalisations désactivée sur cette page pour le moment
 });
 </script>
 <?php
