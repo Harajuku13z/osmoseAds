@@ -120,6 +120,13 @@ if (isset($save_success) && $save_success) {
                             <i class="bi bi-plus-circle me-1"></i>
                             <?php _e('Ajouter une photo', 'osmose-ads'); ?>
                         </button>
+                        <button type="button" class="btn btn-secondary ms-2" id="save-realization-images">
+                            <i class="bi bi-save me-1"></i>
+                            <?php _e('Enregistrer les modifications', 'osmose-ads'); ?>
+                        </button>
+                        <p class="text-muted mt-2 mb-0">
+                            <small><?php _e('Après avoir ajouté ou supprimé des photos, cliquez sur "Enregistrer les modifications" pour sauvegarder.', 'osmose-ads'); ?></small>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -238,6 +245,12 @@ jQuery(document).ready(function($) {
     $('#set-featured-image').on('click', function(e) {
         e.preventDefault();
         
+        // Sécurité : vérifier que la médiathèque WordPress est disponible
+        if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
+            alert('<?php echo esc_js(__('La bibliothèque média WordPress n\'est pas disponible sur cette page. Veuillez recharger la page et vérifier que vous êtes bien connecté(e).', 'osmose-ads')); ?>');
+            return;
+        }
+        
         if (featuredImageFrame) {
             featuredImageFrame.open();
             return;
@@ -318,6 +331,12 @@ jQuery(document).ready(function($) {
     // Supprimer une image de réalisation
     $(document).on('click', '.remove-image', function() {
         $(this).closest('.realization-image-item').remove();
+    });
+
+    // Bouton rapide pour sauvegarder après modification des photos
+    $('#save-realization-images').on('click', function(e) {
+        e.preventDefault();
+        $('#template-edit-form').trigger('submit');
     });
 });
 </script>
