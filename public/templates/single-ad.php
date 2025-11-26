@@ -157,6 +157,18 @@ $company_email = get_option('osmose_ads_company_email', get_option('admin_email'
 $devis_url = get_option('osmose_ads_devis_url', '');
 $company_address = get_option('osmose_ads_company_address', '');
 
+// Nettoyer les données pour supprimer les éléments indésirables
+if ($company_address) {
+    $company_address = strip_tags($company_address);
+    $company_address = preg_replace('/Icon-facebook|icon-facebook|Facebook/i', '', $company_address);
+    $company_address = trim($company_address);
+}
+if ($company_name) {
+    $company_name = strip_tags($company_name);
+    $company_name = preg_replace('/Icon-facebook|icon-facebook|Facebook/i', '', $company_name);
+    $company_name = trim($company_name);
+}
+
 get_header();
 ?>
 
@@ -276,16 +288,16 @@ get_header();
                                     <h4 class="osmose-sidebar-subtitle"><?php _e('Informations Pratiques', 'osmose-ads'); ?></h4>
                                     <ul class="osmose-info-list">
                                         <?php if ($company_address): ?>
-                                            <li><i class="fas fa-check"></i> <?php _e('Adresse :', 'osmose-ads'); ?> <?php echo esc_html($company_address); ?></li>
+                                            <li><i class="fas fa-map-marker-alt"></i> <strong><?php _e('Adresse :', 'osmose-ads'); ?></strong> <?php echo esc_html($company_address); ?></li>
                                         <?php endif; ?>
                                         <?php if ($phone_raw): ?>
-                                            <li><i class="fas fa-check"></i> <?php _e('Téléphone :', 'osmose-ads'); ?> <?php echo esc_html($phone ?: $phone_raw); ?></li>
+                                            <li><i class="fas fa-phone"></i> <strong><?php _e('Téléphone :', 'osmose-ads'); ?></strong> <?php echo esc_html($phone ?: $phone_raw); ?></li>
                                         <?php endif; ?>
                                         <?php if ($company_email): ?>
-                                            <li><i class="fas fa-envelope"></i> <?php _e('Email :', 'osmose-ads'); ?> <a href="mailto:<?php echo esc_attr($company_email); ?>"><?php echo esc_html($company_email); ?></a></li>
+                                            <li><i class="fas fa-envelope"></i> <strong><?php _e('Email :', 'osmose-ads'); ?></strong> <a href="mailto:<?php echo esc_attr($company_email); ?>"><?php echo esc_html($company_email); ?></a></li>
                                         <?php endif; ?>
                                         <?php if ($company_name): ?>
-                                            <li><i class="fas fa-check"></i> <?php _e('Société :', 'osmose-ads'); ?> <?php echo esc_html($company_name); ?></li>
+                                            <li><i class="fas fa-building"></i> <strong><?php _e('Société :', 'osmose-ads'); ?></strong> <?php echo esc_html($company_name); ?></li>
                                         <?php endif; ?>
                                     </ul>
                                 </div>
