@@ -24,6 +24,13 @@ if (isset($_POST['submit'])) {
     echo '<div class="alert alert-success"><p>' . __('Réglages sauvegardés', 'osmose-ads') . '</p></div>';
 }
 
+// Gérer le flush des rewrite rules
+if (isset($_POST['flush_rewrite_rules']) && isset($_POST['osmose_ads_nonce']) && wp_verify_nonce($_POST['osmose_ads_nonce'], 'osmose_ads_flush_rewrite_rules')) {
+    flush_rewrite_rules(false);
+    delete_option('osmose_ads_sitemap_flushed');
+    echo '<div class="alert alert-success"><p>' . __('Rewrite rules régénérées avec succès. Le sitemap devrait maintenant être accessible.', 'osmose-ads') . '</p></div>';
+}
+
 $ai_personalization = get_option('osmose_ads_ai_personalization', false);
 $company_phone = get_option('osmose_ads_company_phone', '');
 $company_phone_raw = get_option('osmose_ads_company_phone_raw', '');
@@ -132,6 +139,58 @@ $services = get_option('osmose_ads_services', array());
         
         <?php submit_button(); ?>
     </form>
+    
+    <!-- Section Sitemap -->
+    <div class="card" style="max-width: 800px; margin-top: 30px;">
+        <h2 style="margin-top: 0;"><?php _e('Sitemap XML', 'osmose-ads'); ?></h2>
+        <p><?php _e('Le sitemap XML contient toutes vos annonces publiées pour faciliter l\'indexation par les moteurs de recherche.', 'osmose-ads'); ?></p>
+        
+        <?php
+        $sitemap_url = home_url('/sitemap-ads.xml');
+        $ads_count = wp_count_posts('ad');
+        $published_ads = isset($ads_count->publish) ? $ads_count->publish : 0;
+        ?>
+        
+        <table class="form-table">
+            <tr>
+                <th scope="row"><?php _e('URL du Sitemap', 'osmose-ads'); ?></th>
+                <td>
+                    <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 3px;"><?php echo esc_url($sitemap_url); ?></code>
+                    <a href="<?php echo esc_url($sitemap_url); ?>" target="_blank" class="button" style="margin-left: 10px;"><?php _e('Voir le Sitemap', 'osmose-ads'); ?></a>
+                    <p class="description"><?php _e('URL du sitemap XML contenant toutes les annonces publiées', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            
+            <tr>
+                <th scope="row"><?php _e('Annonces dans le Sitemap', 'osmose-ads'); ?></th>
+                <td>
+                    <strong><?php echo intval($published_ads); ?></strong> <?php _e('annonce(s) publiée(s)', 'osmose-ads'); ?>
+                    <p class="description"><?php _e('Nombre d\'annonces actuellement incluses dans le sitemap', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            
+            <tr>
+                <th scope="row"><?php _e('Actions', 'osmose-ads'); ?></th>
+                <td>
+                    <form method="post" action="" style="display: inline;">
+                        <?php wp_nonce_field('osmose_ads_flush_rewrite_rules', 'osmose_ads_nonce'); ?>
+                        <input type="hidden" name="action" value="flush_rewrite_rules">
+                        <button type="submit" class="button button-secondary" name="flush_rewrite_rules"><?php _e('Régénérer les Rewrite Rules', 'osmose-ads'); ?></button>
+                    </form>
+                    <p class="description" style="margin-top: 10px;"><?php _e('Si le sitemap retourne une erreur 404, cliquez sur ce bouton pour régénérer les règles de réécriture.', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+        </table>
+        
+        <div class="notice notice-info" style="margin-top: 20px;">
+            <p><strong><?php _e('Comment utiliser le Sitemap :', 'osmose-ads'); ?></strong></p>
+            <ul style="margin-left: 20px;">
+                <li><?php _e('Soumettez l\'URL du sitemap à Google Search Console', 'osmose-ads'); ?></li>
+                <li><?php _e('Ajoutez l\'URL dans votre fichier robots.txt :', 'osmose-ads'); ?> <code>Sitemap: <?php echo esc_url($sitemap_url); ?></code></li>
+                <li><?php _e('Le sitemap est automatiquement mis à jour lors de la création de nouvelles annonces', 'osmose-ads'); ?></li>
+            </ul>
+        </div>
+    </div>
 </div>
 
 <script>

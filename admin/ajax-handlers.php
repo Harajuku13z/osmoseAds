@@ -380,10 +380,89 @@ function osmose_ads_handle_create_template() {
     if (empty($template_json_raw) || empty($description_html)) {
         wp_send_json_error(array(
             'message' => __(
-                'La génération IA n’a pas renvoyé un JSON complet (champ "description" manquant ou invalide). Aucune annonce n’a été créée. Merci de relancer la génération pour obtenir un contenu complet (intro + prestations + FAQ).',
+                'La génération IA n\'a pas renvoyé un JSON complet (champ "description" manquant ou invalide). Aucune annonce n\'a été créée. Merci de relancer la génération pour obtenir un contenu complet (intro + prestations + FAQ).',
                 'osmose-ads'
             ),
         ));
+    }
+
+    // Validation stricte : vérifier que le contenu HTML contient toutes les sections requises
+    $has_title = (stripos($description_html, '<h1') !== false || stripos($description_html, '<h2') !== false);
+    $has_list = (stripos($description_html, '<ul') !== false || stripos($description_html, '<ol') !== false);
+    $has_faq = (stripos($description_html, 'FAQ') !== false || stripos($description_html, 'faq') !== false || stripos($description_html, 'Question') !== false);
+    
+    // Si le contenu ne contient pas toutes les sections, construire un HTML complet
+    if (!$has_title || !$has_list || !$has_faq) {
+        error_log('Osmose ADS: Contenu incomplet détecté - Titre: ' . ($has_title ? 'OUI' : 'NON') . ', Liste: ' . ($has_list ? 'OUI' : 'NON') . ', FAQ: ' . ($has_faq ? 'OUI' : 'NON'));
+        
+        // Extraire l'intro du contenu existant si possible
+        $intro_html = '';
+        if (preg_match('/<p[^>]*>(.*?)<\/p>/is', $description_html, $matches)) {
+            $intro_html = '<p class="text-lg leading-relaxed">' . strip_tags($matches[1]) . '</p>';
+        } else {
+            // Extraire le texte brut
+            $plain_text = wp_strip_all_tags($description_html);
+            $intro_blocks = preg_split('/\n{2,}/', trim($plain_text));
+            foreach ($intro_blocks as $block) {
+                $block = trim($block);
+                if ($block !== '' && strlen($block) > 20) {
+                    $intro_html .= '<p class="text-lg leading-relaxed">' . esc_html($block) . '</p>';
+                    break; // Prendre seulement le premier paragraphe significatif
+                }
+            }
+        }
+        
+        if (empty($intro_html)) {
+            $intro_html = '<p class="text-lg leading-relaxed">Nous mettons à votre disposition notre expertise en ' . esc_html($service_name) . ' à [VILLE] et dans toute la région de [RÉGION].</p>';
+        }
+
+        // Construire un HTML complet avec toutes les sections
+        $html  = "<div class='space-y-6'>";
+        $html .= "<div class='space-y-4'>";
+        $html .= "<h1 class='text-3xl font-bold'>" . esc_html($service_name) . " à [VILLE]</h1>";
+        $html .= $intro_html;
+        $html .= "</div>";
+
+        // Bloc prestations (seulement si pas déjà présent)
+        if (!$has_list) {
+            $html .= "<div class='space-y-4'>";
+            $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>Nos prestations " . esc_html($service_name) . "</h2>";
+            $html .= "<ul class='space-y-3'>";
+            $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Diagnostic complet de vos besoins en " . esc_html($service_name) . " à [VILLE].</li>";
+            $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Mise en œuvre de solutions conformes aux normes en vigueur en [RÉGION].</li>";
+            $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Utilisation de matériaux adaptés au climat local et à votre bâtiment.</li>";
+            $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Accompagnement personnalisé avant, pendant et après l'intervention.</li>";
+            $html .= "<li><i class='fas fa-check text-green-600 mr-2'></i> Entretien et suivi pour garantir la durabilité de vos travaux.</li>";
+            $html .= "</ul>";
+            $html .= "</div>";
+        }
+
+        // Bloc FAQ (seulement si pas déjà présent)
+        if (!$has_faq) {
+            $devis_url = get_option('osmose_ads_devis_url', '');
+            $site_url = get_site_url();
+            $html .= "<div class='space-y-4'>";
+            $html .= "<h2 class='text-2xl font-bold text-gray-900 mb-4'>FAQ sur " . esc_html($service_name) . " à [VILLE]</h2>";
+            $html .= "<div class='space-y-2'>";
+            $html .= "<p><strong>Q1 : Comment obtenir un devis pour " . esc_html($service_name) . " à [VILLE] ?</strong></p>";
+            if (!empty($devis_url)) {
+                $html .= "<p>A : Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un <a href='" . esc_url($devis_url) . "' class='text-blue-600 hover:underline'>devis détaillé et gratuit</a>.</p>";
+            } else {
+                $html .= "<p>A : Contactez-nous pour une étude personnalisée. Nous analysons votre besoin et vous transmettons un devis détaillé et gratuit.</p>";
+            }
+            $html .= "<p><strong>Q2 : Intervenez-vous uniquement à [VILLE] ?</strong></p>";
+            $html .= "<p>A : Nous intervenons à [VILLE] et dans tout le département [DÉPARTEMENT], en [RÉGION]. Découvrez nos autres <a href='" . esc_url($site_url) . "' class='text-blue-600 hover:underline'>services disponibles</a> dans votre région.</p>";
+            $html .= "<p><strong>Q3 : Quelles garanties proposez-vous sur vos prestations de " . esc_html($service_name) . " ?</strong></p>";
+            $html .= "<p>A : Nos interventions respectent les normes en vigueur et bénéficient des garanties légales associées aux travaux réalisés. Pour plus d'informations, consultez notre <a href='" . esc_url($site_url) . "' class='text-blue-600 hover:underline'>site web</a>.</p>";
+            $html .= "</div>";
+            $html .= "</div>";
+        }
+
+        $html .= "</div>";
+
+        // Remplacer le contenu incomplet par le contenu complet
+        $description_html = $html;
+        $ai_response = $description_html;
     }
 
     // Si aucune meta extraite depuis le JSON, fallback sur l'ancienne logique (2e appel IA dédié aux méta)
