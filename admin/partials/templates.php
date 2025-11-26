@@ -279,65 +279,58 @@ jQuery(document).ready(function($) {
         console.warn('WordPress Media Library non disponible');
     }
     
-    // Vérifier que le bouton existe
+    // Bouton de création (peut ne pas exister sur toutes les pages)
     var $createBtn = $('#create-template-btn');
     var $modal = $('#create-template-modal');
     
     console.log('Bouton trouvé:', $createBtn.length);
     console.log('Modal trouvé:', $modal.length);
     
-    if ($createBtn.length === 0) {
-        console.error('Osmose ADS: Le bouton create-template-btn n\'a pas été trouvé dans le DOM!');
-        return;
-    }
-    
-    if ($modal.length === 0) {
-        console.error('Osmose ADS: Le modal create-template-modal n\'a pas été trouvé dans le DOM!');
-        return;
-    }
-    
-    // Gérer le clic sur le bouton
-    $createBtn.on('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('Osmose ADS: Bouton cliqué, affichage du modal');
-        
-        // Afficher le modal avec animation Bootstrap si disponible, sinon show()
-        if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined') {
-            // Utiliser Bootstrap Modal
-            var modalElement = document.getElementById('create-template-modal');
-            if (modalElement) {
-                var modal = new bootstrap.Modal(modalElement);
-                modal.show();
-            } else {
-                $modal.show();
-            }
-        } else {
-            // Fallback : affichage simple avec styles inline
-            $modal.addClass('show').css({
-                'display': 'block !important',
-                'position': 'fixed !important',
-                'top': '50% !important',
-                'left': '50% !important',
-                'transform': 'translate(-50%, -50%) !important',
-                'z-index': '99999 !important',
-                'background': 'white !important',
-                'box-shadow': '0 10px 40px rgba(0,0,0,0.3) !important',
-                'max-height': '90vh !important',
-                'overflow-y': 'auto !important'
-            });
+    // Initialiser le modal uniquement si les éléments existent
+    if ($createBtn.length > 0 && $modal.length > 0) {
+        // Gérer le clic sur le bouton
+        $createBtn.on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Osmose ADS: Bouton cliqué, affichage du modal');
             
-            // Ajouter le backdrop
-            if ($('#modal-backdrop').length === 0) {
-                $('body').append('<div id="modal-backdrop" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99998;"></div>');
+            // Afficher le modal avec animation Bootstrap si disponible, sinon show()
+            if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined') {
+                // Utiliser Bootstrap Modal
+                var modalElement = document.getElementById('create-template-modal');
+                if (modalElement) {
+                    var modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+                } else {
+                    $modal.show();
+                }
+            } else {
+                // Fallback : affichage simple avec styles inline
+                $modal.addClass('show').css({
+                    'display': 'block !important',
+                    'position': 'fixed !important',
+                    'top': '50% !important',
+                    'left': '50% !important',
+                    'transform': 'translate(-50%, -50%) !important',
+                    'z-index': '99999 !important',
+                    'background': 'white !important',
+                    'box-shadow': '0 10px 40px rgba(0,0,0,0.3) !important',
+                    'max-height': '90vh !important',
+                    'overflow-y': 'auto !important'
+                });
+                
+                // Ajouter le backdrop
+                if ($('#modal-backdrop').length === 0) {
+                    $('body').append('<div id="modal-backdrop" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99998;"></div>');
+                }
             }
-        }
-        
-        // Enqueue media si nécessaire
-        if (typeof wp !== 'undefined' && typeof wp.media !== 'undefined') {
-            // Media déjà chargé
-        }
-    });
+            
+            // Enqueue media si nécessaire
+            if (typeof wp !== 'undefined' && typeof wp.media !== 'undefined') {
+                // Media déjà chargé
+            }
+        });
+    }
     
     // Gérer la fermeture du modal
     $('.cancel-modal').on('click', function() {
