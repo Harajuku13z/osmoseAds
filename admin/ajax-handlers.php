@@ -193,10 +193,10 @@ function osmose_ads_handle_create_template() {
         $prompt .= "### ✅ SECTION 3 : GARANTIE (80-120 mots)\n\n";
         $prompt .= "<h2>Garantie satisfaction et performances</h2>\n";
         $prompt .= "<p>Chez " . ($company_name ?: '[ENTREPRISE]') . ", nous vous assurons une garantie décennale sur nos travaux de " . strtolower($service_name) . ", ainsi qu'un suivi personnalisé pour garantir votre entière satisfaction. Nous respectons les normes en vigueur et travaillons dans le souci de la propreté et de la sécurité sur chaque chantier.</p>\n\n\n";
-        $prompt .= "### 🔧 SECTION 4 : NOS PRESTATIONS (OBLIGATOIRE - 10 services)\n\n";
+        $prompt .= "### 🔧 SECTION 4 : NOS PRESTATIONS (OBLIGATOIRE - AU MOINS 10 services)\n\n";
         $prompt .= "Format EXACT à respecter :\n\n";
         $prompt .= "<h2>Nos Prestations " . strtolower($service_name) . "</h2>\n\n";
-        $prompt .= "**Listez EXACTEMENT 10 prestations** au format :\n";
+        $prompt .= "**Listez AU MOINS 10 prestations (10 à 14)** au format :\n";
         $prompt .= "<p><strong>[Nom prestation]</strong> - [Description courte 25-40 mots expliquant les bénéfices]</p>\n\n";
         $prompt .= "Exemple pour isolation :\n";
         $prompt .= "<p><strong>Isolation combles perdus</strong> - Nous intervenons pour isoler vos combles perdus en utilisant des matériaux performants pour réduire les pertes de chaleur et améliorer le confort thermique de votre maison.</p>\n\n";
