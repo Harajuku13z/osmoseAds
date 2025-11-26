@@ -301,8 +301,9 @@ jQuery(document).ready(function($) {
                 var imageId = attachment.id;
                 // Vérifier si l'image n'est pas déjà ajoutée
                 if ($('#realization-images-container').find('[data-image-id="' + imageId + '"]').length === 0) {
+                    var thumbUrl = (attachment.sizes && attachment.sizes.thumbnail) ? attachment.sizes.thumbnail.url : attachment.url;
                     var imageHtml = '<div class="realization-image-item position-relative" data-image-id="' + imageId + '">' +
-                        '<img src="' + attachment.sizes.thumbnail ? attachment.sizes.thumbnail.url : attachment.url + '" class="img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;">' +
+                        '<img src="' + thumbUrl + '" class="img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;">' +
                         '<button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 remove-image" style="margin: 5px;"><i class="bi bi-x"></i></button>' +
                         '<input type="hidden" name="realization_images[]" value="' + imageId + '">' +
                         '</div>';
