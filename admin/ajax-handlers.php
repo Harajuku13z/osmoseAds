@@ -81,215 +81,73 @@ function osmose_ads_handle_create_template() {
             $keywords_list = implode(', ', $keywords_array);
         }
         
-        // Construire le prompt complet selon le nouveau modèle
-        $prompt = "═══════════════════════════════════════════════════════════════════\n";
-        $prompt .= "🚨 RÈGLE CRITIQUE N°1 - VARIABLES OBLIGATOIRES 🚨\n";
-        $prompt .= "═══════════════════════════════════════════════════════════════════\n\n";
-        $prompt .= "VOUS DEVEZ IMPÉRATIVEMENT UTILISER CES VARIABLES :\n";
-        $prompt .= "• [VILLE] pour le nom de la ville (JAMAIS \"Rennes\", \"Paris\", etc. en dur)\n";
-        $prompt .= "• [DÉPARTEMENT] pour le département (JAMAIS \"Ille-et-Vilaine\", etc. en dur)\n";
-        $prompt .= "• [CODE_POSTAL] pour le code postal\n";
-        $prompt .= "• [RÉGION] pour la région\n\n";
-        $prompt .= "❌ INTERDIT : \"Couvreur à Rennes\", \"Expert toiture à Paris\"\n";
-        $prompt .= "✅ CORRECT : \"Couvreur à [VILLE]\", \"Expert toiture à [VILLE]\"\n\n";
-        $prompt .= "Ces variables seront automatiquement remplacées pour chaque ville.\n";
-        $prompt .= "═══════════════════════════════════════════════════════════════════\n\n\n";
-        
-        $prompt .= "# 🎯 Prompt Expert : Génération d'Articles Couvreur Premium SEO\n\n\n";
-        $prompt .= "## IDENTITÉ\n\n";
-        $prompt .= "Tu es un rédacteur web senior spécialisé en BTP/couverture avec 10+ ans d'expérience. Tu maîtrises parfaitement le vocabulaire technique du métier, les enjeux clients et les standards WordPress/SEO 2025.\n\n\n";
-        $prompt .= "---\n\n\n";
-        $prompt .= "## 📋 MISSION\n\n";
-        $prompt .= "Créer un article HTML complet, dense en informations, optimisé SEO et géolocalisé pour promouvoir les services d'un couvreur.\n";
-        $prompt .= "⚠️ ATTENTION : N'utilisez JAMAIS de nom de ville en dur. Utilisez TOUJOURS [VILLE] et [DÉPARTEMENT].\n\n\n";
-        $prompt .= "---\n\n\n";
-        $prompt .= "## 📥 DONNÉES REQUISES\n\n\n";
+        // Construire un prompt simplifié, 100% orienté résultat
         $company_address = get_option('osmose_ads_company_address', '');
-        $services = get_option('osmose_ads_services', array());
         
-        $prompt .= "```\n\n";
-        $prompt .= "Entreprise : " . ($company_name ?: '[NOM_ENTREPRISE]') . "\n";
-        $prompt .= "Adresse siège : " . ($company_address ?: '[ADRESSE_COMPLETE]') . "\n";
-        $prompt .= "Téléphone : " . ($company_phone ?: '[TELEPHONE]') . "\n";
-        $prompt .= "Email : " . ($company_email ?: '[EMAIL]') . "\n";
-        if (!empty($services)) {
-            $prompt .= "Services proposés : " . implode(', ', array_slice($services, 0, 5)) . "\n";
-        }
-        $prompt .= "\nVille cible : [VILLE]\n";
-        $prompt .= "Code postal : [CODE_POSTAL]\n";
-        $prompt .= "Département : [DÉPARTEMENT]\n";
-        $prompt .= "Région : [RÉGION]\n\n\n";
-        $prompt .= "Services : " . $service_name;
-        if (!empty($service_description)) {
-            $prompt .= " - " . $service_description;
-        }
-        $prompt .= "\n";
+        $prompt  = "Tu es un rédacteur web SEO senior spécialisé en couverture.\n";
+        $prompt .= "Génère UNIQUEMENT du HTML (pas de markdown), sans wrapper <html> ni <body>.\n";
+        $prompt .= "Utilise OBLIGATOIREMENT ces variables : [VILLE], [DÉPARTEMENT], [CODE_POSTAL], [RÉGION].\n";
+        $prompt .= "NE JAMAIS mettre de ville réelle en dur (toujours [VILLE], [DÉPARTEMENT], etc.).\n\n";
+        
+        $prompt .= "Contexte :\n";
+        $prompt .= "- Service principal (focus keyword) : " . $service_name . "\n";
         if (!empty($keywords_list)) {
-            $prompt .= "Mots-clés SEO : " . $keywords_list . "\n";
+            $prompt .= "- Mots-clés secondaires : " . $keywords_list . "\n";
         }
-        $prompt .= "```\n\n\n";
-        $prompt .= "---\n\n\n";
-        $prompt .= "## ✍️ RÈGLES D'ÉCRITURE ABSOLUES\n\n\n";
-        $prompt .= "### 1. LONGUEUR ET STRUCTURE\n\n";
-        $prompt .= "- **Contenu concis et professionnel** : 1500-2000 mots\n\n";
-        $prompt .= "- **Introduction courte** : 2-3 paragraphes présentant l'entreprise et ses valeurs\n\n";
-        $prompt .= "- **Sections thématiques** avec titres H2 clairs\n\n";
-        $prompt .= "- **Liste de prestations** : 8-12 services avec descriptions courtes (30-50 mots)\n\n";
-        $prompt .= "- **FAQ** : 5-8 questions pertinentes avec réponses concises (50-80 mots)\n\n\n";
-        $prompt .= "### 2. TON ET STYLE\n\n";
-        $prompt .= "- **Professionnel mais accessible** : vocabulaire technique expliqué\n\n";
-        $prompt .= "- **Local et personnalisé** : références constantes à [VILLE], [DÉPARTEMENT], climat\n";
-        $prompt .= "  ⚠️ RAPPEL : Écrivez \"à [VILLE]\" et PAS \"à Rennes\" ou toute autre ville\n\n";
-        $prompt .= "- **Orienté client** : \"vous\", \"votre maison\", \"votre projet\"\n\n";
-        $prompt .= "- **Rassurant** : mentionne garanties, expertise, proximité\n\n";
-        $prompt .= "- **Zéro blabla** : chaque phrase apporte une valeur concrète\n\n\n";
-        $prompt .= "### 3. CONTENU TECHNIQUE OBLIGATOIRE\n\n";
-        $prompt .= "Pour chaque service, détaille :\n\n";
-        $prompt .= "- **Problématiques concrètes** des clients à [VILLE] ⚠️ Utilisez [VILLE]\n\n";
-        $prompt .= "- **Solutions techniques précises** (matériaux, méthodes, étapes)\n\n";
-        $prompt .= "- **Bénéfices mesurables** (durée de vie, économies, confort)\n\n";
-        $prompt .= "- **Spécificités locales** (climat [DÉPARTEMENT], architecture [VILLE], réglementations)\n";
-        $prompt .= "  ⚠️ Toujours utiliser les variables [VILLE] et [DÉPARTEMENT]\n\n\n";
-        $prompt .= "Exemples de détails attendus :\n\n";
-        $prompt .= "- \"Tuiles terre cuite traditionnelles pour une durée de vie de 50-70 ans\"\n\n";
-        $prompt .= "- \"Isolation en laine minérale soufflée sur une épaisseur minimum de 320mm\"\n\n";
-        $prompt .= "- \"Lavage à moyenne ou basse pression, souvent à l'eau chaude 100°C\"\n\n";
-        $prompt .= "- \"Traitement hydrofuge haute qualité jusqu'à saturation du support\"\n\n\n";
-        $prompt .= "### 4. STRUCTURE HTML SÉMANTIQUE\n\n\n";
-        $prompt .= "🚨 ATTENTION : Générez UNIQUEMENT du HTML pur, PAS de Markdown !\n\n";
-        $prompt .= "**Balises autorisées uniquement** :\n";
-        $prompt .= "<h2>, <h3>, <h4>, <p>, <strong>, <em>, <br>\n\n";
-        $prompt .= "**Interdictions absolues** :\n";
-        $prompt .= "❌ PAS de Markdown : # ## ### ** ne sont PAS autorisés\n";
-        $prompt .= "❌ PAS de <h1>, <div>, <span>, <style>, <script>, <html>, <head>, <body>\n";
-        $prompt .= "❌ PAS de classes CSS, PAS d'attributs style\n";
-        $prompt .= "❌ PAS de balises de code : ```html ou ``` \n\n";
-        $prompt .= "✅ Exemple CORRECT :\n";
-        $prompt .= "<h2>Titre principal</h2>\n";
-        $prompt .= "<p>Paragraphe de texte avec <strong>texte en gras</strong>.</p>\n\n";
-        $prompt .= "✅ Commencez IMMÉDIATEMENT par <h2>, pas de préambule\n\n";
-        $prompt .= "**Hiérarchie stricte** :\n\n";
-        $prompt .= "- H2 pour les sections principales (5-7 sections)\n\n";
-        $prompt .= "- H3 pour les sous-sections (2-4 par H2)\n\n";
-        $prompt .= "- Paragraphes courts : 3-5 lignes maximum\n\n";
-        $prompt .= "- Listes à puces pour énumérations (3-6 items par liste)\n\n\n";
-        $prompt .= "### 5. OPTIMISATION SEO NATURELLE\n\n";
-        $prompt .= "- [VILLE] mentionnée **12-18 fois** naturellement dans le texte\n\n";
-        $prompt .= "- [DÉPARTEMENT] mentionné **4-6 fois**\n\n";
-        $prompt .= "- Mots-clés intégrés **fluidement** (densité 1-2%)\n\n";
-        $prompt .= "- Variations sémantiques : \"couvreur\" → \"entreprise de couverture\", \"artisan toiture\"\n\n";
-        $prompt .= "- Ancres géographiques : \"à [VILLE]\", \"dans le [DÉPARTEMENT]\", \"en [RÉGION]\"\n\n\n";
-        $prompt .= "---\n\n\n";
-        $prompt .= "## 📐 STRUCTURE EXACTE À SUIVRE\n\n\n";
-        $prompt .= "### 🎯 SECTION 1 : INTRODUCTION (150-220 mots)\n\n";
-        $prompt .= "BUT : écrire directement une introduction sans titre 'Description courte' ni mot 'Présentation'.\n";
-        $prompt .= "Format :\n";
-        $prompt .= "- 2 à 3 paragraphes <p> consécutifs, courts (2 à 4 phrases chacun).\n";
-        $prompt .= "- Le tout doit introduire le service de " . strtolower($service_name) . " à [VILLE] ([DÉPARTEMENT], [CODE_POSTAL]) et les bénéfices pour le client.\n\n";
-        $prompt .= "NE PAS écrire de titre 'Description', 'Description courte', 'Présentation'. Écris directement les paragraphes.\n\n\n";
-        
-        $prompt .= "### ✅ SECTION 2 : GARANTIES ET RÉASSURANCE (120-180 mots)\n\n";
-        $prompt .= "Format :\n";
-        $prompt .= "- Ajoute un titre H2 descriptif (par exemple : \"Une entreprise de couverture de confiance à [VILLE]\").\n";
-        $prompt .= "- Puis 1 à 2 paragraphes <p> décrivant les garanties (décennale, assurance, sérieux, sécurité, propreté de chantier).\n\n";
-        $prompt .= "NE PAS afficher un titre isolé 'Garantie' ou 'Garantie satisfaction et performances'. Utilise un titre plus naturel.\n\n\n";
-        
-        $prompt .= "### 🔧 SECTION 3 : NOS PRESTATIONS (OBLIGATOIRE - AU MOINS 10 services)\n\n";
-        $prompt .= "Format EXACT à respecter :\n\n";
-        $prompt .= "<h2>Nos prestations de " . strtolower($service_name) . " à [VILLE]</h2>\n\n";
-        $prompt .= "**Liste AU MOINS 10 prestations (10 à 14)** au format :\n";
-        $prompt .= "<p><strong>[Nom prestation]</strong> - [Description courte 25-40 mots expliquant les bénéfices]</p>\n\n";
-        $prompt .= "Exemple pour isolation :\n";
-        $prompt .= "<p><strong>Isolation combles perdus</strong> - Nous intervenons pour isoler vos combles perdus en utilisant des matériaux performants pour réduire les pertes de chaleur et améliorer le confort thermique de votre maison.</p>\n\n";
-        $prompt .= "⚠️ PAS de <ul>, <ol> ou <li> - UNIQUEMENT des paragraphes <p>\n\n\n";
-        $prompt .= "### ❓ SECTION 4 : FAQ (3-4 questions)\n\n";
-        $prompt .= "Format :\n";
-        $prompt .= "<h2>Questions fréquentes sur " . strtolower($service_name) . " à [VILLE]</h2>\n\n";
-        $prompt .= "Pour chaque question :\n";
-        $prompt .= "<h3>[Question pertinente sur le service] ?</h3>\n";
-        $prompt .= "<p>[Réponse détaillée 40-60 mots]</p>\n\n\n";
-        $prompt .= "### 🚫 INTERDICTIONS\n\n";
-        $prompt .= "❌ PAS de <ul>, <ol> ou <li>\n";
-        $prompt .= "❌ PAS de section \"Pourquoi nous choisir\" longue\n";
-        $prompt .= "❌ PAS de section contact détaillée\n";
-        $prompt .= "❌ PAS de commentaires après le contenu\n\n";
-        $prompt .= "✅ La structure doit être : Description courte → Présentation → Garantie → Nos Prestations (10) → FAQ (3-4)\n\n";
-        $prompt .= "⚠️ LE CONTENU DOIT SE TERMINER APRÈS LA FAQ, RIEN D'AUTRE.\n\n";
-        $prompt .= "---\n\n\n";
-        $prompt .= "## 🎯 EXEMPLES DE CONTENU DE QUALITÉ\n\n\n";
-        $prompt .= "### ❌ MAUVAIS (générique, creux)\n\n";
-        $prompt .= "\"Nous proposons des solutions de qualité pour votre toiture. Notre équipe est professionnelle et expérimentée.\"\n\n\n";
-        $prompt .= "### ✅ BON (précis, technique, local)\n\n";
-        $prompt .= "\"Notre équipe de couvreurs professionnels assure non seulement la réparation des dégâts existants, mais aussi l'amélioration globale de la performance de votre toit. De la pose de tuiles terre cuite ou bac acier au traitement hydrofuge toiture haut de gamme, notre engagement est de vous fournir des solutions sur-mesure, durables et conformes aux règles de l'art.\"\n\n\n";
-        $prompt .= "### ❌ MAUVAIS (vague)\n\n";
-        $prompt .= "\"Nous utilisons des matériaux de qualité.\"\n\n\n";
-        $prompt .= "### ✅ BON (détaillé)\n\n";
-        $prompt .= "\"Tuiles : Pose et remplacement de tuiles béton, tuiles terre cuite traditionnelles et tuiles plates de pays. Durée de vie : 50-70 ans selon le matériau choisi. Ardoises : Installation d'ardoises naturelles (durée de vie 100+ ans) ou d'ardoises fibro-ciment pour une finition élégante et résistante.\"\n\n\n";
-        $prompt .= "---\n\n\n";
-        $prompt .= "## 🚫 INTERDICTIONS ABSOLUES\n\n\n";
-        $prompt .= "### Contenu\n\n";
-        $prompt .= "- ❌ Phrases creuses type \"leader sur le marché\", \"nous sommes les meilleurs\"\n\n";
-        $prompt .= "- ❌ Répétitions inutiles du nom de l'entreprise (max 10-12 fois)\n\n";
-        $prompt .= "- ❌ Sections trop courtes (<150 mots)\n\n";
-        $prompt .= "- ❌ Manque de données techniques concrètes\n\n";
-        $prompt .= "- ❌ Absence de géolocalisation naturelle\n\n\n";
-        $prompt .= "### Structure\n\n";
-        $prompt .= "- ❌ Sections markdown avec # ou ## (UNIQUEMENT HTML)\n\n";
-        $prompt .= "- ❌ Titres non hiérarchisés\n\n";
-        $prompt .= "- ❌ Paragraphes de plus de 6 lignes\n\n";
-        $prompt .= "- ❌ Listes sans éléments <strong>\n\n";
-        $prompt .= "- ❌ Absence de balises HTML\n\n\n";
-        $prompt .= "### Format\n\n";
-        $prompt .= "- ❌ Texte brut non formaté\n\n";
-        $prompt .= "- ❌ Balises interdites (div, span, style)\n\n";
-        $prompt .= "- ❌ Commentaires HTML\n\n";
-        $prompt .= "- ❌ Wrapper <html> <body>\n\n\n";
-        $prompt .= "---\n\n\n";
-        $prompt .= "## ✅ CHECKLIST QUALITÉ FINALE\n\n\n";
-        $prompt .= "Avant de livrer, vérifie TOUS ces points :\n\n\n";
-        $prompt .= "### Longueur et Structure\n\n";
-        $prompt .= "- [ ] 2500-3500 mots au total\n\n";
-        $prompt .= "- [ ] 7-8 sections H2 principales\n\n";
-        $prompt .= "- [ ] 15-25 sous-sections H3\n\n";
-        $prompt .= "- [ ] 6-8 FAQ avec réponses longues\n\n";
-        $prompt .= "- [ ] Paragraphes 3-5 lignes max\n\n\n";
-        $prompt .= "### Contenu et Qualité\n\n";
-        $prompt .= "- [ ] Chaque section = 200+ mots minimum\n\n";
-        $prompt .= "- [ ] Informations techniques précises (matériaux, méthodes, durées, épaisseurs)\n\n";
-        $prompt .= "- [ ] Zéro phrase générique ou creuse\n\n";
-        $prompt .= "- [ ] Contexte local omniprésent\n\n";
-        $prompt .= "- [ ] Bénéfices concrets pour le client\n\n\n";
-        $prompt .= "### SEO et Géolocalisation\n\n";
-        $prompt .= "- [ ] [VILLE] présente 12-18 fois naturellement\n\n";
-        $prompt .= "- [ ] [DÉPARTEMENT] présent 4-6 fois\n\n";
-        $prompt .= "- [ ] Mots-clés intégrés fluidement, sans sur-optimisation\n\n";
-        $prompt .= "- [ ] Variations sémantiques multiples autour du mot-clé principal\n\n";
-        $prompt .= "- [ ] Focus keyword utilisé dans le titre principal, l'introduction, la meta description et au moins un H2\n\n";
-        $prompt .= "- [ ] Au moins 2 liens internes vers d'autres pages du site (ex: /contact, /devis, /services)\n\n";
-        $prompt .= "- [ ] Au moins 1 lien externe vers une source officielle (ex: service-public.fr, ademe.fr)\n\n";
-        $prompt .= "- [ ] Utilisation généreuse de mots de liaison/transition (par exemple : \"d'abord\", \"ensuite\", \"de plus\", \"par ailleurs\", \"en revanche\", \"enfin\", \"ainsi\", \"par conséquent\") pour atteindre un bon score de lisibilité\n\n";
-        $prompt .= "- [ ] Title H2 principal optimisé avec le mot-clé principal et [VILLE]\n\n\n";
-        $prompt .= "### HTML et Format\n\n";
-        $prompt .= "- [ ] HTML pur, valide, sémantique\n\n";
-        $prompt .= "- [ ] Aucune balise interdite\n\n";
-        $prompt .= "- [ ] Hiérarchie H2/H3 logique\n\n";
-        $prompt .= "- [ ] Listes <ul> avec <strong>\n\n";
-        $prompt .= "- [ ] Pas de wrapper extérieur\n\n\n";
-        $prompt .= "### Conversion\n\n";
-        $prompt .= "- [ ] Introduction engageante\n\n";
-        $prompt .= "- [ ] Appels à l'action présents\n\n";
-        $prompt .= "- [ ] Coordonnées complètes en fin\n\n";
-        $prompt .= "- [ ] Éléments de réassurance (garanties, expertise)\n\n";
-        $prompt .= "- [ ] Ton professionnel et local\n\n\n";
-        $prompt .= "---\n\n\n";
-        $prompt .= "## 🚀 INSTRUCTIONS FINALES\n\n\n";
-        $prompt .= "1. **Lis attentivement** toutes les données fournies\n\n";
-        $prompt .= "2. **Structure mentalement** l'article avant de rédiger\n\n";
-        $prompt .= "3. **Rédige en HTML pur** dès le début (pas de markdown)\n\n";
-        $prompt .= "4. **Intègre massivement** les détails techniques et locaux\n\n";
-        $prompt .= "5. **Vérifie la checklist** avant de livrer\n\n";
-        $prompt .= "6. **Livre un code HTML prêt** à coller dans WordPress\n\n\n\n";
-        $prompt .= "**Génère maintenant un article HTML premium de 2500-3500 mots, dense en informations techniques, optimisé SEO et géolocalisé, respectant TOUTES les exigences ci-dessus.**\n";
+        $prompt .= "- Entreprise : " . ($company_name ?: '[ENTREPRISE]') . "\n";
+        $prompt .= "- Adresse : " . ($company_address ?: '[ADRESSE]') . "\n";
+        $prompt .= "- Site : " . $site_url . "\n\n";
+
+        $prompt .= "OBJECTIF :\n";
+        $prompt .= "- Créer un contenu premium pour un " . strtolower($service_name) . " à [VILLE] ([DÉPARTEMENT], [CODE_POSTAL]).\n";
+        $prompt .= "- Respecter les bonnes pratiques SEO : focus keyword dans l'intro, H2, FAQ, etc.\n";
+        $prompt .= "- Longueur cible : 1800 à 2600 mots.\n\n";
+
+        $prompt .= "CONTRAINTES HTML IMPORTANTES :\n";
+        $prompt .= "- Balises autorisées : <h2>, <h3>, <p>, <strong>, <em>, <br> uniquement.\n";
+        $prompt .= "- INTERDIT : titres 'Introduction', 'Description courte', 'Présentation', 'FAQ " . strtolower($service_name) . "'.\n";
+        $prompt .= "- Ne mets AUCUN emoji, AUCUN titre du type 'Article ... Premium'.\n\n";
+
+        $prompt .= "STRUCTURE EXACTE À PRODUIRE :\n\n";
+
+        // 1) INTRODUCTION
+        $prompt .= "1/ INTRODUCTION (200–250 mots)\n";
+        $prompt .= "- Pas de titre, commence directement par un paragraphe <p>.\n";
+        $prompt .= "- Première phrase : doit contenir le focus keyword \"" . strtolower($service_name) . "\" + [VILLE] + [DÉPARTEMENT].\n";
+        $prompt .= "- 2 à 3 paragraphes <p>, ton commercial mais concret, orienté bénéfices client.\n\n";
+
+        // 2) GARANTIES
+        $prompt .= "2/ GARANTIES (120–180 mots)\n";
+        $prompt .= "- Un seul <h2> clair, par exemple : \"Une entreprise de couverture de confiance à [VILLE]\".\n";
+        $prompt .= "- 1 ou 2 <p> qui parlent : garantie décennale, assurance, sérieux, sécurité, propreté de chantier.\n\n";
+
+        // 3) PRESTATIONS
+        $prompt .= "3/ PRESTATIONS (OBLIGATOIRE : au moins 10 services)\n";
+        $prompt .= "- Un seul <h2> : \"Nos prestations de " . strtolower($service_name) . " à [VILLE]\".\n";
+        $prompt .= "- Liste de 10 à 14 prestations.\n";
+        $prompt .= "- Format STRICT pour CHAQUE prestation :\n";
+        $prompt .= "  <p><strong>[Nom de la prestation]</strong> – [Description de 25 à 40 mots expliquant ce que l'on fait, les bénéfices pour le client, et en liant si possible au climat / contexte de [VILLE], [DÉPARTEMENT]].</p>\n";
+        $prompt .= "- Les prestations doivent couvrir : pose, rénovation, réparation urgente, isolation, démoussage, hydrofuge, zinguerie, urgence intempéries, etc.\n\n";
+
+        // 4) FAQ
+        $prompt .= "4/ FAQ (3 à 4 questions)\n";
+        $prompt .= "- Un seul <h2> : \"Questions fréquentes sur " . strtolower($service_name) . " à [VILLE]\".\n";
+        $prompt .= "- Pour chaque question :\n";
+        $prompt .= "  <h3>[Question complète avec le mot \""
+                 . strtolower($service_name) . "\" et [VILLE]] ?</h3>\n";
+        $prompt .= "  <p>[Réponse de 40 à 60 mots, claire, pédagogique, avec focus sur la pratique réelle d'un artisan à [VILLE]].</p>\n\n";
+
+        // 5) RÈGLES SEO
+        $prompt .= "5/ RÈGLES SEO DANS LE TEXTE :\n";
+        $prompt .= "- \""
+                 . strtolower($service_name) . "\" doit apparaître naturellement dans l'introduction, dans au moins un H2, plusieurs prestations et plusieurs FAQ.\n";
+        $prompt .= "- Utiliser beaucoup de mots de liaison : \"D'abord\", \"Ensuite\", \"De plus\", \"Par ailleurs\", \"Cependant\", \"En revanche\", \"Ainsi\", \"Enfin\", \"Par conséquent\".\n";
+        $prompt .= "- Paragraphes courts (2–4 phrases), lisibles.\n";
+        $prompt .= "- Intégrer au moins 2 liens internes sous forme d'ancres (par ex. <a href=\"/contact\">contact</a>, <a href=\"/devis\">devis</a>).\n";
+        $prompt .= "- Intégrer au moins 1 lien externe utile (ex. <a href=\"https://www.service-public.fr/\">service-public.fr</a>) dans un contexte informatif.\n";
+        $prompt .= "- Ne PAS générer de meta title/description ici (c'est géré à part).\n\n";
+
+        $prompt .= "Produis UNIQUEMENT le contenu HTML final, sans explication autour, sans commentaires, sans texte avant/après.\n";
     }
     
     $system_message = 'Tu es un rédacteur web senior spécialisé en BTP/couverture avec 10+ ans d\'expérience. Tu maîtrises parfaitement le vocabulaire technique du métier, les enjeux clients et les standards WordPress/SEO 2025.';
