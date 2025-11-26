@@ -275,6 +275,12 @@ jQuery(document).ready(function($) {
     $('#add-realization-image').on('click', function(e) {
         e.preventDefault();
         
+        // Sécurité : vérifier que la médiathèque WordPress est disponible
+        if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
+            alert('<?php echo esc_js(__('La bibliothèque média WordPress n\'est pas disponible sur cette page. Veuillez recharger la page et vérifier que vous êtes bien connecté(e).', 'osmose-ads')); ?>');
+            return;
+        }
+        
         if (realizationImageFrame) {
             realizationImageFrame.open();
             return;
