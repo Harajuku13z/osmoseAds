@@ -91,12 +91,6 @@ if (isset($save_success) && $save_success) {
                             ));
                             ?>
                         </div>
-                        <?php if (!empty($ai_prompt)): ?>
-                        <div class="alert alert-info">
-                            <strong><?php _e('Prompt IA utilisé:', 'osmose-ads'); ?></strong><br>
-                            <small><?php echo esc_html($ai_prompt); ?></small>
-                        </div>
-                        <?php endif; ?>
                     </div>
                 </div>
 
