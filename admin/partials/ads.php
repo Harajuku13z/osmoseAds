@@ -40,11 +40,17 @@ $cities = get_posts(array(
         <h1 class="h3 mb-1"><?php echo esc_html(get_admin_page_title()); ?></h1>
         <p class="text-muted mb-0"><?php _e('Gérez vos annonces géolocalisées', 'osmose-ads'); ?></p>
     </div>
-    <div>
+    <div class="d-flex gap-2">
         <button type="button" id="create-ads-btn" class="btn btn-primary" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;">
             <i class="bi bi-plus-circle me-2"></i>
             <?php _e('Créer des Annonces', 'osmose-ads'); ?>
         </button>
+        <?php if (!empty($ads)): ?>
+            <button type="button" id="delete-all-ads-btn" class="btn btn-danger">
+                <i class="bi bi-trash me-2"></i>
+                <?php _e('Supprimer toutes les annonces', 'osmose-ads'); ?>
+            </button>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -174,7 +180,10 @@ $cities = get_posts(array(
                         <td><?php echo esc_html(get_the_date('d/m/Y', $ad->ID)); ?></td>
                         <td>
                             <a href="<?php echo get_permalink($ad->ID); ?>" target="_blank"><?php _e('Voir', 'osmose-ads'); ?></a> |
-                            <a href="<?php echo get_edit_post_link($ad->ID); ?>"><?php _e('Modifier', 'osmose-ads'); ?></a>
+                            <a href="<?php echo get_edit_post_link($ad->ID); ?>"><?php _e('Modifier', 'osmose-ads'); ?></a> |
+                            <a href="#" class="osmose-delete-ad-link" data-ad-id="<?php echo esc_attr($ad->ID); ?>" style="color: #d63638;">
+                                <?php _e('Supprimer', 'osmose-ads'); ?>
+                            </a>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -201,6 +210,7 @@ jQuery(document).ready(function($) {
     var $createBtn = $('#create-ads-btn');
     var $modal = $('#create-ads-modal');
     var $backdrop = $('#osmose-ads-modal-backdrop-ads');
+    var nonce = osmoseAds.nonce;
     
     // Ouvrir le modal
     $createBtn.on('click', function(e) {
@@ -221,6 +231,58 @@ jQuery(document).ready(function($) {
     // Fermer avec le backdrop
     $backdrop.on('click', function() {
         $('.cancel-create-ads').trigger('click');
+    });
+
+    // Suppression d'une annonce individuelle
+    $('.osmose-delete-ad-link').on('click', function(e) {
+        e.preventDefault();
+        var adId = $(this).data('ad-id');
+        if (!adId) return;
+
+        if (!confirm('<?php echo esc_js(__('Confirmez-vous la suppression définitive de cette annonce ?', 'osmose-ads')); ?>')) {
+            return;
+        }
+
+        $.post(
+            osmoseAds.ajax_url,
+            {
+                action: 'osmose_ads_delete_ad',
+                nonce: nonce,
+                ad_id: adId
+            },
+            function(response) {
+                if (response && response.success) {
+                    location.reload();
+                } else {
+                    alert(response && response.data && response.data.message ? response.data.message : '<?php echo esc_js(__('Erreur lors de la suppression', 'osmose-ads')); ?>');
+                }
+            }
+        );
+    });
+
+    // Suppression de toutes les annonces
+    $('#delete-all-ads-btn').on('click', function(e) {
+        e.preventDefault();
+
+        if (!confirm('<?php echo esc_js(__('ATTENTION : ceci va supprimer TOUTES les annonces générées. Confirmez-vous ?', 'osmose-ads')); ?>')) {
+            return;
+        }
+
+        $.post(
+            osmoseAds.ajax_url,
+            {
+                action: 'osmose_ads_delete_all_ads',
+                nonce: nonce
+            },
+            function(response) {
+                if (response && response.success) {
+                    alert(response.data && response.data.message ? response.data.message : '<?php echo esc_js(__('Toutes les annonces ont été supprimées', 'osmose-ads')); ?>');
+                    location.reload();
+                } else {
+                    alert(response && response.data && response.data.message ? response.data.message : '<?php echo esc_js(__('Erreur lors de la suppression des annonces', 'osmose-ads')); ?>');
+                }
+            }
+        );
     });
     
     // Sélectionner/Désélectionner toutes les villes

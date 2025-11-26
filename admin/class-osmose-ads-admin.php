@@ -283,6 +283,8 @@ class Osmose_Ads_Admin {
         add_action('wp_ajax_osmose_ads_create_template', array($this, 'ajax_create_template'));
         add_action('wp_ajax_osmose_ads_bulk_generate', array($this, 'ajax_bulk_generate'));
         add_action('wp_ajax_osmose_ads_delete_template', array($this, 'ajax_delete_template'));
+        add_action('wp_ajax_osmose_ads_delete_ad', array($this, 'ajax_delete_ad'));
+        add_action('wp_ajax_osmose_ads_delete_all_ads', array($this, 'ajax_delete_all_ads'));
     }
 
     /**
@@ -319,6 +321,34 @@ class Osmose_Ads_Admin {
         
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/ajax-handlers.php';
         osmose_ads_handle_delete_template();
+    }
+
+    /**
+     * Handler AJAX pour supprimer une annonce
+     */
+    public function ajax_delete_ad() {
+        check_ajax_referer('osmose_ads_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+        }
+        
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/ajax-handlers.php';
+        osmose_ads_handle_delete_ad();
+    }
+
+    /**
+     * Handler AJAX pour supprimer toutes les annonces
+     */
+    public function ajax_delete_all_ads() {
+        check_ajax_referer('osmose_ads_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+        }
+        
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/ajax-handlers.php';
+        osmose_ads_handle_delete_all_ads();
     }
 
     /**

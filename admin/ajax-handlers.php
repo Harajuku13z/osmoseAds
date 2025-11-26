@@ -760,6 +760,70 @@ function osmose_ads_handle_bulk_generate() {
 }
 
 /**
+ * Supprimer une annonce individuelle
+ */
+function osmose_ads_handle_delete_ad() {
+    if (!current_user_can('delete_posts')) {
+        wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+    }
+    
+    $ad_id = intval($_POST['ad_id'] ?? 0);
+    
+    if (!$ad_id) {
+        wp_send_json_error(array('message' => __('ID d\'annonce manquant', 'osmose-ads')));
+    }
+    
+    $post = get_post($ad_id);
+    if (!$post || $post->post_type !== 'ad') {
+        wp_send_json_error(array('message' => __('Annonce non trouvée', 'osmose-ads')));
+    }
+    
+    $deleted = wp_delete_post($ad_id, true); // true = suppression définitive
+    
+    if ($deleted) {
+        wp_send_json_success(array('message' => __('Annonce supprimée avec succès', 'osmose-ads')));
+    } else {
+        wp_send_json_error(array('message' => __('Erreur lors de la suppression de l\'annonce', 'osmose-ads')));
+    }
+}
+
+/**
+ * Supprimer toutes les annonces
+ */
+function osmose_ads_handle_delete_all_ads() {
+    if (!current_user_can('delete_posts')) {
+        wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+    }
+    
+    $ads = get_posts(array(
+        'post_type' => 'ad',
+        'posts_per_page' => -1,
+        'post_status' => 'any',
+        'fields' => 'ids',
+    ));
+    
+    if (empty($ads)) {
+        wp_send_json_success(array(
+            'message' => __('Aucune annonce à supprimer', 'osmose-ads'),
+            'deleted' => 0,
+        ));
+    }
+    
+    $deleted = 0;
+    foreach ($ads as $ad_id) {
+        $result = wp_delete_post($ad_id, true);
+        if ($result) {
+            $deleted++;
+        }
+    }
+    
+    wp_send_json_success(array(
+        'message' => sprintf(__('Annonces supprimées: %d', 'osmose-ads'), $deleted),
+        'deleted' => $deleted,
+    ));
+}
+
+/**
  * Handler pour supprimer un template
  */
 function osmose_ads_handle_delete_template() {
