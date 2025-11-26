@@ -319,14 +319,21 @@ function osmose_ads_handle_create_template() {
     $step1_prompt .= "AUTRES CHAMPS :\n";
     $step1_prompt .= "- 3 paragraphes d'introduction techniques et spécifiques à {$service_name}, mentionnant {$company_name}\n";
     $step1_prompt .= "- Tous les autres champs remplis avec du contenu réel et adapté à {$service_name}\n\n";
-    $step1_prompt .= "RÈGLES STRICTES :\n";
+    $step1_prompt .= "RÈGLES STRICTES - PLACEHOLDERS GÉOGRAPHIQUES :\n";
+    $step1_prompt .= "⚠️ INTERDICTION ABSOLUE d'utiliser des noms de villes, départements ou régions réels (Rennes, Paris, Ille-et-Vilaine, Bretagne, etc.)\n";
+    $step1_prompt .= "⚠️ Tu DOIS utiliser UNIQUEMENT ces placeholders exacts :\n";
+    $step1_prompt .= "   - [VILLE] pour la ville (PAS Rennes, Paris, Lyon, etc.)\n";
+    $step1_prompt .= "   - [DÉPARTEMENT] pour le département (PAS Ille-et-Vilaine, Paris, Rhône, etc.)\n";
+    $step1_prompt .= "   - [RÉGION] pour la région (PAS Bretagne, Île-de-France, Auvergne-Rhône-Alpes, etc.)\n";
+    $step1_prompt .= "   - [ENTREPRISE] pour le nom de l'entreprise (sera remplacé automatiquement)\n";
+    $step1_prompt .= "⚠️ Si tu utilises un nom de ville/département/région réel, le template sera refusé\n\n";
+    $step1_prompt .= "RÈGLES STRICTES - CONTENU :\n";
     $step1_prompt .= "1. GÉNÈRE DU CONTENU RÉEL et TECHNIQUE spécifique à {$service_name}, pas de placeholders ou d'instructions\n";
-    $step1_prompt .= "2. Utilise UNIQUEMENT les placeholders [VILLE], [RÉGION], [DÉPARTEMENT], [ENTREPRISE] pour les variables géographiques\n";
-    $step1_prompt .= "3. Les 10 prestations DOIVENT être différentes et adaptées à {$service_name}\n";
-    $step1_prompt .= "4. Les 4 questions FAQ DOIVENT être différentes et adaptées à {$service_name}\n";
-    $step1_prompt .= "5. Réponds UNIQUEMENT avec le JSON valide complet, sans texte avant ou après\n";
+    $step1_prompt .= "2. Les 10 prestations DOIVENT être différentes et adaptées à {$service_name}\n";
+    $step1_prompt .= "3. Les 4 questions FAQ DOIVENT être différentes et adaptées à {$service_name}\n";
+    $step1_prompt .= "4. Réponds UNIQUEMENT avec le JSON valide complet, sans texte avant ou après\n";
     
-    $step1_system = 'Tu es un expert technique en ' . $service_name . '. Tu génères du CONTENU RÉEL et TECHNIQUE spécifique à ' . $service_name . ', pas des placeholders ou des instructions. OBLIGATOIRE : génère EXACTEMENT 10 prestations différentes et 4 questions FAQ différentes, toutes adaptées au service ' . $service_name . '. Chaque champ du JSON doit contenir du texte réel et complet. Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.';
+    $step1_system = 'Tu es un expert technique en ' . $service_name . '. Tu génères du CONTENU RÉEL et TECHNIQUE spécifique à ' . $service_name . '. OBLIGATOIRE : utilise UNIQUEMENT les placeholders [VILLE], [DÉPARTEMENT], [RÉGION], [ENTREPRISE] - INTERDICTION d\'utiliser des noms de villes/départements/régions réels. Génère EXACTEMENT 10 prestations différentes et 4 questions FAQ différentes, toutes adaptées au service ' . $service_name . '. Chaque champ du JSON doit contenir du texte réel et complet. Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.';
     
     // Premier appel IA
     $step1_response = $ai_service->call_ai($step1_prompt, $step1_system, array(
@@ -424,6 +431,41 @@ function osmose_ads_handle_create_template() {
         ));
     }
     
+    // Validation : détecter si l'IA a utilisé des noms de villes/départements/régions réels au lieu des placeholders
+    $real_places = array(
+        // Villes françaises courantes
+        'Rennes', 'Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier', 'Bordeaux',
+        'Lille', 'Rouen', 'Reims', 'Le Havre', 'Saint-Étienne', 'Toulon', 'Grenoble', 'Dijon', 'Angers', 'Nîmes',
+        'Villeurbanne', 'Saint-Denis', 'Le Mans', 'Aix-en-Provence', 'Clermont-Ferrand', 'Brest', 'Limoges', 'Tours',
+        'Amiens', 'Perpignan', 'Metz', 'Besançon', 'Boulogne-Billancourt', 'Orléans', 'Mulhouse', 'Caen', 'Roubaix',
+        // Départements français
+        'Ille-et-Vilaine', 'Paris', 'Rhône', 'Bouches-du-Rhône', 'Haute-Garonne', 'Alpes-Maritimes', 'Loire-Atlantique',
+        'Bas-Rhin', 'Hérault', 'Gironde', 'Nord', 'Seine-Maritime', 'Marne', 'Seine-et-Marne', 'Isère', 'Var', 'Puy-de-Dôme',
+        'Finistère', 'Haute-Vienne', 'Indre-et-Loire', 'Somme', 'Pyrénées-Orientales', 'Moselle', 'Doubs', 'Hauts-de-Seine',
+        'Loiret', 'Haut-Rhin', 'Calvados', 'Pas-de-Calais',
+        // Régions françaises
+        'Bretagne', 'Île-de-France', 'Auvergne-Rhône-Alpes', 'Provence-Alpes-Côte d\'Azur', 'Occitanie', 'Nouvelle-Aquitaine',
+        'Hauts-de-France', 'Normandie', 'Grand Est', 'Pays de la Loire', 'Centre-Val de Loire', 'Bourgogne-Franche-Comté'
+    );
+    
+    $has_real_places = false;
+    $real_places_found = array();
+    $json_string = json_encode($step1_data);
+    
+    foreach ($real_places as $place) {
+        // Rechercher le nom de lieu dans le JSON (insensible à la casse)
+        if (stripos($json_string, $place) !== false) {
+            $has_real_places = true;
+            $real_places_found[] = $place;
+        }
+    }
+    
+    if ($has_real_places) {
+        wp_send_json_error(array(
+            'message' => 'L\'IA a utilisé des noms de lieux réels (' . implode(', ', array_unique($real_places_found)) . ') au lieu des placeholders [VILLE], [DÉPARTEMENT], [RÉGION]. Merci de relancer la génération en utilisant uniquement les placeholders.'
+        ));
+    }
+    
     // Validation : vérifier que l'IA a généré 10 prestations et 4 FAQ
     $prestations_count = 0;
     if (isset($step1_data['prestations']) && is_array($step1_data['prestations'])) {
@@ -482,7 +524,7 @@ function osmose_ads_handle_create_template() {
     $step2_prompt .= "- Respecte exactement la structure fournie\n";
     $step2_prompt .= "- Garde tous les placeholders [VILLE], [RÉGION], [DÉPARTEMENT], [ENTREPRISE] intacts\n";
     
-    $step2_system = 'Tu es un expert en conversion JSON vers HTML WordPress. Tu génères du HTML propre et bien formaté. Réponds UNIQUEMENT avec le HTML, sans texte avant ou après.';
+    $step2_system = 'Tu es un expert en conversion JSON vers HTML WordPress. Tu génères du HTML propre et bien formaté. OBLIGATOIRE : préserve TOUS les placeholders [VILLE], [DÉPARTEMENT], [RÉGION], [ENTREPRISE] du JSON dans le HTML généré. Réponds UNIQUEMENT avec le HTML, sans texte avant ou après.';
     
     // Deuxième appel IA
     $ai_response = $ai_service->call_ai($step2_prompt, $step2_system, array(
