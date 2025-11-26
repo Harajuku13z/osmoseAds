@@ -333,6 +333,10 @@ function osmose_ads_handle_create_template() {
     // Éviter les doublons immédiats de H2/H3 identiques
     $content = preg_replace('/(<h[23][^>]*>[^<]+<\/h[23]>)\s*(\1)+/i', '$1', $content);
     
+    // Supprimer un éventuel H2 d'ouverture de type \"Article ...\" ou avec emoji qui ne sert à rien pour l'utilisateur
+    // Exemple : <h2>🎯 Article Couvreur Premium à [VILLE]</h2>
+    $content = preg_replace('/^<h2[^>]*>[^<]*(Article|Premium|🎯)[^<]*<\/h2>\s*/iu', '', $content);
+    
     // Mettre à jour la réponse
     $ai_response = trim($content);
     
