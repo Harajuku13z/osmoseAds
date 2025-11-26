@@ -658,3 +658,77 @@ function osmose_ads_handle_bulk_generate() {
         'errors' => $errors,
     ));
 }
+
+/**
+ * Handler pour supprimer un template
+ */
+function osmose_ads_handle_delete_template() {
+    if (!current_user_can('delete_posts')) {
+        wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+    }
+    
+    $template_id = intval($_POST['template_id'] ?? 0);
+    
+    if (!$template_id) {
+        wp_send_json_error(array('message' => __('ID de template manquant', 'osmose-ads')));
+    }
+    
+    // Vérifier que c'est bien un template
+    $template = get_post($template_id);
+    if (!$template || $template->post_type !== 'ad_template') {
+        wp_send_json_error(array('message' => __('Template non trouvé', 'osmose-ads')));
+    }
+    
+    // Vérifier les annonces associées
+    $ads_count = get_posts(array(
+        'post_type' => 'ad',
+        'meta_key' => 'template_id',
+        'meta_value' => $template_id,
+        'posts_per_page' => 1,
+        'post_status' => 'any',
+    ));
+    
+    $ads_count = count($ads_count);
+    
+    // Option : supprimer aussi les annonces associées si demandé
+    $delete_ads = isset($_POST['delete_ads']) && $_POST['delete_ads'] === 'true';
+    
+    if ($ads_count > 0 && !$delete_ads) {
+        // Il y a des annonces associées, demander confirmation
+        wp_send_json_error(array(
+            'message' => sprintf(
+                __('Ce template est utilisé par %d annonce(s). Voulez-vous aussi supprimer ces annonces ?', 'osmose-ads'),
+                $ads_count
+            ),
+            'has_ads' => true,
+            'ads_count' => $ads_count,
+        ));
+    }
+    
+    // Supprimer les annonces associées si demandé
+    if ($delete_ads && $ads_count > 0) {
+        $ads = get_posts(array(
+            'post_type' => 'ad',
+            'meta_key' => 'template_id',
+            'meta_value' => $template_id,
+            'posts_per_page' => -1,
+            'post_status' => 'any',
+        ));
+        
+        foreach ($ads as $ad) {
+            wp_delete_post($ad->ID, true); // true = force delete (bypass trash)
+        }
+    }
+    
+    // Supprimer le template
+    $deleted = wp_delete_post($template_id, true);
+    
+    if ($deleted) {
+        wp_send_json_success(array(
+            'message' => __('Template supprimé avec succès', 'osmose-ads'),
+            'deleted_ads' => $delete_ads ? $ads_count : 0,
+        ));
+    } else {
+        wp_send_json_error(array('message' => __('Erreur lors de la suppression', 'osmose-ads')));
+    }
+}

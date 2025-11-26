@@ -242,7 +242,13 @@ $templates = get_posts(array(
                         </td>
                         <td>
                             <a href="<?php echo get_edit_post_link($template->ID); ?>"><?php _e('Modifier', 'osmose-ads'); ?></a> |
-                            <a href="<?php echo admin_url('admin.php?page=osmose-ads-templates&template_id=' . $template->ID); ?>"><?php _e('Voir', 'osmose-ads'); ?></a>
+                            <a href="<?php echo admin_url('admin.php?page=osmose-ads-templates&template_id=' . $template->ID); ?>"><?php _e('Voir', 'osmose-ads'); ?></a> |
+                            <a href="#" class="osmose-delete-template" 
+                               data-template-id="<?php echo esc_attr($template->ID); ?>"
+                               data-template-name="<?php echo esc_attr($template->post_title); ?>"
+                               style="color: #dc3545; text-decoration: none;">
+                                <i class="dashicons dashicons-trash" style="font-size: 16px; vertical-align: middle;"></i> <?php _e('Supprimer', 'osmose-ads'); ?>
+                            </a>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -541,6 +547,104 @@ jQuery(document).ready(function($) {
             }
         });
     });
+    
+    // Gestion de la suppression de template
+    $(document).on('click', '.osmose-delete-template', function(e) {
+        e.preventDefault();
+        
+        var $button = $(this);
+        var templateId = $button.data('template-id');
+        var templateName = $button.data('template-name');
+        
+        // Confirmation
+        if (!confirm('<?php echo esc_js(__('Êtes-vous sûr de vouloir supprimer le template', 'osmose-ads')); ?> "' + templateName + '" ?\n\n<?php echo esc_js(__('Cette action est irréversible.', 'osmose-ads')); ?>')) {
+            return;
+        }
+        
+        // Désactiver le bouton
+        $button.prop('disabled', true).css('opacity', '0.5');
+        
+        // Appel AJAX
+        $.ajax({
+            url: osmoseAds.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'osmose_ads_delete_template',
+                nonce: osmoseAds.nonce,
+                template_id: templateId,
+                delete_ads: false
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Suppression réussie
+                    alert(response.data.message);
+                    location.reload();
+                } else {
+                    // Vérifier s'il y a des annonces associées
+                    if (response.data && response.data.has_ads) {
+                        // Demander si on veut aussi supprimer les annonces
+                        var confirmDeleteAds = confirm(
+                            response.data.message + '\n\n' +
+                            '<?php echo esc_js(__('Cliquez sur OK pour supprimer le template ET les annonces associées.', 'osmose-ads')); ?>'
+                        );
+                        
+                        if (confirmDeleteAds) {
+                            // Supprimer avec les annonces
+                            $.ajax({
+                                url: osmoseAds.ajax_url,
+                                type: 'POST',
+                                data: {
+                                    action: 'osmose_ads_delete_template',
+                                    nonce: osmoseAds.nonce,
+                                    template_id: templateId,
+                                    delete_ads: true
+                                },
+                                success: function(response2) {
+                                    if (response2.success) {
+                                        var message = response2.data.message;
+                                        if (response2.data.deleted_ads > 0) {
+                                            message += '\n' + sprintf('<?php echo esc_js(__('%d annonce(s) supprimée(s) également.', 'osmose-ads')); ?>', response2.data.deleted_ads);
+                                        }
+                                        alert(message);
+                                        location.reload();
+                                    } else {
+                                        alert('<?php echo esc_js(__('Erreur lors de la suppression', 'osmose-ads')); ?>: ' + response2.data.message);
+                                        $button.prop('disabled', false).css('opacity', '1');
+                                    }
+                                },
+                                error: function() {
+                                    alert('<?php echo esc_js(__('Erreur lors de la suppression', 'osmose-ads')); ?>');
+                                    $button.prop('disabled', false).css('opacity', '1');
+                                }
+                            });
+                        } else {
+                            // Annuler
+                            $button.prop('disabled', false).css('opacity', '1');
+                        }
+                    } else {
+                        // Autre erreur
+                        alert('<?php echo esc_js(__('Erreur', 'osmose-ads')); ?>: ' + response.data.message);
+                        $button.prop('disabled', false).css('opacity', '1');
+                    }
+                }
+            },
+            error: function() {
+                alert('<?php echo esc_js(__('Erreur lors de la suppression', 'osmose-ads')); ?>');
+                $button.prop('disabled', false).css('opacity', '1');
+            }
+        });
+    });
+    
+    // Fonction sprintf simple pour le formatage
+    function sprintf(format) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        return format.replace(/%[sdj%]/g, function(match) {
+            if (match === '%%') return '%';
+            var index = Math.floor((sprintf.cache || 0)++);
+            return args[index] !== undefined ? args[index] : match;
+        });
+    }
+    sprintf.cache = 0;
 });
 </script>
 <?php

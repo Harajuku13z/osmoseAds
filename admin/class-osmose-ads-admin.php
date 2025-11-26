@@ -282,6 +282,7 @@ class Osmose_Ads_Admin {
     public function register_ajax_handlers() {
         add_action('wp_ajax_osmose_ads_create_template', array($this, 'ajax_create_template'));
         add_action('wp_ajax_osmose_ads_bulk_generate', array($this, 'ajax_bulk_generate'));
+        add_action('wp_ajax_osmose_ads_delete_template', array($this, 'ajax_delete_template'));
     }
 
     /**
@@ -304,6 +305,20 @@ class Osmose_Ads_Admin {
         
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/ajax-handlers.php';
         osmose_ads_handle_create_template();
+    }
+
+    /**
+     * Handler AJAX pour supprimer un template
+     */
+    public function ajax_delete_template() {
+        check_ajax_referer('osmose_ads_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+        }
+        
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/ajax-handlers.php';
+        osmose_ads_handle_delete_template();
     }
 
     /**
