@@ -337,7 +337,6 @@ get_header();
                     
                     <!-- Section Avis Clients (Widgets for Google Reviews) -->
                     <div class="osmose-reviews-section">
-                        <h3 class="osmose-reviews-title"><?php _e('Nos avis clients', 'osmose-ads'); ?></h3>
                         <div class="osmose-reviews-widget">
                             <?php
                             /**
