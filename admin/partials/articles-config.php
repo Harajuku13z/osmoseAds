@@ -315,10 +315,13 @@ jQuery(document).ready(function($) {
         var index = $(this).data('index');
         var $item = $(this).closest('.article-image-item');
         var $imgContainer = $item.find('div:first-child');
-        var $input = $item.find('.article-image-id');
+        var $input = $item.find('.article-image-id[data-index="' + index + '"]');
         
-        if (articleImageFrames[index]) {
-            articleImageFrames[index].open();
+        // Créer une clé unique pour ce frame
+        var frameKey = 'frame_' + index;
+        
+        if (articleImageFrames[frameKey]) {
+            articleImageFrames[frameKey].open();
             return;
         }
         
@@ -333,17 +336,45 @@ jQuery(document).ready(function($) {
         frame.on('select', function() {
             var attachment = frame.state().get('selection').first().toJSON();
             $input.val(attachment.id);
-            $imgContainer.html('<img src="' + attachment.url + '" alt="" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">');
+            
+            // Mettre à jour l'aperçu de l'image
+            if ($imgContainer.find('.article-image-placeholder').length > 0) {
+                $imgContainer.find('.article-image-placeholder').replaceWith('<img src="' + attachment.url + '" alt="" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;" class="article-image-preview">');
+            } else if ($imgContainer.find('.article-image-preview').length > 0) {
+                $imgContainer.find('.article-image-preview').attr('src', attachment.url);
+            } else {
+                $imgContainer.html('<img src="' + attachment.url + '" alt="" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;" class="article-image-preview">');
+            }
         });
         
         frame.open();
-        articleImageFrames[index] = frame;
+        articleImageFrames[frameKey] = frame;
     });
     
     // Supprimer une image pour articles
     $(document).on('click', '.remove-article-image', function() {
         $(this).closest('.article-image-item').remove();
+        
+        // Réindexer les indices après suppression
+        reindexArticleImages();
     });
+    
+    // Fonction pour réindexer les images après suppression
+    function reindexArticleImages() {
+        $('#article-images-container .article-image-item').each(function(newIndex) {
+            var $item = $(this);
+            
+            // Mettre à jour l'index du bouton
+            $item.find('.select-article-image').attr('data-index', newIndex);
+            
+            // Mettre à jour les noms des champs
+            $item.find('.article-image-id').attr('name', 'article_images[' + newIndex + '][image_id]').attr('data-index', newIndex);
+            $item.find('.article-image-keywords').attr('name', 'article_images[' + newIndex + '][keywords]');
+        });
+        
+        // Mettre à jour le compteur pour les nouvelles images
+        articleImageIndex = $('#article-images-container .article-image-item').length;
+    }
 });
 </script>
 
