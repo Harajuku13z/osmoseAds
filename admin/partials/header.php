@@ -58,12 +58,17 @@ if (!function_exists('osmose_ads_get_logo_url')) {
 $logo_url = osmose_ads_get_logo_url();
 $current_page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : 'osmose-ads';
 
-// Navigation pages
+// Navigation pages - Ordre personnalisé
 $nav_items = array(
     'osmose-ads' => array(
-        'title' => __('Tableau de bord', 'osmose-ads'),
+        'title' => __('Tableau', 'osmose-ads'),
         'icon' => 'dashicons-dashboard',
         'url' => admin_url('admin.php?page=osmose-ads'),
+    ),
+    'osmose-ads-articles' => array(
+        'title' => __('Articles', 'osmose-ads'),
+        'icon' => 'dashicons-edit-page',
+        'url' => admin_url('admin.php?page=osmose-ads-articles'),
     ),
     'osmose-ads-templates' => array(
         'title' => __('Templates', 'osmose-ads'),
@@ -80,25 +85,20 @@ $nav_items = array(
         'icon' => 'dashicons-location-alt',
         'url' => admin_url('admin.php?page=osmose-ads-cities'),
     ),
-    'osmose-ads-articles' => array(
-        'title' => __('Articles', 'osmose-ads'),
-        'icon' => 'dashicons-edit-page',
-        'url' => admin_url('admin.php?page=osmose-ads-articles'),
+    'osmose-ads-calls' => array(
+        'title' => __('Appels', 'osmose-ads'),
+        'icon' => 'dashicons-phone',
+        'url' => admin_url('admin.php?page=osmose-ads-calls'),
+    ),
+    'osmose-ads-visits' => array(
+        'title' => __('Visites', 'osmose-ads'),
+        'icon' => 'dashicons-visibility',
+        'url' => admin_url('admin.php?page=osmose-ads-visits'),
     ),
     'osmose-ads-settings' => array(
         'title' => __('Réglages', 'osmose-ads'),
         'icon' => 'dashicons-admin-settings',
         'url' => admin_url('admin.php?page=osmose-ads-settings'),
-    ),
-    'osmose-ads-calls' => array(
-        'title' => __('Statistiques d\'Appels', 'osmose-ads'),
-        'icon' => 'dashicons-phone',
-        'url' => admin_url('admin.php?page=osmose-ads-calls'),
-    ),
-    'osmose-ads-visits' => array(
-        'title' => __('Statistiques de Visites', 'osmose-ads'),
-        'icon' => 'dashicons-visibility',
-        'url' => admin_url('admin.php?page=osmose-ads-visits'),
     ),
 );
 ?>
