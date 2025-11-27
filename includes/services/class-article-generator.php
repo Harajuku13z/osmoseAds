@@ -274,6 +274,30 @@ class Osmose_Article_Generator {
         $title = trim($response);
         $title = preg_replace('/^["\']|["\']$/', '', $title); // Enlever les guillemets
         $title = wp_strip_all_tags($title);
+        
+        // Post-traitement: Remplacer le code du département par le nom si présent
+        if ($department) {
+            $dept_name = $this->get_department_name($department);
+            if ($dept_name && $dept_name !== $department) {
+                // Remplacer le code du département par le nom (avec différents formats possibles)
+                $patterns = array(
+                    '/\b' . preg_quote($department, '/') . '\b/',  // Code seul
+                    '/\(' . preg_quote($department, '/') . '\)/',  // (56)
+                    '/\s' . preg_quote($department, '/') . '\s/',  // Espaces autour
+                    '/\s' . preg_quote($department, '/') . '$/',   // Fin de phrase
+                    '/^' . preg_quote($department, '/') . '\s/',   // Début de phrase
+                );
+                
+                foreach ($patterns as $pattern) {
+                    $title = preg_replace($pattern, ' ' . $dept_name . ' ', $title);
+                }
+                
+                // Nettoyer les espaces multiples
+                $title = preg_replace('/\s+/', ' ', $title);
+                $title = trim($title);
+            }
+        }
+        
         $title = substr($title, 0, 100); // Limiter à 100 caractères
         
         return $title;
@@ -283,14 +307,19 @@ class Osmose_Article_Generator {
      * Construire le prompt pour le titre
      */
     private function build_title_prompt($keyword, $department, $city, $article_type) {
+        // Récupérer le nom du département AVANT de construire le prompt
+        $dept_name = $department ? $this->get_department_name($department) : '';
+        $city_name = ($city && is_array($city)) ? $city['name'] : '';
+        
         $prompt = "Génère UN SEUL titre d'article SEO optimisé (maximum 80 caractères) pour un site web français.\n\n";
         
         $context = "Mot-clé principal: {$keyword}\n";
         
-        if ($department) {
-            $dept_name = $this->get_department_name($department);
-            $context .= "Département: {$dept_name}\n";
-            $context .= "⚠️ IMPORTANT: Dans le contenu généré, utilise UNIQUEMENT le nom complet \"{$dept_name}\", JAMAIS le code \"{$department}\"\n";
+        if ($department && $dept_name) {
+            $context .= "Département: {$dept_name} (code: {$department})\n";
+            $context .= "⚠️ RÈGLE ABSOLUE: Dans le titre généré, tu DOIS utiliser UNIQUEMENT le nom complet \"{$dept_name}\".\n";
+            $context .= "⚠️ INTERDICTION FORMELLE: N'utilise JAMAIS le code \"{$department}\" dans le titre.\n";
+            $context .= "⚠️ Si tu utilises le code au lieu du nom, c'est une ERREUR CRITIQUE.\n";
         }
         
         if ($city && is_array($city)) {
@@ -299,15 +328,13 @@ class Osmose_Article_Generator {
         
         $prompt .= $context . "\n";
         
-        $dept_name = $department ? $this->get_department_name($department) : '';
-        $city_name = ($city && is_array($city)) ? $city['name'] : '';
-        
         switch ($article_type) {
             case 'how_to':
                 $prompt .= "Type d'article: Guide pratique \"Comment faire\"\n";
-                $prompt .= "Exemples de formats:\n";
+                $prompt .= "Exemples de formats (utilise TOUJOURS le nom du département, JAMAIS le code):\n";
                 if ($dept_name) {
                     $prompt .= "- Comment {$keyword} sa toiture en {$dept_name} ?\n";
+                    $prompt .= "- Guide: {$keyword} de toiture en {$dept_name}\n";
                 }
                 if ($city_name) {
                     $prompt .= "- Guide: {$keyword} de toiture à {$city_name}\n";
@@ -316,9 +343,10 @@ class Osmose_Article_Generator {
                 
             case 'top_companies':
                 $prompt .= "Type d'article: Liste \"Top entreprises\"\n";
-                $prompt .= "Exemples de formats:\n";
+                $prompt .= "Exemples de formats (utilise TOUJOURS le nom du département, JAMAIS le code):\n";
                 if ($dept_name) {
                     $prompt .= "- Top 10 entreprises de {$keyword} en {$dept_name}\n";
+                    $prompt .= "- Meilleurs professionnels {$keyword} en {$dept_name}\n";
                 }
                 if ($city_name) {
                     $prompt .= "- Meilleurs professionnels {$keyword} à {$city_name}\n";
@@ -327,9 +355,10 @@ class Osmose_Article_Generator {
                 
             case 'guide':
                 $prompt .= "Type d'article: Guide complet\n";
-                $prompt .= "Exemples de formats:\n";
+                $prompt .= "Exemples de formats (utilise TOUJOURS le nom du département, JAMAIS le code):\n";
                 if ($dept_name) {
                     $prompt .= "- Guide complet du {$keyword} en {$dept_name}\n";
+                    $prompt .= "- {$keyword} en {$dept_name}: Guide complet\n";
                 }
                 if ($city_name) {
                     $prompt .= "- Tout savoir sur le {$keyword} à {$city_name}\n";
