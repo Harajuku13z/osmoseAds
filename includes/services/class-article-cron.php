@@ -17,17 +17,37 @@ class Osmose_Article_Cron {
         }
         $this->generator = new Osmose_Article_Generator();
         
-        // Enregistrer le hook de cron pour la publication
-        add_action('osmose_article_publish', array($this, 'publish_scheduled_article'));
+        // Enregistrer le hook de cron pour la publication (priorité haute pour être sûr qu'il est enregistré)
+        add_action('osmose_article_publish', array($this, 'publish_scheduled_article'), 10, 1);
         
         // Enregistrer le hook de cron pour la génération quotidienne
         add_action('osmose_articles_daily_generation', array($this, 'generate_daily_articles'));
+        
+        // Enregistrer les hooks pour chaque heure possible (pour être sûr qu'ils sont enregistrés)
+        $this->register_all_hourly_hooks();
         
         // Vérifier et planifier le cron à chaque chargement admin
         add_action('admin_init', array($this, 'schedule_cron'));
         
         // Vérifier les publications programmées à chaque chargement (pour les sites peu visités)
         add_action('init', array($this, 'check_scheduled_publications'), 20);
+        
+        // Vérifier aussi les générations programmées (pour les sites peu visités)
+        add_action('init', array($this, 'check_scheduled_generations'), 25);
+    }
+    
+    /**
+     * Enregistrer tous les hooks horaires possibles
+     */
+    private function register_all_hourly_hooks() {
+        $publish_hours = get_option('osmose_articles_publish_hours', array('09:00'));
+        
+        foreach ($publish_hours as $hour) {
+            $hook_name = 'osmose_articles_generate_' . str_replace(':', '_', $hour);
+            if (!has_action($hook_name, array($this, 'generate_articles_at_hour'))) {
+                add_action($hook_name, array($this, 'generate_articles_at_hour'));
+            }
+        }
     }
     
     /**
@@ -240,6 +260,7 @@ class Osmose_Article_Cron {
             'post_status' => 'draft',
             'posts_per_page' => 50,
             'meta_query' => array(
+                'relation' => 'AND',
                 array(
                     'key' => '_scheduled_publish_time',
                     'value' => time(),
@@ -258,6 +279,50 @@ class Osmose_Article_Cron {
             if ($scheduled_time && $scheduled_time <= time()) {
                 $this->publish_scheduled_article($post->ID);
                 delete_post_meta($post->ID, '_scheduled_publish_time');
+            }
+        }
+    }
+    
+    /**
+     * Vérifier les générations programmées (pour les sites peu visités où le cron ne se déclenche pas)
+     */
+    public function check_scheduled_generations() {
+        // Ne vérifier que toutes les 10 minutes pour éviter la surcharge
+        $last_check = get_transient('osmose_articles_last_generation_check');
+        if ($last_check && (time() - $last_check) < 600) {
+            return;
+        }
+        
+        set_transient('osmose_articles_last_generation_check', time(), 1200);
+        
+        $auto_generate = get_option('osmose_articles_auto_generate', 0);
+        if (!$auto_generate) {
+            return;
+        }
+        
+        $publish_hours = get_option('osmose_articles_publish_hours', array('09:00'));
+        $current_time = current_time('timestamp');
+        $current_hour = date('H:i', $current_time);
+        
+        // Vérifier si on est dans une heure de génération (avec une marge de 5 minutes)
+        foreach ($publish_hours as $hour) {
+            $time_parts = explode(':', $hour);
+            $hour_int = intval($time_parts[0]);
+            $minute_int = isset($time_parts[1]) ? intval($time_parts[1]) : 0;
+            
+            $scheduled_time = mktime($hour_int, $minute_int, 0, date('n'), date('j'), date('Y'));
+            
+            // Si on est dans les 5 minutes après l'heure prévue
+            if ($current_time >= $scheduled_time && $current_time <= ($scheduled_time + 300)) {
+                // Vérifier si un article a déjà été généré aujourd'hui à cette heure
+                $hook_name = 'osmose_articles_generate_' . str_replace(':', '_', $hour);
+                $last_generation = get_transient('osmose_articles_generated_' . date('Y-m-d') . '_' . $hour);
+                
+                if (!$last_generation) {
+                    // Déclencher la génération
+                    $this->generate_articles_at_hour();
+                    set_transient('osmose_articles_generated_' . date('Y-m-d') . '_' . $hour, true, 86400);
+                }
             }
         }
     }

@@ -58,9 +58,16 @@ class Osmose_Article_Generator {
                 $city = $this->get_city_from_department($department);
             }
             
-            // Déterminer le type d'article (aléatoire)
-            $article_types = array('how_to', 'top_companies', 'guide');
-            $article_type = $article_types[array_rand($article_types)];
+            // Déterminer le type d'article (aléatoire, mais moins souvent top_companies)
+            // 40% how_to, 20% top_companies, 40% guide
+            $rand = rand(1, 100);
+            if ($rand <= 40) {
+                $article_type = 'how_to';
+            } elseif ($rand <= 60) {
+                $article_type = 'top_companies';
+            } else {
+                $article_type = 'guide';
+            }
             
             // Générer le titre et le contenu
             $title = $this->generate_title($keyword, $department, $city, $article_type);
@@ -416,6 +423,7 @@ class Osmose_Article_Generator {
                 $prompt .= "3. Section \"Étapes à suivre\" avec 5-7 étapes détaillées\n";
                 $prompt .= "4. Section \"Conseils pratiques\" avec 4-5 conseils\n";
                 $prompt .= "5. Conclusion avec appel à l'action\n\n";
+                $prompt .= "⚠️ IMPORTANT: NE PAS créer de liste d'entreprises dans ce type d'article. C'est un guide pratique, pas une liste.\n\n";
                 if ($city_name && $dept_name) {
                     $prompt .= "Dans le texte, mentionne naturellement la géolocalisation: \"que vous soyez à {$city_name} ou dans d'autres villes du département\", \"en {$dept_name}\", etc.\n";
                 } elseif ($dept_name) {
@@ -431,9 +439,11 @@ class Osmose_Article_Generator {
                 } else {
                     $prompt .= "1. Introduction (2-3 paragraphes) sur l'importance de choisir les bons professionnels\n";
                 }
-                $prompt .= "2. Section \"Top 10 entreprises\" avec:\n";
-                $prompt .= "   - Pour chaque entreprise: nom fictif mais réaliste, localisation (ville du département), spécialités, avantages\n";
-                $prompt .= "   - Commencer par une entreprise principale, puis lister les autres\n";
+                $prompt .= "2. Section \"Top entreprises\" avec:\n";
+                $prompt .= "   ⚠️ IMPORTANT: La PREMIÈRE entreprise de la liste DOIT TOUJOURS être \"{$company_name}\"\n";
+                $prompt .= "   - Pour {$company_name}: décris ses services ({$services_text}), ses avantages, son expertise en {$dept_name}\n";
+                $prompt .= "   - Ensuite, liste 4-9 autres entreprises fictives mais réalistes avec: nom, localisation (ville du département), spécialités, avantages\n";
+                $prompt .= "   - Format: <ul><li><strong>Nom entreprise</strong> - Description détaillée...</li></ul>\n";
                 $prompt .= "3. Section \"Comment choisir\" avec 4-5 critères\n";
                 $prompt .= "4. Conclusion\n\n";
                 if ($city_name && $dept_name) {
@@ -463,6 +473,7 @@ class Osmose_Article_Generator {
                     $prompt .= "6. Section \"Conseils pratiques\"\n";
                 }
                 $prompt .= "7. Conclusion\n\n";
+                $prompt .= "⚠️ IMPORTANT: NE PAS créer de liste d'entreprises dans ce type d'article. C'est un guide informatif, pas une liste.\n\n";
                 break;
         }
         
