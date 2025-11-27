@@ -75,10 +75,10 @@ if (!$ad) {
 // Récupérer les données avec gestion d'erreurs
 try {
     $city = $ad->get_city();
-    $template = $ad->get_template();
+    $template = $is_article ? null : $ad->get_template(); // Les articles générés n'ont pas de template
     $content = $ad->get_content();
     $meta = $ad->get_meta();
-    $related_ads = $ad->get_related_ads(5);
+    $related_ads = $is_article ? array() : $ad->get_related_ads(5); // Pas d'annonces similaires pour les articles
     
     // Récupérer le numéro de suivi
     $tracking_number = get_post_meta($ad->post_id, 'tracking_number', true);
