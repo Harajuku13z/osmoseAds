@@ -189,22 +189,19 @@ class Osmose_Ads_Rewrite {
     public function template_loader($template) {
         global $wp_query, $post;
         
-        // Si c'est un post de type 'ad'
-        if (isset($post) && $post->post_type === 'ad') {
+        // Vérifier si c'est un post de type 'ad' ou un article généré (post avec meta article_auto_generated)
+        $is_ad = isset($post) && $post->post_type === 'ad';
+        $is_generated_article = isset($post) && $post->post_type === 'post' && get_post_meta($post->ID, 'article_auto_generated', true) === '1';
+        
+        if ($is_ad || $is_generated_article) {
             // Si on est dans le blog (home, archive, category, search, tag, author), utiliser le template standard
             if (is_home() || is_archive() || is_category() || is_search() || is_tag() || is_author()) {
                 return $template; // Laisser WordPress utiliser le template standard du thème (single.php)
             }
             
-            // Si on accède directement à l'annonce via son URL, utiliser le template standard du thème
+            // Si on accède directement à l'annonce/article via son URL, utiliser le template des annonces
             if (is_single() && !is_admin()) {
-                // D'abord essayer le template du thème
-                $single_template = locate_template(array('single.php'));
-                if ($single_template) {
-                    return $single_template;
-                }
-                
-                // Sinon, vérifier si un template single-ad.php existe dans le thème
+                // D'abord vérifier si un template single-ad.php existe dans le thème
                 $theme_template = locate_template(array('single-ad.php'));
                 if ($theme_template) {
                     return $theme_template;

@@ -39,14 +39,25 @@ if (!function_exists('osmose_ads_track_visit')) {
     require_once OSMOSE_ADS_PLUGIN_DIR . 'public/class-osmose-ads-public.php';
 }
 
-// Récupérer l'annonce
-global $wp_query;
+// Récupérer l'annonce ou l'article généré
+global $wp_query, $post;
 $ad_slug = get_query_var('ad_slug');
+$is_article = false;
+$ad = null;
 
 if (!$ad_slug) {
-    global $post;
-    if ($post && $post->post_type === 'ad') {
-        $ad = new Ad($post->ID);
+    if ($post) {
+        // Vérifier si c'est un article généré (post avec meta article_auto_generated)
+        $is_article = ($post->post_type === 'post' && get_post_meta($post->ID, 'article_auto_generated', true) === '1');
+        
+        if ($post->post_type === 'ad') {
+            $ad = new Ad($post->ID);
+        } elseif ($is_article) {
+            // Créer un objet Ad-like pour les articles générés
+            $ad = new Ad($post->ID);
+        } else {
+            $ad = null;
+        }
     } else {
         $ad = null;
     }
@@ -56,7 +67,7 @@ if (!$ad_slug) {
 
 if (!$ad) {
     get_header();
-    echo '<div class="container"><p>' . __('Annonce non trouvée', 'osmose-ads') . '</p></div>';
+    echo '<div class="container"><p>' . __('Contenu non trouvé', 'osmose-ads') . '</p></div>';
     get_footer();
     exit;
 }

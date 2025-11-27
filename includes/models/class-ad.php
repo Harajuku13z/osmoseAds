@@ -34,6 +34,29 @@ class Ad {
      * Récupérer la ville associée
      */
     public function get_city() {
+        // Vérifier si c'est un article généré
+        $is_article = get_post_meta($this->post_id, 'article_auto_generated', true) === '1';
+        
+        if ($is_article) {
+            // Pour les articles générés, récupérer la ville depuis les meta
+            $city_id = get_post_meta($this->post_id, 'article_city_id', true);
+            if ($city_id) {
+                return get_post($city_id);
+            }
+            // Si pas de city_id, créer un objet ville fictif avec les données de l'article
+            $city_name = get_post_meta($this->post_id, 'article_city', true);
+            $department = get_post_meta($this->post_id, 'article_department', true);
+            if ($city_name || $department) {
+                // Créer un objet stdClass pour simuler une ville
+                $city = new stdClass();
+                $city->ID = 0;
+                $city->post_title = $city_name ?: '';
+                $city->post_type = 'city';
+                return $city;
+            }
+            return null;
+        }
+        
         $city_id = get_post_meta($this->post_id, 'city_id', true);
         if ($city_id) {
             return get_post($city_id);
@@ -65,6 +88,14 @@ class Ad {
      * Récupérer le contenu final de l'annonce
      */
     public function get_content() {
+        // Vérifier si c'est un article généré
+        $is_article = get_post_meta($this->post_id, 'article_auto_generated', true) === '1';
+        
+        if ($is_article) {
+            // Pour les articles générés, utiliser directement le contenu du post
+            return get_post_field('post_content', $this->post_id);
+        }
+        
         $template = $this->get_template();
         $city = $this->get_city();
         
@@ -80,6 +111,22 @@ class Ad {
      * Récupérer les métadonnées finales
      */
     public function get_meta() {
+        // Vérifier si c'est un article généré
+        $is_article = get_post_meta($this->post_id, 'article_auto_generated', true) === '1';
+        
+        if ($is_article) {
+            // Pour les articles générés, utiliser les métadonnées SEO stockées
+            return array(
+                'meta_title' => get_post_meta($this->post_id, '_aioseo_title', true) ?: get_post_meta($this->post_id, '_yoast_wpseo_title', true) ?: get_the_title($this->post_id),
+                'meta_description' => get_post_meta($this->post_id, '_aioseo_description', true) ?: get_post_meta($this->post_id, '_yoast_wpseo_metadesc', true) ?: get_post_field('post_excerpt', $this->post_id),
+                'meta_keywords' => get_post_meta($this->post_id, 'article_keyword', true) ?: '',
+                'og_title' => get_post_meta($this->post_id, '_aioseo_title', true) ?: get_the_title($this->post_id),
+                'og_description' => get_post_meta($this->post_id, '_aioseo_description', true) ?: get_post_field('post_excerpt', $this->post_id),
+                'twitter_title' => get_post_meta($this->post_id, '_aioseo_title', true) ?: get_the_title($this->post_id),
+                'twitter_description' => get_post_meta($this->post_id, '_aioseo_description', true) ?: get_post_field('post_excerpt', $this->post_id),
+            );
+        }
+        
         $template = $this->get_template();
         $city = $this->get_city();
         
