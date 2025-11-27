@@ -49,8 +49,8 @@ class Osmose_Ads_Admin {
             true
         );
         
-        // Charger WordPress Media Library sur les pages de templates et création
-        if (strpos($hook, 'osmose-ads-templates') !== false || strpos($hook, 'osmose-ads-template-create') !== false) {
+        // Charger WordPress Media Library sur les pages de templates, création et articles
+        if (strpos($hook, 'osmose-ads-templates') !== false || strpos($hook, 'osmose-ads-template-create') !== false || strpos($hook, 'osmose-ads-articles') !== false) {
             wp_enqueue_media();
         }
         
@@ -312,6 +312,7 @@ class Osmose_Ads_Admin {
         add_action('wp_ajax_osmose_ads_delete_template', array($this, 'ajax_delete_template'));
         add_action('wp_ajax_osmose_ads_delete_ad', array($this, 'ajax_delete_ad'));
         add_action('wp_ajax_osmose_ads_delete_all_ads', array($this, 'ajax_delete_all_ads'));
+        add_action('wp_ajax_osmose_generate_article_ajax', array($this, 'ajax_generate_article'));
     }
 
     /**
@@ -796,6 +797,72 @@ class Osmose_Ads_Admin {
         }
         
         wp_send_json_success(is_array($communes) ? $communes : array());
+    }
+    
+    /**
+     * Handler AJAX pour générer un article
+     */
+    public function ajax_generate_article() {
+        // Vérifier le nonce
+        if (!check_ajax_referer('osmose_generate_article_ajax', 'nonce', false)) {
+            wp_send_json_error(__('Erreur de sécurité', 'osmose-ads'));
+            return;
+        }
+        
+        // Vérifier les permissions
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(__('Permissions insuffisantes', 'osmose-ads'));
+            return;
+        }
+        
+        // Récupérer les données
+        $keyword = isset($_POST['keyword']) ? sanitize_text_field($_POST['keyword']) : '';
+        $featured_image_id = isset($_POST['featured_image_id']) ? intval($_POST['featured_image_id']) : 0;
+        $publish_immediately = isset($_POST['publish_immediately']) && intval($_POST['publish_immediately']) === 1;
+        
+        if (empty($keyword)) {
+            wp_send_json_error(__('Le mot-clé est requis', 'osmose-ads'));
+            return;
+        }
+        
+        // Charger le générateur d'articles
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-article-generator.php';
+        $generator = new Osmose_Article_Generator();
+        
+        // Générer l'article avec le mot-clé fourni
+        $result = $generator->generate_article($keyword);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+            return;
+        }
+        
+        if (!$result || !is_numeric($result)) {
+            wp_send_json_error(__('Erreur lors de la génération de l\'article', 'osmose-ads'));
+            return;
+        }
+        
+        $article_id = intval($result);
+        
+        // Définir l'image mise en avant si fournie
+        if ($featured_image_id > 0) {
+            set_post_thumbnail($article_id, $featured_image_id);
+        }
+        
+        // Publier immédiatement si demandé
+        if ($publish_immediately) {
+            wp_update_post(array(
+                'ID' => $article_id,
+                'post_status' => 'publish',
+            ));
+        }
+        
+        // Retourner le succès avec les informations de l'article
+        wp_send_json_success(array(
+            'message' => __('Article généré avec succès!', 'osmose-ads'),
+            'article_id' => $article_id,
+            'edit_link' => get_edit_post_link($article_id, 'raw'),
+        ));
     }
 }
 

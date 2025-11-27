@@ -231,12 +231,66 @@ if ($error_message !== false) {
     <?php endif; ?>
     
     <div style="margin: 20px 0;">
-        <form method="post" action="" style="display: inline-block;">
-            <?php wp_nonce_field('osmose_generate_article', 'osmose_generate_article_nonce'); ?>
-            <input type="submit" name="generate_article_manual" class="button button-primary" value="<?php _e('Générer un Article Maintenant', 'osmose-ads'); ?>">
-        </form>
+        <button type="button" class="button button-primary" id="open-generate-article-modal">
+            <?php _e('Générer un Article Maintenant', 'osmose-ads'); ?>
+        </button>
         <a href="<?php echo admin_url('admin.php?page=osmose-ads-articles-config'); ?>" class="button"><?php _e('Configuration', 'osmose-ads'); ?></a>
     </div>
+    
+    <!-- Modal pour générer un article -->
+    <div id="generate-article-modal" class="card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 700px; width: 90%; z-index: 1050; box-shadow: 0 0 20px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; background: #fff;">
+        <div class="card-header d-flex justify-content-between align-items-center" style="padding: 15px 20px; border-bottom: 1px solid #ddd;">
+            <h2 class="mb-0" style="font-size: 18px; font-weight: 600;"><?php _e('Générer un Article', 'osmose-ads'); ?></h2>
+            <button type="button" class="button button-small cancel-generate-article" aria-label="<?php _e('Fermer', 'osmose-ads'); ?>" style="background: transparent; border: none; font-size: 20px; cursor: pointer;">&times;</button>
+        </div>
+        <div class="card-body" style="padding: 20px;">
+            <form id="generate-article-form">
+                <div id="generate-article-messages" style="margin-bottom: 15px;"></div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label for="article_keyword" style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <?php _e('Mot-clé ou Titre de l\'article', 'osmose-ads'); ?>
+                        <span style="color: #dc3232;">*</span>
+                    </label>
+                    <input type="text" class="regular-text" id="article_keyword" name="article_keyword" required placeholder="<?php _e('Ex: hydrofuger, couvreur, isolation...', 'osmose-ads'); ?>" style="width: 100%; padding: 8px;">
+                    <small style="display: block; margin-top: 5px; color: #666;"><?php _e('Le mot-clé principal qui sera utilisé pour générer le titre et le contenu de l\'article.', 'osmose-ads'); ?></small>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label for="article_featured_image" style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <?php _e('Image mise en avant', 'osmose-ads'); ?>
+                    </label>
+                    <div id="article-featured-image-preview" style="margin-bottom: 10px; display: none;">
+                        <img id="article-featured-image-preview-img" src="" alt="" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 4px; display: block; margin-bottom: 10px;">
+                        <button type="button" class="button button-small" id="remove-featured-image"><?php _e('Supprimer', 'osmose-ads'); ?></button>
+                    </div>
+                    <button type="button" class="button" id="select-featured-image">
+                        <?php _e('Sélectionner une image', 'osmose-ads'); ?>
+                    </button>
+                    <input type="hidden" id="article_featured_image_id" name="article_featured_image_id" value="">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;"><?php _e('Options de génération', 'osmose-ads'); ?></label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="article_publish_immediately" name="article_publish_immediately" value="1" style="margin-right: 8px;">
+                        <span><?php _e('Publier immédiatement (sinon en brouillon)', 'osmose-ads'); ?></span>
+                    </label>
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+                    <button type="button" class="button cancel-generate-article"><?php _e('Annuler', 'osmose-ads'); ?></button>
+                    <button type="submit" class="button button-primary" id="generate-article-submit">
+                        <span id="generate-article-spinner" style="display: none; margin-right: 5px;">⏳</span>
+                        <?php _e('Générer l\'Article', 'osmose-ads'); ?>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Backdrop pour le modal -->
+    <div id="osmose-ads-modal-backdrop-article" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1040;"></div>
     
     <?php if ($articles_query->have_posts()): ?>
         <table class="wp-list-table widefat fixed striped">
@@ -315,6 +369,125 @@ if ($error_message !== false) {
         <p><?php _e('Aucun article généré pour le moment.', 'osmose-ads'); ?></p>
     <?php endif; ?>
 </div>
+
+<script>
+jQuery(document).ready(function($) {
+    var $modal = $('#generate-article-modal');
+    var $backdrop = $('#osmose-ads-modal-backdrop-article');
+    
+    // Ouvrir le modal
+    $('#open-generate-article-modal').on('click', function() {
+        $backdrop.show();
+        $modal.show();
+    });
+    
+    // Fermer le modal
+    $('.cancel-generate-article, #osmose-ads-modal-backdrop-article').on('click', function() {
+        $modal.hide();
+        $backdrop.hide();
+    });
+    
+    // Gestion de la sélection d'image mise en avant
+    var featuredImageFrame;
+    
+    $('#select-featured-image').on('click', function(e) {
+        e.preventDefault();
+        
+        if (featuredImageFrame) {
+            featuredImageFrame.open();
+            return;
+        }
+        
+        featuredImageFrame = wp.media({
+            title: '<?php echo esc_js(__('Sélectionner l\'image mise en avant', 'osmose-ads')); ?>',
+            button: {
+                text: '<?php echo esc_js(__('Utiliser cette image', 'osmose-ads')); ?>'
+            },
+            multiple: false
+        });
+        
+        featuredImageFrame.on('select', function() {
+            var attachment = featuredImageFrame.state().get('selection').first().toJSON();
+            $('#article_featured_image_id').val(attachment.id);
+            $('#article-featured-image-preview-img').attr('src', attachment.url);
+            $('#article-featured-image-preview').show();
+        });
+        
+        featuredImageFrame.open();
+    });
+    
+    $('#remove-featured-image').on('click', function(e) {
+        e.preventDefault();
+        $('#article_featured_image_id').val('');
+        $('#article-featured-image-preview').hide();
+    });
+    
+    // Soumission du formulaire de génération
+    $('#generate-article-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        var $form = $(this);
+        var $submitBtn = $('#generate-article-submit');
+        var $spinner = $('#generate-article-spinner');
+        var $messages = $('#generate-article-messages');
+        
+        // Désactiver le bouton et afficher le spinner
+        $submitBtn.prop('disabled', true);
+        $spinner.show();
+        $messages.html('');
+        
+        var formData = {
+            action: 'osmose_generate_article_ajax',
+            keyword: $('#article_keyword').val(),
+            featured_image_id: $('#article_featured_image_id').val(),
+            publish_immediately: $('#article_publish_immediately').is(':checked') ? 1 : 0,
+            nonce: '<?php echo wp_create_nonce('osmose_generate_article_ajax'); ?>'
+        };
+        
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                $spinner.hide();
+                $submitBtn.prop('disabled', false);
+                
+                if (response.success) {
+                    $messages.html('<div style="padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724; margin-bottom: 15px;"><strong><?php echo esc_js(__('Succès!', 'osmose-ads')); ?></strong> ' + response.data.message + '</div>');
+                    
+                    // Rediriger vers l'article après 2 secondes
+                    if (response.data.article_id && response.data.edit_link) {
+                        setTimeout(function() {
+                            window.location.href = response.data.edit_link;
+                        }, 2000);
+                    } else {
+                        // Recharger la page après 2 secondes
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000);
+                    }
+                } else {
+                    $messages.html('<div style="padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24; margin-bottom: 15px;"><strong><?php echo esc_js(__('Erreur!', 'osmose-ads')); ?></strong> ' + (response.data || '<?php echo esc_js(__('Erreur lors de la génération.', 'osmose-ads')); ?>') + '</div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                $spinner.hide();
+                $submitBtn.prop('disabled', false);
+                $messages.html('<div style="padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24; margin-bottom: 15px;"><strong><?php echo esc_js(__('Erreur!', 'osmose-ads')); ?></strong> <?php echo esc_js(__('Une erreur est survenue lors de la génération.', 'osmose-ads')); ?></div>');
+            }
+        });
+    });
+    
+    // Réinitialiser le formulaire quand le modal est fermé
+    $('.cancel-generate-article, #osmose-ads-modal-backdrop-article').on('click', function() {
+        $('#generate-article-form')[0].reset();
+        $('#article-featured-image-preview').hide();
+        $('#generate-article-messages').html('');
+        $('#generate-article-spinner').hide();
+        $('#generate-article-submit').prop('disabled', false);
+    });
+});
+</script>
 
 <?php
 require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/footer.php';
