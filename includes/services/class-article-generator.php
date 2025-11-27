@@ -75,10 +75,14 @@ class Osmose_Article_Generator {
                 return new WP_Error('empty_content', __('Le titre ou le contenu généré est vide.', 'osmose-ads'));
             }
             
+            // Générer l'extrait (excerpt) pour SEO
+            $excerpt = $this->generate_excerpt($keyword, $department, $city);
+            
             // Créer l'article
             $post_data = array(
                 'post_title' => $title,
                 'post_content' => $content,
+                'post_excerpt' => $excerpt,
                 'post_status' => 'draft', // Brouillon par défaut, sera publié selon le planning
                 'post_type' => 'osmose_article',
                 'post_author' => 1,
@@ -90,13 +94,28 @@ class Osmose_Article_Generator {
                 return $post_id;
             }
             
-            // Sauvegarder les métadonnées
+            // Générer et sauvegarder les métadonnées SEO
+            $dept_name = '';
+            if ($department) {
+                $dept_name = $this->get_department_name($department);
+            }
+            $city_name = ($city && is_array($city) && isset($city['name'])) ? $city['name'] : '';
+            
+            $meta_title = $this->generate_meta_title($title, $keyword, $dept_name, $city_name);
+            $meta_description = $this->generate_meta_description($keyword, $dept_name, $city_name);
+            
+            // Sauvegarder les métadonnées SEO
+            update_post_meta($post_id, '_aioseo_title', $meta_title);
+            update_post_meta($post_id, '_aioseo_description', $meta_description);
+            update_post_meta($post_id, '_yoast_wpseo_title', $meta_title);
+            update_post_meta($post_id, '_yoast_wpseo_metadesc', $meta_description);
+            
+            // Sauvegarder les autres métadonnées
             if ($keyword) {
                 update_post_meta($post_id, 'article_keyword', $keyword);
             }
             if ($department) {
                 update_post_meta($post_id, 'article_department', $department);
-                $dept_name = $this->get_department_name($department);
                 if ($dept_name) {
                     update_post_meta($post_id, 'article_department_name', $dept_name);
                 }
@@ -305,7 +324,7 @@ class Osmose_Article_Generator {
         $prompt = $this->build_content_prompt($keyword, $department, $city, $article_type);
         
         $response = $this->ai_service->call_ai($prompt, '', array(
-            'max_tokens' => 2000,
+            'max_tokens' => 3000, // Augmenté pour plus de contenu
             'temperature' => 0.7,
         ));
         
@@ -323,17 +342,27 @@ class Osmose_Article_Generator {
      * Construire le prompt pour le contenu
      */
     private function build_content_prompt($keyword, $department, $city, $article_type) {
-        $prompt = "Écris un article complet et détaillé (minimum 800 mots) en français pour un site web.\n\n";
+        // Récupérer le nom de l'entreprise
+        $company_name = get_bloginfo('name');
+        
+        // Récupérer les services proposés (depuis les templates actifs)
+        $services = $this->get_active_services();
+        $services_text = !empty($services) ? implode(', ', array_slice($services, 0, 5)) : $keyword;
+        
+        $prompt = "Écris un article complet et détaillé (minimum 1000 mots) en français pour un site web WordPress.\n\n";
+        $prompt .= "⚠️ IMPORTANT: Tu DOIS générer du HTML VALIDE et BIEN STRUCTURÉ avec des balises appropriées.\n\n";
         
         // Définir les variables au début pour éviter les erreurs
         $dept_name = '';
         $city_name = '';
         
-        $context = "Sujet: {$keyword}\n";
+        $context = "Sujet principal: {$keyword}\n";
+        $context .= "Nom de l'entreprise: {$company_name}\n";
+        $context .= "Services proposés par l'entreprise: {$services_text}\n";
         
         if ($department) {
             $dept_name = $this->get_department_name($department);
-            $context .= "Département: {$dept_name} ({$department})\n";
+            $context .= "Département (TU DOIS TOUJOURS utiliser le nom complet): {$dept_name} (code: {$department})\n";
         }
         
         if ($city && is_array($city)) {
@@ -356,6 +385,22 @@ class Osmose_Article_Generator {
         }
         
         $prompt .= $context . "\n";
+        
+        $prompt .= "STRUCTURE HTML REQUISE:\n";
+        $prompt .= "- Utilise <h2> pour les titres de sections principales\n";
+        $prompt .= "- Utilise <h3> pour les sous-sections\n";
+        $prompt .= "- Utilise <p> pour les paragraphes (minimum 3-4 phrases par paragraphe)\n";
+        $prompt .= "- Utilise <ul> et <li> pour les listes\n";
+        $prompt .= "- Utilise <strong> pour mettre en évidence les points importants\n";
+        $prompt .= "- Ajoute des espaces entre les sections (saut de ligne)\n";
+        $prompt .= "- Le contenu doit être bien aéré et lisible\n\n";
+        
+        $prompt .= "OBLIGATIONS ABSOLUES:\n";
+        $prompt .= "1. TU DOIS mentionner le nom de l'entreprise \"{$company_name}\" au moins 3 fois dans l'article\n";
+        $prompt .= "2. TU DOIS mentionner les services proposés: {$services_text}\n";
+        $prompt .= "3. TU DOIS TOUJOURS utiliser le nom COMPLET du département \"{$dept_name}\" (jamais juste le code)\n";
+        $prompt .= "4. TU DOIS créer un contenu riche et détaillé avec des informations utiles\n";
+        $prompt .= "5. TU DOIS utiliser un langage naturel et fluide\n\n";
         
         switch ($article_type) {
             case 'how_to':
@@ -416,14 +461,124 @@ class Osmose_Article_Generator {
                 break;
         }
         
-        $prompt .= "IMPORTANT:\n";
-        $prompt .= "- Écris en français naturel et fluide\n";
-        $prompt .= "- Utilise des balises HTML appropriées (<h2>, <h3>, <p>, <ul>, <li>)\n";
-        $prompt .= "- Intègre naturellement la géolocalisation dans le texte\n";
-        $prompt .= "- Le contenu doit être informatif et utile\n";
-        $prompt .= "- Minimum 800 mots\n";
+        $prompt .= "FORMAT DE SORTIE:\n";
+        $prompt .= "- Génère UNIQUEMENT le contenu HTML (sans <html>, <head>, <body>)\n";
+        $prompt .= "- Commence directement par le contenu (pas de titre H1, il sera ajouté séparément)\n";
+        $prompt .= "- Chaque section doit être séparée par un saut de ligne\n";
+        $prompt .= "- Le HTML doit être valide et bien formaté\n";
+        $prompt .= "- Minimum 1000 mots de contenu réel\n\n";
+        
+        $prompt .= "EXEMPLE DE STRUCTURE:\n";
+        $prompt .= "<p>Introduction avec mention de {$company_name} et du département {$dept_name}...</p>\n\n";
+        $prompt .= "<h2>Titre de section</h2>\n";
+        $prompt .= "<p>Contenu détaillé...</p>\n";
+        $prompt .= "<p>Autre paragraphe...</p>\n\n";
+        $prompt .= "<h3>Sous-section</h3>\n";
+        $prompt .= "<p>Contenu...</p>\n\n";
         
         return $prompt;
+    }
+    
+    /**
+     * Récupérer les services actifs (depuis les templates)
+     */
+    private function get_active_services() {
+        $templates = get_posts(array(
+            'post_type' => 'ad_template',
+            'posts_per_page' => 10,
+            'post_status' => 'publish',
+            'meta_query' => array(
+                array(
+                    'key' => 'is_active',
+                    'value' => '1',
+                    'compare' => '=',
+                ),
+            ),
+        ));
+        
+        $services = array();
+        foreach ($templates as $template) {
+            $service_name = get_post_meta($template->ID, 'service_name', true);
+            if ($service_name) {
+                $services[] = $service_name;
+            }
+        }
+        
+        return array_unique($services);
+    }
+    
+    /**
+     * Générer l'extrait (excerpt) pour l'article
+     */
+    private function generate_excerpt($keyword, $department, $city) {
+        $company_name = get_bloginfo('name');
+        $dept_name = '';
+        $city_name = '';
+        
+        if ($department) {
+            $dept_name = $this->get_department_name($department);
+        }
+        
+        if ($city && is_array($city) && isset($city['name'])) {
+            $city_name = $city['name'];
+        }
+        
+        $excerpt = "Découvrez tout ce qu'il faut savoir sur {$keyword}";
+        if ($city_name && $dept_name) {
+            $excerpt .= " à {$city_name} dans le département {$dept_name}";
+        } elseif ($dept_name) {
+            $excerpt .= " dans le département {$dept_name}";
+        }
+        $excerpt .= ". {$company_name} vous propose des solutions professionnelles et adaptées à vos besoins.";
+        
+        return $excerpt;
+    }
+    
+    /**
+     * Générer le meta title pour SEO
+     */
+    private function generate_meta_title($title, $keyword, $dept_name, $city_name) {
+        $company_name = get_bloginfo('name');
+        
+        // Construire un titre SEO optimisé (max 60 caractères)
+        $meta_title = $title;
+        
+        if ($city_name && $dept_name) {
+            $meta_title = "{$keyword} à {$city_name} ({$dept_name}) - {$company_name}";
+        } elseif ($dept_name) {
+            $meta_title = "{$keyword} en {$dept_name} - {$company_name}";
+        } else {
+            $meta_title = "{$keyword} - {$company_name}";
+        }
+        
+        // Limiter à 60 caractères pour SEO
+        if (strlen($meta_title) > 60) {
+            $meta_title = substr($meta_title, 0, 57) . '...';
+        }
+        
+        return $meta_title;
+    }
+    
+    /**
+     * Générer la meta description pour SEO
+     */
+    private function generate_meta_description($keyword, $dept_name, $city_name) {
+        $company_name = get_bloginfo('name');
+        
+        $description = "Expert en {$keyword}";
+        if ($city_name && $dept_name) {
+            $description .= " à {$city_name} dans le département {$dept_name}";
+        } elseif ($dept_name) {
+            $description .= " en {$dept_name}";
+        }
+        $description .= ". {$company_name} vous accompagne avec des solutions professionnelles. Devis gratuit et intervention rapide.";
+        
+        // Limiter à 160 caractères pour SEO
+        if (strlen($description) > 160) {
+            $description = substr($description, 0, 157) . '...';
+        }
+        
+        return $description;
     }
     
     /**
@@ -471,12 +626,11 @@ class Osmose_Article_Generator {
     }
     
     /**
-     * Nettoyer le contenu généré
+     * Nettoyer et formater le contenu généré
      */
     private function clean_content($content) {
-        // Enlever les balises HTML indésirables mais garder les balises de structure
-        $allowed_tags = '<h2><h3><h4><p><ul><ol><li><strong><em><a><br>';
-        $content = wp_kses($content, array(
+        // Nettoyer le contenu en gardant les balises HTML valides
+        $allowed_tags = array(
             'h2' => array(),
             'h3' => array(),
             'h4' => array(),
