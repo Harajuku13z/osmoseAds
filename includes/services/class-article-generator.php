@@ -22,86 +22,104 @@ class Osmose_Article_Generator {
      * Générer un article
      */
     public function generate_article($keyword = null, $department = null, $city = null) {
-        // Récupérer la configuration
-        $keywords = $this->get_keywords();
-        $favorite_cities = get_option('osmose_articles_favorite_cities', array());
-        $favorite_departments = get_option('osmose_articles_favorite_departments', array());
-        
-        // Sélectionner un mot-clé aléatoire si non fourni
-        if (!$keyword) {
-            $keyword = $this->select_random_keyword($keywords);
-        }
-        
-        if (!$keyword) {
-            return new WP_Error('no_keyword', __('Aucun mot-clé configuré. Veuillez configurer les mots-clés dans la page de configuration.', 'osmose-ads'));
-        }
-        
-        // Sélectionner un département et une ville si non fournis
-        if (!$department && !empty($favorite_departments)) {
-            $department = $favorite_departments[array_rand($favorite_departments)];
-        }
-        
-        if (!$city && !empty($favorite_cities)) {
-            $city_id = $favorite_cities[array_rand($favorite_cities)];
-            $city = $this->get_city_data($city_id);
-        } elseif ($city && is_numeric($city)) {
-            $city = $this->get_city_data($city);
-        }
-        
-        // Si on a un département mais pas de ville, récupérer des villes du département
-        if ($department && !$city) {
-            $city = $this->get_city_from_department($department);
-        }
-        
-        // Déterminer le type d'article (aléatoire)
-        $article_types = array('how_to', 'top_companies', 'guide');
-        $article_type = $article_types[array_rand($article_types)];
-        
-        // Générer le titre et le contenu
-        $title = $this->generate_title($keyword, $department, $city, $article_type);
-        $content = $this->generate_content($keyword, $department, $city, $article_type);
-        
-        if (is_wp_error($title) || is_wp_error($content)) {
-            return is_wp_error($title) ? $title : $content;
-        }
-        
-        // Créer l'article
-        $post_data = array(
-            'post_title' => $title,
-            'post_content' => $content,
-            'post_status' => 'draft', // Brouillon par défaut, sera publié selon le planning
-            'post_type' => 'osmose_article',
-            'post_author' => 1,
-        );
-        
-        $post_id = wp_insert_post($post_data);
-        
-        if (is_wp_error($post_id)) {
+        try {
+            // Récupérer la configuration
+            $keywords = $this->get_keywords();
+            $favorite_cities = get_option('osmose_articles_favorite_cities', array());
+            $favorite_departments = get_option('osmose_articles_favorite_departments', array());
+            
+            // Sélectionner un mot-clé aléatoire si non fourni
+            if (!$keyword) {
+                $keyword = $this->select_random_keyword($keywords);
+            }
+            
+            if (!$keyword) {
+                return new WP_Error('no_keyword', __('Aucun mot-clé configuré. Veuillez configurer les mots-clés dans la page de configuration.', 'osmose-ads'));
+            }
+            
+            // Sélectionner un département et une ville si non fournis
+            if (!$department && !empty($favorite_departments) && is_array($favorite_departments)) {
+                $random_key = array_rand($favorite_departments);
+                $department = isset($favorite_departments[$random_key]) ? $favorite_departments[$random_key] : null;
+            }
+            
+            if (!$city && !empty($favorite_cities) && is_array($favorite_cities)) {
+                $random_key = array_rand($favorite_cities);
+                $city_id = isset($favorite_cities[$random_key]) ? intval($favorite_cities[$random_key]) : 0;
+                if ($city_id > 0) {
+                    $city = $this->get_city_data($city_id);
+                }
+            } elseif ($city && is_numeric($city)) {
+                $city = $this->get_city_data(intval($city));
+            }
+            
+            // Si on a un département mais pas de ville, récupérer des villes du département
+            if ($department && (!$city || !is_array($city))) {
+                $city = $this->get_city_from_department($department);
+            }
+            
+            // Déterminer le type d'article (aléatoire)
+            $article_types = array('how_to', 'top_companies', 'guide');
+            $article_type = $article_types[array_rand($article_types)];
+            
+            // Générer le titre et le contenu
+            $title = $this->generate_title($keyword, $department, $city, $article_type);
+            $content = $this->generate_content($keyword, $department, $city, $article_type);
+            
+            if (is_wp_error($title) || is_wp_error($content)) {
+                return is_wp_error($title) ? $title : $content;
+            }
+            
+            // Vérifier que le titre et le contenu ne sont pas vides
+            if (empty($title) || empty($content)) {
+                return new WP_Error('empty_content', __('Le titre ou le contenu généré est vide.', 'osmose-ads'));
+            }
+            
+            // Créer l'article
+            $post_data = array(
+                'post_title' => $title,
+                'post_content' => $content,
+                'post_status' => 'draft', // Brouillon par défaut, sera publié selon le planning
+                'post_type' => 'osmose_article',
+                'post_author' => 1,
+            );
+            
+            $post_id = wp_insert_post($post_data);
+            
+            if (is_wp_error($post_id)) {
+                return $post_id;
+            }
+            
+            // Sauvegarder les métadonnées
+            if ($keyword) {
+                update_post_meta($post_id, 'article_keyword', $keyword);
+            }
+            if ($department) {
+                update_post_meta($post_id, 'article_department', $department);
+                $dept_name = $this->get_department_name($department);
+                if ($dept_name) {
+                    update_post_meta($post_id, 'article_department_name', $dept_name);
+                }
+            }
+            if ($city && is_array($city)) {
+                $city_name_meta = isset($city['name']) ? $city['name'] : '';
+                if ($city_name_meta) {
+                    update_post_meta($post_id, 'article_city', $city_name_meta);
+                }
+                if (isset($city['id']) && $city['id']) {
+                    update_post_meta($post_id, 'article_city_id', intval($city['id']));
+                }
+            }
+            update_post_meta($post_id, 'article_type', $article_type);
+            update_post_meta($post_id, 'article_generated_at', current_time('mysql'));
+            update_post_meta($post_id, 'article_auto_generated', 1);
+            
             return $post_id;
+        } catch (Exception $e) {
+            return new WP_Error('generation_exception', sprintf(__('Erreur lors de la génération de l\'article: %s', 'osmose-ads'), $e->getMessage()));
+        } catch (Error $e) {
+            return new WP_Error('generation_error', sprintf(__('Erreur fatale lors de la génération de l\'article: %s', 'osmose-ads'), $e->getMessage()));
         }
-        
-        // Sauvegarder les métadonnées
-        if ($keyword) {
-            update_post_meta($post_id, 'article_keyword', $keyword);
-        }
-        if ($department) {
-            update_post_meta($post_id, 'article_department', $department);
-            $dept_name = $this->get_department_name($department);
-            if ($dept_name) {
-                update_post_meta($post_id, 'article_department_name', $dept_name);
-            }
-        }
-        if ($city && is_array($city)) {
-            update_post_meta($post_id, 'article_city', $city['name']);
-            if (isset($city['id'])) {
-                update_post_meta($post_id, 'article_city_id', $city['id']);
-            }
-        }
-        update_post_meta($post_id, 'article_type', $article_type);
-        update_post_meta($post_id, 'article_generated_at', current_time('mysql'));
-        update_post_meta($post_id, 'article_auto_generated', 1);
-        
-        return $post_id;
     }
     
     /**
@@ -152,20 +170,24 @@ class Osmose_Article_Generator {
      * Récupérer une ville d'un département
      */
     private function get_city_from_department($department_code) {
+        if (empty($department_code)) {
+            return null;
+        }
+        
         $cities = get_posts(array(
             'post_type' => 'city',
             'posts_per_page' => 1,
             'meta_query' => array(
                 array(
                     'key' => 'department',
-                    'value' => $department_code,
+                    'value' => sanitize_text_field($department_code),
                     'compare' => '=',
                 ),
             ),
             'orderby' => 'rand',
         ));
         
-        if (empty($cities)) {
+        if (empty($cities) || !is_array($cities) || !isset($cities[0]) || !isset($cities[0]->ID)) {
             return null;
         }
         
@@ -297,6 +319,10 @@ class Osmose_Article_Generator {
     private function build_content_prompt($keyword, $department, $city, $article_type) {
         $prompt = "Écris un article complet et détaillé (minimum 800 mots) en français pour un site web.\n\n";
         
+        // Définir les variables au début pour éviter les erreurs
+        $dept_name = '';
+        $city_name = '';
+        
         $context = "Sujet: {$keyword}\n";
         
         if ($department) {
@@ -305,13 +331,21 @@ class Osmose_Article_Generator {
         }
         
         if ($city && is_array($city)) {
-            $context .= "Ville principale: {$city['name']}\n";
+            $city_name = isset($city['name']) ? $city['name'] : '';
+            if ($city_name) {
+                $context .= "Ville principale: {$city_name}\n";
+            }
             
             // Ajouter d'autres villes du département pour enrichir
-            $other_cities = $this->get_other_cities_from_department($department, $city['id'], 3);
-            if (!empty($other_cities)) {
-                $city_names = array_map(function($c) { return $c['name']; }, $other_cities);
-                $context .= "Autres villes à mentionner: " . implode(', ', $city_names) . "\n";
+            if ($department && isset($city['id']) && $city['id']) {
+                $other_cities = $this->get_other_cities_from_department($department, $city['id'], 3);
+                if (!empty($other_cities)) {
+                    $city_names = array_map(function($c) { return isset($c['name']) ? $c['name'] : ''; }, $other_cities);
+                    $city_names = array_filter($city_names); // Enlever les valeurs vides
+                    if (!empty($city_names)) {
+                        $context .= "Autres villes à mentionner: " . implode(', ', $city_names) . "\n";
+                    }
+                }
             }
         }
         
@@ -390,14 +424,25 @@ class Osmose_Article_Generator {
      * Récupérer d'autres villes du département
      */
     private function get_other_cities_from_department($department_code, $exclude_city_id, $limit = 3) {
+        if (empty($department_code) || empty($exclude_city_id)) {
+            return array();
+        }
+        
+        $exclude_ids = is_array($exclude_city_id) ? $exclude_city_id : array(intval($exclude_city_id));
+        $exclude_ids = array_filter($exclude_ids); // Enlever les valeurs vides
+        
+        if (empty($exclude_ids)) {
+            return array();
+        }
+        
         $cities = get_posts(array(
             'post_type' => 'city',
-            'posts_per_page' => $limit,
-            'post__not_in' => array($exclude_city_id),
+            'posts_per_page' => intval($limit),
+            'post__not_in' => $exclude_ids,
             'meta_query' => array(
                 array(
                     'key' => 'department',
-                    'value' => $department_code,
+                    'value' => sanitize_text_field($department_code),
                     'compare' => '=',
                 ),
             ),
@@ -405,10 +450,14 @@ class Osmose_Article_Generator {
         ));
         
         $result = array();
-        foreach ($cities as $city) {
-            $city_data = $this->get_city_data($city->ID);
-            if ($city_data) {
-                $result[] = $city_data;
+        if ($cities && is_array($cities)) {
+            foreach ($cities as $city) {
+                if (isset($city->ID)) {
+                    $city_data = $this->get_city_data($city->ID);
+                    if ($city_data && is_array($city_data)) {
+                        $result[] = $city_data;
+                    }
+                }
             }
         }
         
