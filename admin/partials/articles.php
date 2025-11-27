@@ -7,6 +7,25 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Traitement de la suppression d'article
+if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['post_id'])) {
+    $post_id = intval($_GET['post_id']);
+    if ($post_id > 0 && check_admin_referer('delete_article_' . $post_id)) {
+        if (current_user_can('delete_post', $post_id)) {
+            $deleted = wp_delete_post($post_id, true);
+            if ($deleted) {
+                wp_redirect(add_query_arg('deleted', '1', admin_url('admin.php?page=osmose-ads-articles')));
+                exit;
+            }
+        }
+    }
+}
+
+// Afficher le message de succès après suppression
+if (isset($_GET['deleted']) && $_GET['deleted'] == '1') {
+    echo '<div class="notice notice-success is-dismissible"><p>' . __('Article supprimé avec succès.', 'osmose-ads') . '</p></div>';
+}
+
 // Traitement de la génération manuelle
 if (isset($_POST['generate_article_manual']) && check_admin_referer('osmose_generate_article', 'osmose_generate_article_nonce')) {
     require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-article-generator.php';
@@ -344,6 +363,7 @@ if ($error_message !== false) {
                         <td>
                             <a href="<?php echo get_edit_post_link($post_id); ?>" class="button button-small"><?php _e('Modifier', 'osmose-ads'); ?></a>
                             <a href="<?php echo get_permalink($post_id); ?>" target="_blank" class="button button-small"><?php _e('Voir', 'osmose-ads'); ?></a>
+                            <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=osmose-ads-articles&action=delete&post_id=' . $post_id), 'delete_article_' . $post_id); ?>" class="button button-small button-link-delete" onclick="return confirm('<?php echo esc_js(__('Êtes-vous sûr de vouloir supprimer cet article ?', 'osmose-ads')); ?>');"><?php _e('Supprimer', 'osmose-ads'); ?></a>
                         </td>
                     </tr>
                 <?php endwhile; ?>

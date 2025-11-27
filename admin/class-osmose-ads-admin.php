@@ -102,18 +102,27 @@ class Osmose_Ads_Admin {
     public function add_admin_menu() {
         // Pas d'icône dans le menu - on utilisera juste le texte
         // On pourra ajouter un logo dans le header plus tard si nécessaire
+        // Vérifier si un logo existe
+        $logo_path = OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.png';
+        $logo_url = '';
+        if (file_exists($logo_path)) {
+            $logo_url = OSMOSE_ADS_PLUGIN_URL . 'admin/img/logo.png';
+        }
+        
         add_menu_page(
             __('Osmose ADS', 'osmose-ads'),
-            __('Osmose ADS', 'osmose-ads'),
+            __('🚀 Osmose ADS', 'osmose-ads'),
             'manage_options',
             'osmose-ads',
             array($this, 'display_dashboard'),
-            '', // Pas d'icône
+            $logo_url ? 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><image href="' . esc_url($logo_url) . '" width="20" height="20"/></svg>') : 'dashicons-admin-generic', // Icône fusée ou logo
             30
         );
         
-        // Masquer l'icône par défaut avec CSS
-        add_action('admin_head', array($this, 'hide_menu_icon'));
+        // Ajouter le style pour l'icône personnalisée si logo existe
+        if ($logo_url) {
+            add_action('admin_head', array($this, 'add_menu_icon_style'));
+        }
         
         add_submenu_page(
             'osmose-ads',
@@ -290,17 +299,28 @@ class Osmose_Ads_Admin {
     }
     
     /**
-     * Masquer l'icône du menu dans la sidebar
+     * Ajouter le style pour l'icône du menu
      */
-    public function hide_menu_icon() {
-        echo '<style>
-            #toplevel_page_osmose-ads .wp-menu-image {
-                display: none !important;
-            }
-            #toplevel_page_osmose-ads .wp-menu-name {
-                padding-left: 12px !important;
-            }
-        </style>';
+    public function add_menu_icon_style() {
+        $logo_url = OSMOSE_ADS_PLUGIN_URL . 'admin/img/logo.png';
+        if (file_exists(OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.png')) {
+            echo '<style>
+                #toplevel_page_osmose-ads .wp-menu-image img {
+                    width: 20px;
+                    height: 20px;
+                    padding: 6px 0;
+                }
+            </style>';
+        } else {
+            // Style pour l'icône fusée
+            echo '<style>
+                #toplevel_page_osmose-ads .wp-menu-image::before {
+                    content: "🚀";
+                    font-size: 20px;
+                    line-height: 1;
+                }
+            </style>';
+        }
     }
 
     /**

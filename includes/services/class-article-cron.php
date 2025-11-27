@@ -17,11 +17,17 @@ class Osmose_Article_Cron {
         }
         $this->generator = new Osmose_Article_Generator();
         
-        // Enregistrer le hook de cron
+        // Enregistrer le hook de cron pour la publication
+        add_action('osmose_article_publish', array($this, 'publish_scheduled_article'));
+        
+        // Enregistrer le hook de cron pour la génération quotidienne
         add_action('osmose_articles_daily_generation', array($this, 'generate_daily_articles'));
         
         // Vérifier et planifier le cron à chaque chargement admin
         add_action('admin_init', array($this, 'schedule_cron'));
+        
+        // Vérifier les publications programmées à chaque chargement (pour les sites peu visités)
+        add_action('init', array($this, 'check_scheduled_publications'), 20);
     }
     
     /**
@@ -179,29 +185,80 @@ class Osmose_Article_Cron {
      * Planifier la publication d'un article
      */
     private function schedule_publication($post_id, $hour = null) {
-        if (!$hour) {
-            // Utiliser l'heure actuelle + quelques minutes
-            $publish_time = strtotime('+10 minutes');
-        } else {
-            // Convertir l'heure en timestamp pour aujourd'hui
+        // Récupérer les heures de publication configurées
+        $publish_hours = get_option('osmose_articles_publish_hours', array('09:00'));
+        
+        if (!$hour && !empty($publish_hours)) {
+            // Utiliser la première heure configurée
+            $hour = $publish_hours[0];
+        }
+        
+        if ($hour) {
+            // Convertir l'heure en timestamp
             $time_parts = explode(':', $hour);
             $hour_int = intval($time_parts[0]);
             $minute_int = isset($time_parts[1]) ? intval($time_parts[1]) : 0;
             
             $publish_time = mktime($hour_int, $minute_int, 0, date('n'), date('j'), date('Y'));
             
-            // Si l'heure est déjà passée, publier maintenant
+            // Si l'heure est déjà passée aujourd'hui, planifier pour demain
             if ($publish_time < time()) {
-                $publish_time = time() + 60; // 1 minute
+                $publish_time = strtotime('+1 day', $publish_time);
             }
+        } else {
+            // Utiliser l'heure actuelle + quelques minutes
+            $publish_time = strtotime('+10 minutes');
         }
         
-        // Programmer la publication
-        wp_schedule_single_event($publish_time, 'osmose_article_publish', array($post_id));
+        // Stocker la date de publication prévue dans les meta
+        update_post_meta($post_id, '_scheduled_publish_time', $publish_time);
         
-        // Ajouter l'action si elle n'existe pas déjà
-        if (!has_action('osmose_article_publish', 'publish_scheduled_article')) {
-            add_action('osmose_article_publish', array($this, 'publish_scheduled_article'));
+        // Programmer la publication via WordPress cron
+        $scheduled = wp_schedule_single_event($publish_time, 'osmose_article_publish', array($post_id));
+        
+        // Si le cron ne peut pas être programmé (site peu visité), on vérifiera manuellement
+        if (is_wp_error($scheduled)) {
+            error_log('Osmose ADS: Impossible de programmer le cron pour l\'article ' . $post_id . ': ' . $scheduled->get_error_message());
+        }
+    }
+    
+    /**
+     * Vérifier les publications programmées (pour les sites peu visités où le cron ne se déclenche pas)
+     */
+    public function check_scheduled_publications() {
+        // Ne vérifier que toutes les 5 minutes pour éviter la surcharge
+        $last_check = get_transient('osmose_articles_last_publish_check');
+        if ($last_check && (time() - $last_check) < 300) {
+            return;
+        }
+        
+        set_transient('osmose_articles_last_publish_check', time(), 600);
+        
+        // Récupérer les articles en brouillon avec une date de publication programmée
+        $scheduled_posts = get_posts(array(
+            'post_type' => 'post',
+            'post_status' => 'draft',
+            'posts_per_page' => 50,
+            'meta_query' => array(
+                array(
+                    'key' => '_scheduled_publish_time',
+                    'value' => time(),
+                    'compare' => '<=',
+                ),
+                array(
+                    'key' => 'article_auto_generated',
+                    'value' => '1',
+                    'compare' => '=',
+                ),
+            ),
+        ));
+        
+        foreach ($scheduled_posts as $post) {
+            $scheduled_time = get_post_meta($post->ID, '_scheduled_publish_time', true);
+            if ($scheduled_time && $scheduled_time <= time()) {
+                $this->publish_scheduled_article($post->ID);
+                delete_post_meta($post->ID, '_scheduled_publish_time');
+            }
         }
     }
     
