@@ -38,6 +38,21 @@ $cities = get_posts(array(
     'orderby' => 'title',
     'order' => 'ASC',
 ));
+
+// Construire la liste des départements disponibles à partir des villes
+$departments = array();
+if (!empty($cities)) {
+    foreach ($cities as $city) {
+        $dept_code = get_post_meta($city->ID, 'department', true);
+        $dept_name = get_post_meta($city->ID, 'department_name', true);
+        if (!empty($dept_code)) {
+            if (!isset($departments[$dept_code])) {
+                $departments[$dept_code] = $dept_name ?: $dept_code;
+            }
+        }
+    }
+    ksort($departments);
+}
 ?>
 
 <div class="osmose-ads-page">
@@ -93,10 +108,28 @@ $cities = get_posts(array(
             
             <div class="mb-4">
                 <label class="form-label fw-bold"><?php _e('Sélectionner les Villes', 'osmose-ads'); ?> <span class="text-danger">*</span></label>
+
+                <?php if (!empty($departments)): ?>
+                    <div class="mb-3">
+                        <label class="form-label"><?php _e('Filtrer / sélectionner par département (optionnel)', 'osmose-ads'); ?></label>
+                        <div style="max-height: 120px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 8px; background: #fff;">
+                            <?php foreach ($departments as $dept_code => $dept_label): ?>
+                                <label class="d-block mb-1" style="cursor: pointer;">
+                                    <input type="checkbox" class="department-checkbox-ads me-2" data-department="<?php echo esc_attr($dept_code); ?>">
+                                    <span><?php echo esc_html($dept_code . ' - ' . $dept_label); ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <small class="form-text text-muted">
+                            <?php _e('Cocher un ou plusieurs départements pour sélectionner automatiquement toutes les villes associées. Utilisez un département à la fois pour éviter les erreurs.', 'osmose-ads'); ?>
+                        </small>
+                    </div>
+                <?php endif; ?>
+
                 <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: #f9f9f9;">
                     <label class="mb-3 d-block">
                         <input type="checkbox" id="select-all-cities-ads" class="me-2">
-                        <strong><?php _e('Tout sélectionner', 'osmose-ads'); ?></strong>
+                        <strong><?php _e('Tout sélectionner (villes visibles)', 'osmose-ads'); ?></strong>
                     </label>
                     <hr class="my-2">
                     <?php if (!empty($cities)): ?>
@@ -107,7 +140,13 @@ $cities = get_posts(array(
                                 $department_name = get_post_meta($city->ID, 'department_name', true);
                             ?>
                                 <label class="d-block mb-2" style="cursor: pointer; padding: 5px; border-radius: 3px; transition: background 0.2s;">
-                                    <input type="checkbox" name="city_ids[]" value="<?php echo esc_attr($city->ID); ?>" class="city-checkbox-ads me-2">
+                                    <input
+                                        type="checkbox"
+                                        name="city_ids[]"
+                                        value="<?php echo esc_attr($city->ID); ?>"
+                                        class="city-checkbox-ads me-2"
+                                        data-department="<?php echo esc_attr($department); ?>"
+                                    >
                                     <span>
                                         <?php echo esc_html($city_name); ?>
                                         <?php if ($department): ?>
@@ -312,6 +351,30 @@ jQuery(document).ready(function($) {
     // Sélectionner/Désélectionner toutes les villes
     $('#select-all-cities-ads').on('change', function() {
         $('.city-checkbox-ads').prop('checked', $(this).prop('checked'));
+        updateCitiesCount();
+    });
+
+    // Sélection par département : coche / décoche toutes les villes du département
+    $('.department-checkbox-ads').on('change', function() {
+        var deptCode = $(this).data('department');
+        var isChecked = $(this).is(':checked');
+
+        if (!deptCode) {
+            return;
+        }
+
+        $('.city-checkbox-ads').each(function() {
+            var cityDept = $(this).data('department');
+            if (cityDept == deptCode) {
+                $(this).prop('checked', isChecked);
+            }
+        });
+
+        // Si on décoche au moins un département, on enlève aussi le "tout sélectionner"
+        if (!isChecked) {
+            $('#select-all-cities-ads').prop('checked', false);
+        }
+
         updateCitiesCount();
     });
     
