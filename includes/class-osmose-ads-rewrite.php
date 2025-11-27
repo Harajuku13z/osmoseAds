@@ -6,7 +6,8 @@ class Osmose_Ads_Rewrite {
 
     public function __construct() {
         add_action('init', array($this, 'add_rewrite_tags'));
-        add_filter('template_include', array($this, 'template_loader'));
+        add_filter('template_include', array($this, 'template_loader'), 1);
+        add_filter('single_template', array($this, 'single_template_loader'), 10, 3); // Hook plus spécifique
         add_action('template_redirect', array($this, 'intercept_ad_requests'));
         add_action('template_redirect', array($this, 'handle_call_tracking'));
     }
@@ -236,6 +237,54 @@ class Osmose_Ads_Rewrite {
                 }
                 
                 // En dernier recours, utiliser le template du plugin
+                $plugin_template = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/single-ad.php';
+                if (file_exists($plugin_template)) {
+                    return $plugin_template;
+                }
+            }
+        }
+        
+        return $template;
+    }
+    
+    /**
+     * Hook spécifique pour les single posts (plus fiable que template_include)
+     */
+    public function single_template_loader($template, $type, $templates) {
+        global $post;
+        
+        // Ne rien faire en admin
+        if (is_admin()) {
+            return $template;
+        }
+        
+        // Vérifier si c'est un post de type 'ad'
+        if ($post && $post->post_type === 'ad') {
+            // Vérifier si un template single-ad.php existe dans le thème
+            $theme_template = locate_template(array('single-ad.php'));
+            if ($theme_template) {
+                return $theme_template;
+            }
+            
+            // Utiliser le template du plugin
+            $plugin_template = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/single-ad.php';
+            if (file_exists($plugin_template)) {
+                return $plugin_template;
+            }
+        }
+        
+        // Vérifier si c'est un article généré (post avec meta article_auto_generated)
+        if ($post && $post->post_type === 'post' && $post->ID > 0) {
+            $is_generated_article = (get_post_meta($post->ID, 'article_auto_generated', true) === '1');
+            
+            if ($is_generated_article) {
+                // Vérifier si un template single-ad.php existe dans le thème
+                $theme_template = locate_template(array('single-ad.php'));
+                if ($theme_template) {
+                    return $theme_template;
+                }
+                
+                // Utiliser le template du plugin
                 $plugin_template = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/single-ad.php';
                 if (file_exists($plugin_template)) {
                     return $plugin_template;
