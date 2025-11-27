@@ -218,7 +218,10 @@ class Osmose_Article_Generator {
     private function generate_title($keyword, $department, $city, $article_type) {
         $prompt = $this->build_title_prompt($keyword, $department, $city, $article_type);
         
-        $response = $this->ai_service->generate_content($prompt, 200);
+        $response = $this->ai_service->call_ai($prompt, '', array(
+            'max_tokens' => 200,
+            'temperature' => 0.7,
+        ));
         
         if (is_wp_error($response)) {
             return $response;
@@ -301,7 +304,10 @@ class Osmose_Article_Generator {
     private function generate_content($keyword, $department, $city, $article_type) {
         $prompt = $this->build_content_prompt($keyword, $department, $city, $article_type);
         
-        $response = $this->ai_service->generate_content($prompt, 2000);
+        $response = $this->ai_service->call_ai($prompt, '', array(
+            'max_tokens' => 2000,
+            'temperature' => 0.7,
+        ));
         
         if (is_wp_error($response)) {
             return $response;
