@@ -83,10 +83,20 @@ $templates = get_posts(array(
         </table>
         
         <p class="submit">
-            <button type="submit" class="button button-primary"><?php _e('Générer les Annonces', 'osmose-ads'); ?></button>
+            <button type="submit" class="button button-primary" id="bulk-generate-submit"><?php _e('Générer les Annonces', 'osmose-ads'); ?></button>
         </p>
     </form>
     
+    <div id="generation-progress" style="margin-top: 20px; display: none;">
+        <div style="margin-bottom:8px;">
+            <strong><?php _e('Progression de la génération', 'osmose-ads'); ?></strong>
+        </div>
+        <div style="width:100%; background:#f1f1f1; border-radius:4px; overflow:hidden; height:18px; margin-bottom:8px;">
+            <div id="generation-progress-bar" style="width:0%; height:100%; background:#2271b1; transition:width 0.3s;"></div>
+        </div>
+        <p id="generation-progress-text" style="margin:0; font-size:13px; color:#444;"></p>
+    </div>
+
     <div id="generation-result" style="margin-top: 20px;"></div>
 </div>
 
@@ -99,43 +109,111 @@ jQuery(document).ready(function($) {
     $('#bulk-generation-form').on('submit', function(e) {
         e.preventDefault();
         
-        var formData = {
-            action: 'osmose_ads_bulk_generate',
-            nonce: osmoseAds.nonce,
-            service_slug: $('#service-select').val(),
-            city_ids: $('.city-checkbox:checked').map(function() {
-                return $(this).val();
-            }).get(),
-        };
-        
-        if (formData.city_ids.length === 0) {
-            alert('<?php _e('Veuillez sélectionner au moins une ville', 'osmose-ads'); ?>');
+        var serviceSlug = $('#service-select').val();
+        var allCityIds = $('.city-checkbox:checked').map(function() {
+            return $(this).val();
+        }).get();
+
+        if (!serviceSlug) {
+            alert('<?php _e('Veuillez sélectionner un service', 'osmose-ads'); ?>');
             return;
         }
         
-        $('#generation-result').html('<p><?php _e('Génération en cours...', 'osmose-ads'); ?></p>');
-        
-        $.ajax({
-            url: osmoseAds.ajax_url,
-            type: 'POST',
-            data: formData,
-            success: function(response) {
-                if (response.success) {
-                    $('#generation-result').html(
-                        '<div class="notice notice-success"><p>' + response.data.message + '</p></div>'
-                    );
-                } else {
-                    $('#generation-result').html(
-                        '<div class="notice notice-error"><p>' + response.data.message + '</p></div>'
-                    );
-                }
-            },
-            error: function() {
-                $('#generation-result').html(
-                    '<div class="notice notice-error"><p><?php _e('Erreur lors de la génération', 'osmose-ads'); ?></p></div>'
-                );
+        if (allCityIds.length === 0) {
+            alert('<?php _e('Veuillez sélectionner au moins une ville', 'osmose-ads'); ?>');
+            return;
+        }
+
+        var total = allCityIds.length;
+        var processed = 0;
+        var batchSize = 50; // nombre de villes traitées par requête
+        var totalCreated = 0;
+        var totalSkipped = 0;
+        var totalErrors = 0;
+        var isAborted = false;
+
+        $('#generation-result').empty();
+        $('#generation-progress').show();
+        $('#generation-progress-bar').css('width', '0%');
+        $('#generation-progress-text').text('<?php _e('Initialisation de la génération...', 'osmose-ads'); ?>');
+        $('#bulk-generate-submit').prop('disabled', true);
+
+        function updateProgress() {
+            var percent = total > 0 ? Math.round((processed / total) * 100) : 0;
+            if (percent > 100) percent = 100;
+            $('#generation-progress-bar').css('width', percent + '%');
+            $('#generation-progress-text').text(
+                percent + '% - ' +
+                '<?php _e('Traitées :', 'osmose-ads'); ?> ' + processed + '/' + total +
+                ' | <?php _e('Créées', 'osmose-ads'); ?> : ' + totalCreated +
+                ' | <?php _e('Ignorées', 'osmose-ads'); ?> : ' + totalSkipped +
+                ' | <?php _e('Erreurs', 'osmose-ads'); ?> : ' + totalErrors
+            );
+        }
+
+        function processNextBatch() {
+            if (isAborted) {
+                return;
             }
-        });
+
+            if (allCityIds.length === 0) {
+                // Terminé
+                updateProgress();
+                $('#bulk-generate-submit').prop('disabled', false);
+
+                var finalMessage = '<?php _e('Génération terminée.', 'osmose-ads'); ?> ' +
+                    '<?php _e('Créées :', 'osmose-ads'); ?> ' + totalCreated +
+                    ' | <?php _e('Ignorées :', 'osmose-ads'); ?> ' + totalSkipped +
+                    ' | <?php _e('Erreurs :', 'osmose-ads'); ?> ' + totalErrors;
+
+                $('#generation-result').html(
+                    '<div class="notice notice-success"><p>' + finalMessage + '</p></div>'
+                );
+                return;
+            }
+
+            var batch = allCityIds.splice(0, batchSize);
+
+            $.ajax({
+                url: osmoseAds.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'osmose_ads_bulk_generate',
+                    nonce: osmoseAds.nonce,
+                    service_slug: serviceSlug,
+                    city_ids: batch
+                },
+                success: function(response) {
+                    if (response && response.success && response.data) {
+                        totalCreated += parseInt(response.data.created || 0, 10);
+                        totalSkipped += parseInt(response.data.skipped || 0, 10);
+                        totalErrors += parseInt(response.data.errors || 0, 10);
+                    } else {
+                        // si erreur pour ce lot, on compte toutes les villes du lot comme erreurs
+                        totalErrors += batch.length;
+                    }
+                    processed += batch.length;
+                    updateProgress();
+                    // Traiter le lot suivant
+                    processNextBatch();
+                },
+                error: function() {
+                    totalErrors += batch.length;
+                    processed += batch.length;
+                    updateProgress();
+
+                    // On affiche une erreur mais on continue les lots suivants
+                    $('#generation-result').html(
+                        '<div class="notice notice-error"><p><?php _e('Erreur lors de la génération pour un lot de villes. La génération continue pour les lots suivants.', 'osmose-ads'); ?></p></div>'
+                    );
+                    processNextBatch();
+                }
+            });
+        }
+
+        // Lancer le premier lot
+        updateProgress();
+        processNextBatch();
     });
 });
 </script>
