@@ -67,11 +67,18 @@ if (isset($_POST['save_template']) && isset($_POST['template_id'])) {
             'post_title' => sanitize_text_field($_POST['template_title'] ?? ''),
         ));
         
+        // Mettre à jour service_name et service_slug si modifiés
+        if (isset($_POST['service_name']) && !empty($_POST['service_name'])) {
+            $service_name = sanitize_text_field($_POST['service_name']);
+            $service_slug = sanitize_title($service_name);
+            update_post_meta($template_id, 'service_name', $service_name);
+            update_post_meta($template_id, 'service_slug', $service_slug);
+        }
+        
         // Mettre à jour les meta
         $meta_fields = array(
-            'featured_image_id', 'realization_images', 'meta_title', 'meta_description',
-            'meta_keywords', 'og_title', 'og_description', 'twitter_title',
-            'twitter_description', 'short_description'
+            'meta_title', 'meta_description', 'meta_keywords', 'og_title', 'og_description', 
+            'twitter_title', 'twitter_description', 'short_description'
         );
         
         foreach ($meta_fields as $field) {
@@ -105,8 +112,24 @@ if (isset($_POST['save_template']) && isset($_POST['template_id'])) {
         
         // Gérer les images de réalisations (array)
         if (isset($_POST['realization_images'])) {
-            $images = array_map('intval', $_POST['realization_images']);
+            $images_input = $_POST['realization_images'];
+            if (is_array($images_input)) {
+                $images = array_map('intval', $images_input);
+            } else {
+                // Si c'est une chaîne CSV
+                $images = array_filter(array_map('intval', explode(',', $images_input)));
+            }
             update_post_meta($template_id, 'realization_images', $images);
+            
+            // Gérer les mots-clés associés aux images
+            if (isset($_POST['realization_keywords']) && is_array($_POST['realization_keywords'])) {
+                foreach ($_POST['realization_keywords'] as $img_id => $keywords) {
+                    $img_id = intval($img_id);
+                    if (in_array($img_id, $images)) {
+                        update_post_meta($img_id, '_osmose_image_keywords', sanitize_text_field($keywords));
+                    }
+                }
+            }
         }
 
         // Si des images de réalisations sont associées, injecter une galerie HTML dans le contenu du template

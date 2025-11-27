@@ -1391,6 +1391,13 @@ function osmose_ads_handle_bulk_generate() {
         
         // Générer le slug
         $slug = $service_slug . '-' . sanitize_title($city_name);
+
+        // Vérifier si une annonce avec le même slug existe déjà (peu importe le template)
+        $existing_slug_post = get_page_by_path($slug, OBJECT, 'ad');
+        if ($existing_slug_post && $existing_slug_post->post_status !== 'trash') {
+            $skipped++;
+            continue;
+        }
         
         // Générer le contenu
         $content = $template->get_content_for_city($city_id);

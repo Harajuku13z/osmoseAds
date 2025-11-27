@@ -13,11 +13,32 @@ if (!$template || $template->post_type !== 'ad_template') {
     wp_die(__('Template non trouvé', 'osmose-ads'));
 }
 
+// Initialiser les variables de message si elles ne sont pas définies
+if (!isset($save_success)) {
+    $save_success = false;
+}
+if (!isset($save_message)) {
+    $save_message = '';
+}
+
 // Récupérer les meta
 $service_name = get_post_meta($template_id, 'service_name', true);
 $service_slug = get_post_meta($template_id, 'service_slug', true);
 $featured_image_id = get_post_thumbnail_id($template_id);
-$realization_images = get_post_meta($template_id, 'realization_images', true) ?: array();
+$realization_images_raw = get_post_meta($template_id, 'realization_images', true);
+// Gérer les deux formats : tableau d'IDs ou tableau d'objets avec id/keywords
+$realization_images = array();
+if (is_array($realization_images_raw)) {
+    foreach ($realization_images_raw as $item) {
+        if (is_numeric($item)) {
+            $realization_images[] = intval($item);
+        } elseif (is_array($item) && isset($item['id'])) {
+            $realization_images[] = intval($item['id']);
+        }
+    }
+} elseif (!empty($realization_images_raw)) {
+    $realization_images = array_map('intval', explode(',', $realization_images_raw));
+}
 $meta_title = get_post_meta($template_id, 'meta_title', true);
 $meta_description = get_post_meta($template_id, 'meta_description', true);
 $meta_keywords = get_post_meta($template_id, 'meta_keywords', true);
@@ -101,7 +122,48 @@ if (isset($save_success) && $save_success) {
                     </div>
                 </div>
 
-                <!-- Images de réalisations (section désactivée pour le moment) -->
+                <!-- Photos des réalisations -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-images me-2"></i><?php _e('Photos des Réalisations', 'osmose-ads'); ?></h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info py-2 mb-3">
+                            <small>
+                                <i class="bi bi-info-circle me-1"></i>
+                                <?php _e('Les mots-clés que vous saisissez seront utilisés comme attribut ALT des images pour améliorer le référencement (SEO).', 'osmose-ads'); ?>
+                            </small>
+                        </div>
+                        <div id="realization-images-container" class="mb-3 d-flex flex-wrap gap-3" style="min-height: 80px; padding: 15px; border: 2px dashed #ddd; border-radius: 8px; background: #f8f9fa;">
+                            <?php if (!empty($realization_images) && is_array($realization_images)): 
+                                foreach ($realization_images as $index => $img_id): 
+                                    if (!wp_attachment_is_image($img_id)) continue;
+                                    $img_url = wp_get_attachment_image_url($img_id, 'thumbnail');
+                                    $img_keywords = get_post_meta($img_id, '_osmose_image_keywords', true);
+                            ?>
+                                <div class="realization-image-item" data-image-id="<?php echo $img_id; ?>" style="position: relative; width: 120px;">
+                                    <img src="<?php echo esc_url($img_url); ?>" class="img-thumbnail" style="width: 100%; height: auto; cursor: pointer;" alt="Preview">
+                                    <button type="button" class="btn btn-sm btn-danger remove-realization-image" data-image-id="<?php echo $img_id; ?>" style="position: absolute; top: 5px; right: 5px; padding: 2px 6px; font-size: 12px;" title="<?php _e('Supprimer', 'osmose-ads'); ?>">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                    <input type="text" 
+                                           class="form-control form-control-sm mt-2" 
+                                           name="realization_keywords[<?php echo $img_id; ?>]" 
+                                           value="<?php echo esc_attr($img_keywords); ?>" 
+                                           placeholder="<?php esc_attr_e('Mots-clés ALT', 'osmose-ads'); ?>"
+                                           style="font-size: 11px;">
+                                </div>
+                            <?php endforeach; 
+                            else: ?>
+                                <p class="text-muted mb-0 w-100 text-center"><?php _e('Aucune photo ajoutée', 'osmose-ads'); ?></p>
+                            <?php endif; ?>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" id="add-realization-images">
+                            <i class="bi bi-images me-1"></i><?php _e('Ajouter des photos', 'osmose-ads'); ?>
+                        </button>
+                        <input type="hidden" name="realization_images" id="realization_images" value="<?php echo esc_attr(is_array($realization_images) ? implode(',', $realization_images) : ''); ?>">
+                    </div>
+                </div>
             </div>
 
             <!-- Colonne latérale -->
@@ -256,7 +318,122 @@ jQuery(document).ready(function($) {
         $(this).hide();
     });
     
-    // Gestion des images de réalisations désactivée sur cette page pour le moment
+    // Gestion des images de réalisations
+    var realizationImagesFrame;
+    var selectedRealizationImages = <?php 
+        $images_data = array();
+        if (!empty($realization_images) && is_array($realization_images)) {
+            foreach ($realization_images as $img_id) {
+                if (wp_attachment_is_image($img_id)) {
+                    $img_url = wp_get_attachment_image_url($img_id, 'thumbnail');
+                    $keywords = get_post_meta($img_id, '_osmose_image_keywords', true);
+                    $images_data[] = array(
+                        'id' => $img_id,
+                        'url' => $img_url ? $img_url : wp_get_attachment_image_url($img_id, 'full'),
+                        'keywords' => $keywords ? $keywords : ''
+                    );
+                }
+            }
+        }
+        echo json_encode($images_data);
+    ?>;
+    
+    function updateRealizationImagesDisplay() {
+        var container = $('#realization-images-container');
+        container.empty();
+        
+        if (selectedRealizationImages.length === 0) {
+            container.html('<p class="text-muted mb-0 w-100 text-center"><?php _e('Aucune photo ajoutée', 'osmose-ads'); ?></p>');
+            $('#realization_images').val('');
+            return;
+        }
+        
+        var ids = [];
+        selectedRealizationImages.forEach(function(img) {
+            ids.push(img.id);
+            var item = $('<div class="realization-image-item" data-image-id="' + img.id + '" style="position: relative; width: 120px;">' +
+                '<img src="' + img.url + '" class="img-thumbnail" style="width: 100%; height: auto; cursor: pointer;" alt="Preview">' +
+                '<button type="button" class="btn btn-sm btn-danger remove-realization-image" data-image-id="' + img.id + '" style="position: absolute; top: 5px; right: 5px; padding: 2px 6px; font-size: 12px;" title="<?php _e('Supprimer', 'osmose-ads'); ?>">' +
+                '<i class="bi bi-x"></i></button>' +
+                '<input type="text" class="form-control form-control-sm mt-2" name="realization_keywords[' + img.id + ']" value="' + (img.keywords || '') + '" placeholder="<?php esc_attr_e('Mots-clés ALT', 'osmose-ads'); ?>" style="font-size: 11px;">' +
+                '</div>');
+            container.append(item);
+        });
+        
+        $('#realization_images').val(ids.join(','));
+    }
+    
+    $('#add-realization-images').on('click', function(e) {
+        e.preventDefault();
+        
+        if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
+            alert('<?php echo esc_js(__('La bibliothèque média WordPress n\'est pas disponible sur cette page. Veuillez recharger la page et vérifier que vous êtes bien connecté(e).', 'osmose-ads')); ?>');
+            return;
+        }
+        
+        if (realizationImagesFrame) {
+            realizationImagesFrame.open();
+            return;
+        }
+        
+        realizationImagesFrame = wp.media({
+            title: '<?php _e('Choisir des photos de réalisations', 'osmose-ads'); ?>',
+            button: {
+                text: '<?php _e('Ajouter les photos', 'osmose-ads'); ?>'
+            },
+            multiple: true
+        });
+        
+        realizationImagesFrame.on('select', function() {
+            var attachments = realizationImagesFrame.state().get('selection').toJSON();
+            
+            attachments.forEach(function(attachment) {
+                // Vérifier si l'image n'est pas déjà dans la liste
+                var exists = selectedRealizationImages.some(function(img) {
+                    return img.id === attachment.id;
+                });
+                
+                if (!exists) {
+                    var keywords = prompt('<?php echo esc_js(__('Mots-clés pour l\'attribut ALT de cette image :', 'osmose-ads')); ?>\n<?php echo esc_js(__('(Ces mots-clés seront utilisés comme texte alternatif pour le SEO)', 'osmose-ads')); ?>', '');
+                    if (keywords === null) {
+                        keywords = ''; // Si l'utilisateur annule, on met une chaîne vide
+                    }
+                    
+                    var imgUrl = attachment.url;
+                    if (attachment.sizes && attachment.sizes.thumbnail) {
+                        imgUrl = attachment.sizes.thumbnail.url;
+                    }
+                    
+                    selectedRealizationImages.push({
+                        id: attachment.id,
+                        url: imgUrl,
+                        keywords: keywords || ''
+                    });
+                }
+            });
+            
+            updateRealizationImagesDisplay();
+        });
+        
+        realizationImagesFrame.open();
+    });
+    
+    $(document).on('click', '.remove-realization-image', function() {
+        var imgId = parseInt($(this).data('image-id'));
+        selectedRealizationImages = selectedRealizationImages.filter(function(img) {
+            return img.id !== imgId;
+        });
+        updateRealizationImagesDisplay();
+    });
+    
+    // Initialiser le champ hidden avec les images existantes
+    if (selectedRealizationImages.length > 0) {
+        var ids = selectedRealizationImages.map(function(img) { return img.id; });
+        $('#realization_images').val(ids.join(','));
+    } else {
+        // Si pas d'images, s'assurer que le champ est vide
+        $('#realization_images').val('');
+    }
 });
 </script>
 <?php
