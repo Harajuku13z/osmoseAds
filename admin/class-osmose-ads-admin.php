@@ -162,6 +162,24 @@ class Osmose_Ads_Admin {
         
         add_submenu_page(
             'osmose-ads',
+            __('Articles Générés', 'osmose-ads'),
+            __('📝 Articles Générés', 'osmose-ads'),
+            'manage_options',
+            'osmose-ads-articles',
+            array($this, 'display_articles')
+        );
+        
+        add_submenu_page(
+            'osmose-ads',
+            __('Configuration Articles', 'osmose-ads'),
+            __('⚙️ Config Articles', 'osmose-ads'),
+            'manage_options',
+            'osmose-ads-articles-config',
+            array($this, 'display_articles_config')
+        );
+        
+        add_submenu_page(
+            'osmose-ads',
             __('Configuration', 'osmose-ads'),
             __('Configuration', 'osmose-ads'),
             'manage_options',
@@ -194,24 +212,6 @@ class Osmose_Ads_Admin {
             'manage_options',
             'osmose-ads-settings',
             array($this, 'display_settings')
-        );
-        
-        add_submenu_page(
-            'osmose-ads',
-            __('Articles Générés', 'osmose-ads'),
-            __('Articles Générés', 'osmose-ads'),
-            'manage_options',
-            'osmose-ads-articles',
-            array($this, 'display_articles')
-        );
-        
-        add_submenu_page(
-            'osmose-ads',
-            __('Configuration Articles', 'osmose-ads'),
-            __('Configuration Articles', 'osmose-ads'),
-            'manage_options',
-            'osmose-ads-articles-config',
-            array($this, 'display_articles_config')
         );
     }
     
