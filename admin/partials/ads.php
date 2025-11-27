@@ -6,13 +6,20 @@ if (!defined('ABSPATH')) {
 // Inclure le header global
 require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
 
-$ads = get_posts(array(
-    'post_type' => 'ad',
-    'posts_per_page' => 50,
-    'post_status' => 'any',
-    'orderby' => 'date',
-    'order' => 'DESC',
+// Pagination
+$per_page = 50;
+$current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+
+$ads_query = new WP_Query(array(
+    'post_type'      => 'ad',
+    'posts_per_page' => $per_page,
+    'post_status'    => 'any',
+    'orderby'        => 'date',
+    'order'          => 'DESC',
+    'paged'          => $current_page,
 ));
+
+$ads = $ads_query->posts;
 
 // Récupérer les templates disponibles
 $templates = get_posts(array(
@@ -194,6 +201,23 @@ $cities = get_posts(array(
             <?php endif; ?>
         </tbody>
     </table>
+
+    <?php if ($ads_query->max_num_pages > 1): ?>
+        <div class="tablenav bottom" style="margin-top: 15px;">
+            <div class="tablenav-pages">
+                <?php
+                echo paginate_links(array(
+                    'base'      => add_query_arg('paged', '%#%'),
+                    'format'    => '',
+                    'prev_text' => '&laquo;',
+                    'next_text' => '&raquo;',
+                    'current'   => $current_page,
+                    'total'     => $ads_query->max_num_pages,
+                ));
+                ?>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 <script>
