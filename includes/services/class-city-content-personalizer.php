@@ -71,7 +71,10 @@ class City_Content_Personalizer {
         
         $city_context = $this->build_city_context($city);
         $city_name = get_post_meta($city->ID, 'name', true) ?: $city->post_title;
-        $department = get_post_meta($city->ID, 'department', true);
+
+        $department_code = get_post_meta($city->ID, 'department', true);
+        $department_name = get_post_meta($city->ID, 'department_name', true);
+        $department = $department_name ?: $department_code;
         
         $prompt = "Génère des métadonnées SEO pour : \"$service_name à $city_name\" (Département: $department).\n\n";
         $prompt .= "Contexte de la ville :\n" . wp_json_encode($city_context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
@@ -116,14 +119,20 @@ class City_Content_Personalizer {
      */
     private function build_city_context($city) {
         $city_name = get_post_meta($city->ID, 'name', true) ?: $city->post_title;
-        $department = get_post_meta($city->ID, 'department', true);
-        $region = get_post_meta($city->ID, 'region', true);
+        $department_code = get_post_meta($city->ID, 'department', true);
+        $department_name = get_post_meta($city->ID, 'department_name', true);
+        $department = $department_name ?: $department_code;
+        $region_code = get_post_meta($city->ID, 'region', true);
+        $region_name = get_post_meta($city->ID, 'region_name', true);
+        $region = $region_name ?: $region_code;
         $postal_code = get_post_meta($city->ID, 'postal_code', true);
         $population = get_post_meta($city->ID, 'population', true);
         
         $context = array(
             'name' => $city_name,
+            'department_code' => $department_code,
             'department' => $department,
+            'region_code' => $region_code,
             'region' => $region,
             'postal_code' => $postal_code,
             'population' => $population,
@@ -213,8 +222,12 @@ class City_Content_Personalizer {
         
         // Remplacer les placeholders
         $city_name = get_post_meta($city->ID, 'name', true) ?: $city->post_title;
-        $department = get_post_meta($city->ID, 'department', true);
-        $region = get_post_meta($city->ID, 'region', true);
+        $department_code = get_post_meta($city->ID, 'department', true);
+        $department_name = get_post_meta($city->ID, 'department_name', true);
+        $department = $department_name ?: $department_code;
+        $region_code = get_post_meta($city->ID, 'region', true);
+        $region_name = get_post_meta($city->ID, 'region_name', true);
+        $region = $region_name ?: $region_code;
         $postal_code = get_post_meta($city->ID, 'postal_code', true);
         
         $replacements = array(

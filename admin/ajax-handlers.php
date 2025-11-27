@@ -1415,22 +1415,29 @@ function osmose_ads_handle_bulk_generate() {
         if (!empty($remaining_placeholders)) {
             error_log('Osmose ADS: Placeholders non remplacés détectés dans le contenu: ' . implode(', ', $remaining_placeholders));
             // Forcer le remplacement des variables
-            $city = get_post($city_id);
-            if ($city) {
-                $city_name = get_post_meta($city_id, 'name', true) ?: $city->post_title;
-                $department = get_post_meta($city_id, 'department', true);
-                $region = get_post_meta($city_id, 'region', true);
-                $postal_code = get_post_meta($city_id, 'postal_code', true);
-                
-                $replacements = array(
-                    '[VILLE]' => $city_name,
-                    '[RÉGION]' => $region ?: '',
-                    '[DÉPARTEMENT]' => $department ?: '',
-                    '[CODE_POSTAL]' => $postal_code ?: '',
-                );
-                
-                $content = str_replace(array_keys($replacements), array_values($replacements), $content);
-            }
+                $city = get_post($city_id);
+                if ($city) {
+                    $city_name = get_post_meta($city_id, 'name', true) ?: $city->post_title;
+
+                    $department_code = get_post_meta($city_id, 'department', true);
+                    $department_name = get_post_meta($city_id, 'department_name', true);
+                    $department = $department_name ?: $department_code;
+
+                    $region_code = get_post_meta($city_id, 'region', true);
+                    $region_name = get_post_meta($city_id, 'region_name', true);
+                    $region = $region_name ?: $region_code;
+
+                    $postal_code = get_post_meta($city_id, 'postal_code', true);
+                    
+                    $replacements = array(
+                        '[VILLE]' => $city_name,
+                        '[RÉGION]' => $region ?: '',
+                        '[DÉPARTEMENT]' => $department ?: '',
+                        '[CODE_POSTAL]' => $postal_code ?: '',
+                    );
+                    
+                    $content = str_replace(array_keys($replacements), array_values($replacements), $content);
+                }
         }
         
         // Générer les métadonnées
@@ -1446,8 +1453,15 @@ function osmose_ads_handle_bulk_generate() {
                         $city = get_post($city_id);
                         if ($city) {
                             $city_name = get_post_meta($city_id, 'name', true) ?: $city->post_title;
-                            $department = get_post_meta($city_id, 'department', true);
-                            $region = get_post_meta($city_id, 'region', true);
+
+                            $department_code = get_post_meta($city_id, 'department', true);
+                            $department_name = get_post_meta($city_id, 'department_name', true);
+                            $department = $department_name ?: $department_code;
+
+                            $region_code = get_post_meta($city_id, 'region', true);
+                            $region_name = get_post_meta($city_id, 'region_name', true);
+                            $region = $region_name ?: $region_code;
+
                             $postal_code = get_post_meta($city_id, 'postal_code', true);
                             
                             $replacements = array(
