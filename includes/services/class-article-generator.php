@@ -727,18 +727,46 @@ class Osmose_Article_Generator {
             $city_name = $city['name'];
         }
         
-        // Construire un extrait optimisé (max 160 caractères)
-        $excerpt = "Découvrez tout sur {$keyword}";
+        // Construire un extrait optimisé (cible: 120-160 caractères)
+        $excerpt = "Découvrez tout ce qu'il faut savoir sur {$keyword}";
+        
         if ($city_name && $dept_name) {
-            $excerpt .= " à {$city_name} ({$dept_name})";
+            $excerpt .= " à {$city_name} dans le département {$dept_name}";
         } elseif ($dept_name) {
             $excerpt .= " en {$dept_name}";
+        } elseif ($city_name) {
+            $excerpt .= " à {$city_name}";
         }
-        $excerpt .= ". {$company_name} vous accompagne.";
         
-        // Limiter strictement à 160 caractères
+        $excerpt .= ". {$company_name} vous propose des solutions professionnelles et adaptées à vos besoins.";
+        
+        // Ajuster la longueur si nécessaire (cible: 120-160 caractères)
+        $current_length = mb_strlen($excerpt);
+        
+        if ($current_length < 120) {
+            // Si trop court, ajouter des informations supplémentaires
+            if ($dept_name) {
+                $excerpt .= " Devis gratuit et intervention rapide dans toute la région.";
+            } else {
+                $excerpt .= " Devis gratuit et intervention rapide.";
+            }
+        }
+        
+        // Limiter à 160 caractères maximum pour SEO
         if (mb_strlen($excerpt) > 160) {
             $excerpt = mb_substr($excerpt, 0, 157) . '...';
+        }
+        
+        // S'assurer qu'on a au moins 120 caractères
+        $final_length = mb_strlen($excerpt);
+        if ($final_length < 120) {
+            // Si encore trop court, ajouter un appel à l'action
+            $excerpt .= " Contactez-nous pour plus d'informations.";
+            
+            // Limiter à nouveau si nécessaire
+            if (mb_strlen($excerpt) > 160) {
+                $excerpt = mb_substr($excerpt, 0, 157) . '...';
+            }
         }
         
         return $excerpt;
