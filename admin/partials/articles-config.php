@@ -24,16 +24,17 @@ if (isset($_POST['osmose_articles_config_save']) && check_admin_referer('osmose_
     // Sauvegarder les images pour articles
     $article_images = array();
     if (isset($_POST['article_images']) && is_array($_POST['article_images'])) {
-        foreach ($_POST['article_images'] as $img_data) {
+        // Réindexer le tableau pour éviter les problèmes d'indices
+        $article_images_raw = array_values($_POST['article_images']);
+        foreach ($article_images_raw as $img_data) {
             $img_id = isset($img_data['image_id']) ? intval($img_data['image_id']) : 0;
             $keywords = isset($img_data['keywords']) ? sanitize_text_field($img_data['keywords']) : '';
             
-            if ($img_id > 0) {
-                $article_images[] = array(
-                    'image_id' => $img_id,
-                    'keywords' => $keywords,
-                );
-            }
+            // Sauvegarder même si image_id est 0 (pour permettre de sauvegarder les mots-clés avant de sélectionner l'image)
+            $article_images[] = array(
+                'image_id' => $img_id,
+                'keywords' => $keywords,
+            );
         }
     }
     update_option('osmose_articles_images', $article_images);
@@ -159,7 +160,10 @@ require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
             ?>
             
             <div id="article-images-container">
-                <?php foreach ($article_images as $index => $img_data): 
+                <?php 
+                // Réindexer pour avoir des indices séquentiels (0, 1, 2...)
+                $article_images = array_values($article_images);
+                foreach ($article_images as $index => $img_data): 
                     $img_id = isset($img_data['image_id']) ? intval($img_data['image_id']) : 0;
                     $keywords = isset($img_data['keywords']) ? esc_attr($img_data['keywords']) : '';
                     $img_url = $img_id ? wp_get_attachment_image_url($img_id, 'thumbnail') : '';
@@ -168,9 +172,9 @@ require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
                         <div style="display: flex; gap: 15px; align-items: flex-start;">
                             <div style="flex-shrink: 0;">
                                 <?php if ($img_url): ?>
-                                    <img src="<?php echo esc_url($img_url); ?>" alt="" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
+                                    <img src="<?php echo esc_url($img_url); ?>" alt="" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;" class="article-image-preview">
                                 <?php else: ?>
-                                    <div style="width: 100px; height: 100px; background: #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                                    <div class="article-image-placeholder" style="width: 100px; height: 100px; background: #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
                                         <span style="color: #999;"><?php _e('Aucune image', 'osmose-ads'); ?></span>
                                     </div>
                                 <?php endif; ?>
@@ -179,12 +183,12 @@ require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
                                 <button type="button" class="button select-article-image" data-index="<?php echo $index; ?>">
                                     <?php _e('Sélectionner une image', 'osmose-ads'); ?>
                                 </button>
-                                <input type="hidden" name="article_images[<?php echo $index; ?>][image_id]" value="<?php echo $img_id; ?>" class="article-image-id">
+                                <input type="hidden" name="article_images[<?php echo $index; ?>][image_id]" value="<?php echo $img_id; ?>" class="article-image-id" data-index="<?php echo $index; ?>">
                                 <div style="margin-top: 10px;">
                                     <label style="display: block; margin-bottom: 5px; font-weight: 600;">
                                         <?php _e('Mots-clés associés (séparés par des virgules)', 'osmose-ads'); ?>
                                     </label>
-                                    <input type="text" name="article_images[<?php echo $index; ?>][keywords]" value="<?php echo $keywords; ?>" class="regular-text" style="width: 100%;" placeholder="<?php _e('Ex: couvreur, toiture, isolation, hydrofuger...', 'osmose-ads'); ?>">
+                                    <input type="text" name="article_images[<?php echo $index; ?>][keywords]" value="<?php echo $keywords; ?>" class="regular-text article-image-keywords" style="width: 100%;" placeholder="<?php _e('Ex: couvreur, toiture, isolation, hydrofuger...', 'osmose-ads'); ?>">
                                     <p class="description"><?php _e('Ces mots-clés seront utilisés pour insérer cette image dans les articles dont le titre contient ces mots.', 'osmose-ads'); ?></p>
                                 </div>
                             </div>
