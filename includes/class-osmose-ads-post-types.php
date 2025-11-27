@@ -8,6 +8,7 @@ class Osmose_Ads_Post_Types {
         $this->register_ad_template_post_type();
         $this->register_ad_post_type();
         $this->register_city_post_type();
+        $this->register_article_post_type();
     }
 
     /**
@@ -129,6 +130,54 @@ class Osmose_Ads_Post_Types {
         );
 
         register_post_type('city', $args);
+    }
+
+    /**
+     * Enregistrer le CPT pour les articles générés automatiquement
+     */
+    private function register_article_post_type() {
+        $labels = array(
+            'name'               => __('Articles Générés', 'osmose-ads'),
+            'singular_name'      => __('Article Généré', 'osmose-ads'),
+            'menu_name'          => __('Articles Générés', 'osmose-ads'),
+            'add_new'            => __('Ajouter un Article', 'osmose-ads'),
+            'add_new_item'       => __('Ajouter un nouvel Article', 'osmose-ads'),
+            'edit_item'          => __('Modifier l\'Article', 'osmose-ads'),
+            'new_item'           => __('Nouvel Article', 'osmose-ads'),
+            'view_item'          => __('Voir l\'Article', 'osmose-ads'),
+            'search_items'       => __('Rechercher des Articles', 'osmose-ads'),
+            'not_found'          => __('Aucun article trouvé', 'osmose-ads'),
+            'not_found_in_trash' => __('Aucun article dans la corbeille', 'osmose-ads'),
+        );
+
+        $args = array(
+            'labels'              => $labels,
+            'public'              => true,
+            'show_ui'             => true,
+            'show_in_menu'        => false, // On le gère manuellement
+            'show_in_admin_bar'   => true,
+            'show_in_nav_menus'   => true,
+            'publicly_queryable'  => true,
+            'capability_type'     => 'post',
+            'has_archive'         => true,
+            'hierarchical'        => false,
+            'supports'            => array('title', 'editor', 'custom-fields', 'thumbnail', 'excerpt', 'comments', 'author', 'trackbacks', 'revisions'),
+            'rewrite'             => array(
+                'slug'       => 'articles',
+                'with_front' => false,
+                'feeds'      => true,
+                'pages'     => true,
+            ),
+            'query_var'           => 'osmose_article',
+            'show_in_rest'        => true,
+            'taxonomies'          => array('category', 'post_tag'),
+        );
+
+        register_post_type('osmose_article', $args);
+        
+        // Associer les catégories et tags WordPress
+        register_taxonomy_for_object_type('category', 'osmose_article');
+        register_taxonomy_for_object_type('post_tag', 'osmose_article');
     }
 
     /**

@@ -38,6 +38,8 @@ class Osmose_Ads {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-ai-service.php';
         require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-city-content-personalizer.php';
         require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-france-geo-api.php';
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-article-generator.php';
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-article-cron.php';
         
         // Admin
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/class-osmose-ads-admin.php';

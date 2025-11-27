@@ -195,6 +195,24 @@ class Osmose_Ads_Admin {
             'osmose-ads-settings',
             array($this, 'display_settings')
         );
+        
+        add_submenu_page(
+            'osmose-ads',
+            __('Articles Générés', 'osmose-ads'),
+            __('Articles Générés', 'osmose-ads'),
+            'manage_options',
+            'osmose-ads-articles',
+            array($this, 'display_articles')
+        );
+        
+        add_submenu_page(
+            'osmose-ads',
+            __('Configuration Articles', 'osmose-ads'),
+            __('Configuration Articles', 'osmose-ads'),
+            'manage_options',
+            'osmose-ads-articles-config',
+            array($this, 'display_articles_config')
+        );
     }
     
     /**
@@ -261,6 +279,14 @@ class Osmose_Ads_Admin {
     
     public function display_visit_stats() {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/visit-stats.php';
+    }
+    
+    public function display_articles() {
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/articles.php';
+    }
+    
+    public function display_articles_config() {
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/articles-config.php';
     }
     
     /**
