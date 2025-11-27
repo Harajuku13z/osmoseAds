@@ -22,6 +22,8 @@ $visits_by_referrer = array();
 $visits_by_device = array();
 $visits_by_browser = array();
 $recent_visits = array();
+$visits_last7_labels = array();
+$visits_last7_counts = array();
 
 // Filtrer par annonce si demandé
 $filter_ad_id = isset($_GET['ad_id']) ? intval($_GET['ad_id']) : 0;
@@ -80,6 +82,50 @@ if ($table_exists) {
             current_time('m')
         ));
     }
+
+    // Visites des 7 derniers jours (y compris aujourd'hui)
+    $labels_tmp = array();
+    $counts_tmp = array();
+    $start_timestamp = current_time('timestamp') - (6 * DAY_IN_SECONDS);
+    $start_date = date('Y-m-d', $start_timestamp);
+
+    if ($filter_ad_id > 0) {
+        $rows_7days = $wpdb->get_results($wpdb->prepare(
+            "SELECT DATE(visit_time) as visit_date, COUNT(*) as count
+             FROM $table_name
+             WHERE visit_time >= %s AND ad_id = %d
+             GROUP BY DATE(visit_time)
+             ORDER BY visit_date ASC",
+            $start_date . ' 00:00:00',
+            $filter_ad_id
+        ), ARRAY_A);
+    } else {
+        $rows_7days = $wpdb->get_results($wpdb->prepare(
+            "SELECT DATE(visit_time) as visit_date, COUNT(*) as count
+             FROM $table_name
+             WHERE visit_time >= %s
+             GROUP BY DATE(visit_time)
+             ORDER BY visit_date ASC",
+            $start_date . ' 00:00:00'
+        ), ARRAY_A);
+    }
+
+    $map_7days = array();
+    if (!empty($rows_7days)) {
+        foreach ($rows_7days as $row) {
+            $map_7days[$row['visit_date']] = (int) $row['count'];
+        }
+    }
+
+    for ($i = 0; $i < 7; $i++) {
+        $ts = $start_timestamp + ($i * DAY_IN_SECONDS);
+        $date_key = date('Y-m-d', $ts);
+        $labels_tmp[] = date_i18n('d/m', $ts);
+        $counts_tmp[] = isset($map_7days[$date_key]) ? (int) $map_7days[$date_key] : 0;
+    }
+
+    $visits_last7_labels = $labels_tmp;
+    $visits_last7_counts = $counts_tmp;
     
     // Visites par annonce
     $visits_by_ad = $wpdb->get_results(
@@ -193,6 +239,25 @@ if ($table_exists) {
     <div class="row">
         <!-- Colonne gauche -->
         <div class="col-lg-8">
+            <!-- Graphique 7 derniers jours -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up-arrow me-2"></i><?php _e('Visites sur les 7 derniers jours', 'osmose-ads'); ?>
+                    </h5>
+                    <?php if ($filter_ad_id > 0): ?>
+                        <span class="badge bg-secondary"><?php _e('Filtré par annonce', 'osmose-ads'); ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="card-body">
+                    <?php if ($table_exists && !empty($visits_last7_labels)): ?>
+                        <canvas id="osmose-visits-7days-chart" height="120"></canvas>
+                    <?php else: ?>
+                        <p class="text-muted mb-0"><?php _e('Aucune visite enregistrée pour les 7 derniers jours.', 'osmose-ads'); ?></p>
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <!-- Visites par annonce -->
             <?php if (!empty($visits_by_ad)): ?>
                 <div class="card mb-4">
@@ -390,6 +455,62 @@ if ($table_exists) {
         </div>
     </div>
 </div>
+
+<?php if ($table_exists && !empty($visits_last7_labels)): ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    (function() {
+        var ctx = document.getElementById('osmose-visits-7days-chart');
+        if (!ctx) {
+            return;
+        }
+
+        var labels = <?php echo wp_json_encode(array_values($visits_last7_labels)); ?>;
+        var dataCounts = <?php echo wp_json_encode(array_values($visits_last7_counts)); ?>;
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '<?php echo esc_js(__('Visites', 'osmose-ads')); ?>',
+                    data: dataCounts,
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    backgroundColor: 'rgba(34, 113, 177, 0.6)',
+                    borderColor: 'rgba(34, 113, 177, 1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0,
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + ' <?php echo esc_js(__('visites', 'osmose-ads')); ?>';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    })();
+    </script>
+<?php endif; ?>
 
 <?php
 // Inclure le footer global

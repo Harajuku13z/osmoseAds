@@ -15,6 +15,7 @@ $table_exists = ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name
 // Récupérer les statistiques
 $stats = array();
 $calls_by_page = array();
+$calls_by_city = array();
 $total_calls = 0;
 $calls_today = 0;
 $calls_this_week = 0;
@@ -50,6 +51,18 @@ if ($table_exists) {
          GROUP BY page_url 
          ORDER BY count DESC 
          LIMIT 20",
+        ARRAY_A
+    );
+    
+    // Appels par ville (basé sur l'annonce associée)
+    $calls_by_city = $wpdb->get_results(
+        "SELECT pm.meta_value as city_id, COUNT(*) as count
+         FROM $table_name ct
+         INNER JOIN {$wpdb->postmeta} pm ON ct.ad_id = pm.post_id AND pm.meta_key = 'city_id'
+         WHERE pm.meta_value IS NOT NULL AND pm.meta_value != ''
+         GROUP BY pm.meta_value
+         ORDER BY count DESC
+         LIMIT 15",
         ARRAY_A
     );
     
@@ -151,6 +164,59 @@ if ($table_exists) {
                                     <td class="text-center">
                                         <div class="progress" style="height: 20px;">
                                             <div class="progress-bar bg-primary" role="progressbar" style="width: <?php echo esc_attr($percentage); ?>%">
+                                                <?php echo number_format_i18n($percentage, 1); ?>%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <!-- Appels par ville -->
+    <?php if (!empty($calls_by_city)): ?>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i><?php _e('Villes qui génèrent le plus d\'appels', 'osmose-ads'); ?></h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th><?php _e('Ville', 'osmose-ads'); ?></th>
+                                <th><?php _e('Département', 'osmose-ads'); ?></th>
+                                <th class="text-center"><?php _e('Appels', 'osmose-ads'); ?></th>
+                                <th class="text-center"><?php _e('Pourcentage', 'osmose-ads'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($calls_by_city as $city_stat): 
+                                $city_id = intval($city_stat['city_id']);
+                                $city_post = $city_id ? get_post($city_id) : null;
+                                $city_name = $city_post ? $city_post->post_title : __('Ville inconnue', 'osmose-ads');
+                                $department = $city_id ? get_post_meta($city_id, 'department_name', true) : '';
+                                if (!$department) {
+                                    $department = $city_id ? get_post_meta($city_id, 'department', true) : '';
+                                }
+                                $percentage = $total_calls > 0 ? ($city_stat['count'] / $total_calls) * 100 : 0;
+                            ?>
+                                <tr>
+                                    <td>
+                                        <?php echo esc_html($city_name); ?>
+                                        <?php if ($city_post): ?>
+                                            <br><small class="text-muted">#<?php echo esc_html($city_id); ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?php echo esc_html($department ?: '—'); ?></td>
+                                    <td class="text-center"><strong><?php echo number_format_i18n($city_stat['count']); ?></strong></td>
+                                    <td class="text-center">
+                                        <div class="progress" style="height: 18px;">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo esc_attr($percentage); ?>%">
                                                 <?php echo number_format_i18n($percentage, 1); ?>%
                                             </div>
                                         </div>
