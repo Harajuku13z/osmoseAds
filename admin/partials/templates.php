@@ -24,6 +24,35 @@ if (isset($_GET['action'], $_GET['template_id']) && $_GET['action'] === 'delete_
     exit;
 }
 
+// Création rapide d'un template manuel (sans IA)
+if (isset($_GET['action']) && $_GET['action'] === 'create_manual_template') {
+    if (!current_user_can('edit_posts')) {
+        wp_die(__('Permissions insuffisantes pour créer un template.', 'osmose-ads'));
+    }
+
+    check_admin_referer('osmose_ads_create_manual_template');
+
+    // Créer un template vide (brouillon) que l'utilisateur pourra remplir manuellement
+    $template_post_id = wp_insert_post(array(
+        'post_type'   => 'ad_template',
+        'post_status' => 'draft',
+        'post_title'  => __('Nouveau template manuel', 'osmose-ads'),
+        'post_content'=> '',
+    ));
+
+    if (is_wp_error($template_post_id) || !$template_post_id) {
+        wp_die(__('Erreur lors de la création du template manuel.', 'osmose-ads'));
+    }
+
+    // Initialiser quelques metas par défaut
+    update_post_meta($template_post_id, 'is_active', '1');
+    update_post_meta($template_post_id, 'usage_count', 0);
+
+    // Rediriger directement vers la page d’édition du template
+    wp_safe_redirect(admin_url('admin.php?page=osmose-ads-templates&template_id=' . $template_post_id));
+    exit;
+}
+
 // Traitement de la sauvegarde du template (AVANT la vérification du template_id pour qu'il s'exécute)
 if (isset($_POST['save_template']) && isset($_POST['template_id'])) {
     check_admin_referer('osmose_ads_save_template_' . $_POST['template_id']);
@@ -48,6 +77,17 @@ if (isset($_POST['save_template']) && isset($_POST['template_id'])) {
         foreach ($meta_fields as $field) {
             if (isset($_POST[$field])) {
                 update_post_meta($template_id, $field, sanitize_text_field($_POST[$field]));
+            }
+        }
+
+        // Mettre à jour le nom du service (mot-clé principal) et le slug associé
+        if (isset($_POST['service_name'])) {
+            $service_name = sanitize_text_field($_POST['service_name']);
+            update_post_meta($template_id, 'service_name', $service_name);
+
+            if (!empty($service_name)) {
+                $service_slug = sanitize_title($service_name);
+                update_post_meta($template_id, 'service_slug', $service_slug);
             }
         }
         
@@ -176,10 +216,14 @@ $templates = get_posts(array(
         <h1 class="h3 mb-1"><?php echo esc_html(get_admin_page_title()); ?></h1>
         <p class="text-muted mb-0"><?php _e('Gérez vos templates de services', 'osmose-ads'); ?></p>
     </div>
-    <div>
+    <div class="d-flex gap-2">
         <a href="<?php echo admin_url('admin.php?page=osmose-ads-template-create'); ?>" class="btn btn-primary" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;">
+            <i class="bi bi-magic me-2"></i>
+            <?php _e('Créer un Template avec l\'IA', 'osmose-ads'); ?>
+        </a>
+        <a href="<?php echo esc_url( wp_nonce_url( admin_url('admin.php?page=osmose-ads-templates&action=create_manual_template'), 'osmose_ads_create_manual_template' ) ); ?>" class="btn btn-outline-primary">
             <i class="bi bi-plus-circle me-2"></i>
-            <?php _e('Créer un Template', 'osmose-ads'); ?>
+            <?php _e('Créer un Template manuel (sans IA)', 'osmose-ads'); ?>
         </a>
     </div>
 </div>

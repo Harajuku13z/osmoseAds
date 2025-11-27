@@ -73,6 +73,13 @@ if (isset($save_success) && $save_success) {
                             <input type="text" name="template_title" class="form-control" value="<?php echo esc_attr($template->post_title); ?>" required>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label"><?php _e('Service (mot-clé principal)', 'osmose-ads'); ?></label>
+                            <input type="text" name="service_name" class="form-control" value="<?php echo esc_attr($service_name); ?>" placeholder="<?php esc_attr_e('Ex: Couvreur zingueur, Isolation des combles, etc.', 'osmose-ads'); ?>">
+                            <small class="form-text text-muted">
+                                <?php _e('Ce champ définit le service principal utilisé pour générer les annonces (slug, SEO, etc.).', 'osmose-ads'); ?>
+                            </small>
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label"><?php _e('Description courte', 'osmose-ads'); ?></label>
                             <textarea name="short_description" class="form-control" rows="2"><?php echo esc_textarea($short_description); ?></textarea>
                             <small class="form-text text-muted"><?php _e('Description utilisée dans les aperçus', 'osmose-ads'); ?></small>
