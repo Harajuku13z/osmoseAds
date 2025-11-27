@@ -104,11 +104,14 @@ class Osmose_Ads_Public {
     public function generate_sitemap() {
         // Vérifier l'URL directement (plus fiable que les query vars)
         $request_uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+        // Nettoyer l'URL : enlever le slash final et les query strings
+        $request_uri = rtrim(parse_url($request_uri, PHP_URL_PATH), '/');
         $is_sitemap = false;
         $sitemap_index = false;
         $sitemap_number = null;
         
         // Vérifier si l'URL contient sitemap-ads.xml (index ou numéroté)
+        // Gérer aussi le cas avec un slash final
         if (preg_match('/sitemap-ads(?:-(\d+))?\.xml$/', $request_uri, $matches)) {
             $is_sitemap = true;
             if (empty($matches[1])) {
@@ -122,17 +125,22 @@ class Osmose_Ads_Public {
         
         // Vérifier aussi via query vars (si les rewrite rules sont flushées)
         global $wp_query;
-        if (isset($wp_query->query_vars['osmose_ads_sitemap'])) {
+        if (isset($wp_query) && isset($wp_query->query_vars['osmose_ads_sitemap'])) {
             $is_sitemap = true;
             $sitemap_index = true; // Par défaut, c'est l'index
         }
         
-        if (isset($wp_query->query_vars['osmose_ads_sitemap_num'])) {
+        if (isset($wp_query) && isset($wp_query->query_vars['osmose_ads_sitemap_num'])) {
             $is_sitemap = true;
             $sitemap_number = intval($wp_query->query_vars['osmose_ads_sitemap_num']);
         }
         
         if (!$is_sitemap) {
+            return;
+        }
+
+        // Vérifier que les headers n'ont pas déjà été envoyés
+        if (headers_sent()) {
             return;
         }
 
@@ -150,6 +158,7 @@ class Osmose_Ads_Public {
 
         // En-têtes XML
         header('Content-Type: application/xml; charset=utf-8');
+        header('X-Robots-Tag: noindex');
         
         // Si c'est le sitemap index, générer l'index
         if ($sitemap_index) {
@@ -162,6 +171,10 @@ class Osmose_Ads_Public {
             $this->generate_sitemap_file($ads, $sitemap_number, $max_links_per_sitemap);
             exit;
         }
+        
+        // Si on arrive ici sans avoir généré de sitemap, générer l'index par défaut
+        $this->generate_sitemap_index($ads, $max_links_per_sitemap);
+        exit;
     }
     
     /**
@@ -177,9 +190,10 @@ class Osmose_Ads_Public {
         // Toujours ajouter le sitemap de la page d'accueil
         $home_sitemap_url = home_url('/sitemap-ads-0.xml');
         $lastmod = get_lastpostmodified('GMT');
+        $lastmod_date = $lastmod ? date('c', strtotime($lastmod)) : date('c');
         echo "  <sitemap>\n";
         echo "    <loc>" . esc_url($home_sitemap_url) . "</loc>\n";
-        echo "    <lastmod>" . esc_html($lastmod ? date('c', strtotime($lastmod)) : date('c')) . "</lastmod>\n";
+        echo "    <lastmod>" . esc_html($lastmod_date) . "</lastmod>\n";
         echo "  </sitemap>\n";
         
         // Ajouter les sitemaps des annonces (seulement s'il y en a)
@@ -223,9 +237,10 @@ class Osmose_Ads_Public {
         if ($sitemap_number === 0) {
             $home_url = home_url('/');
             $lastmod = get_lastpostmodified('GMT');
+            $lastmod_date = $lastmod ? date('c', strtotime($lastmod)) : date('c');
             echo "  <url>\n";
             echo "    <loc>" . esc_url($home_url) . "</loc>\n";
-            echo "    <lastmod>" . esc_html($lastmod ? date('c', strtotime($lastmod)) : date('c')) . "</lastmod>\n";
+            echo "    <lastmod>" . esc_html($lastmod_date) . "</lastmod>\n";
             echo "    <changefreq>daily</changefreq>\n";
             echo "    <priority>1.0</priority>\n";
             echo "  </url>\n";
@@ -240,8 +255,16 @@ class Osmose_Ads_Public {
                 }
                 
                 $ad = $ads[$i];
+                if (!is_object($ad) || !isset($ad->ID)) {
+                    continue;
+                }
+                
                 $url = get_permalink($ad->ID);
-                $modified = $ad->post_modified_gmt;
+                if (!$url) {
+                    continue;
+                }
+                
+                $modified = isset($ad->post_modified_gmt) ? $ad->post_modified_gmt : '';
                 $modified_date = $modified ? date('c', strtotime($modified)) : date('c');
                 
                 // Déterminer la priorité (peut être ajustée selon vos besoins)
