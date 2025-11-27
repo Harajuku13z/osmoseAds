@@ -630,7 +630,7 @@ class Osmose_Article_Generator {
      */
     private function clean_content($content) {
         // Nettoyer le contenu en gardant les balises HTML valides
-        $allowed_tags = array(
+        $content = wp_kses($content, array(
             'h2' => array(),
             'h3' => array(),
             'h4' => array(),
