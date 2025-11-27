@@ -865,7 +865,7 @@ class Osmose_Article_Generator {
     }
     
     /**
-     * Générer les tags WordPress pour l'article
+     * Générer les tags WordPress pour l'article (minimum 10 tags)
      */
     private function generate_tags($keyword, $department, $city) {
         $tags = array();
@@ -888,15 +888,126 @@ class Osmose_Article_Generator {
             $tags[] = $city['name'];
         }
         
-        // Ajouter des tags génériques
+        // Ajouter des tags génériques pertinents
         $tags[] = __('Rénovation', 'osmose-ads');
         $tags[] = __('Travaux', 'osmose-ads');
         $tags[] = __('Professionnel', 'osmose-ads');
+        $tags[] = __('Artisan', 'osmose-ads');
+        $tags[] = __('Expert', 'osmose-ads');
+        $tags[] = __('Qualifié', 'osmose-ads');
         
-        // Nettoyer et limiter les tags
+        // Ajouter des tags spécifiques selon le mot-clé
+        $keyword_lower = strtolower($keyword);
+        
+        // Tags pour toiture/couvreur
+        if (stripos($keyword_lower, 'toiture') !== false || stripos($keyword_lower, 'couvreur') !== false) {
+            $tags[] = __('Toiture', 'osmose-ads');
+            $tags[] = __('Couvreur', 'osmose-ads');
+            $tags[] = __('Charpente', 'osmose-ads');
+            $tags[] = __('Zinguerie', 'osmose-ads');
+        }
+        
+        // Tags pour isolation
+        if (stripos($keyword_lower, 'isolation') !== false) {
+            $tags[] = __('Isolation', 'osmose-ads');
+            $tags[] = __('Isolant', 'osmose-ads');
+            $tags[] = __('Énergie', 'osmose-ads');
+            $tags[] = __('Économie', 'osmose-ads');
+        }
+        
+        // Tags pour étanchéité/hydrofugation
+        if (stripos($keyword_lower, 'étanchéité') !== false || stripos($keyword_lower, 'hydrofug') !== false) {
+            $tags[] = __('Étanchéité', 'osmose-ads');
+            $tags[] = __('Hydrofugation', 'osmose-ads');
+            $tags[] = __('Protection', 'osmose-ads');
+            $tags[] = __('Imperméabilisation', 'osmose-ads');
+        }
+        
+        // Tags pour démoussage
+        if (stripos($keyword_lower, 'démoussage') !== false || stripos($keyword_lower, 'nettoyage') !== false) {
+            $tags[] = __('Démoussage', 'osmose-ads');
+            $tags[] = __('Nettoyage', 'osmose-ads');
+            $tags[] = __('Entretien', 'osmose-ads');
+            $tags[] = __('Maintenance', 'osmose-ads');
+        }
+        
+        // Tags généraux supplémentaires
+        $tags[] = __('Devis gratuit', 'osmose-ads');
+        $tags[] = __('Intervention rapide', 'osmose-ads');
+        
+        // Si on a encore moins de 10 tags, ajouter des tags génériques supplémentaires
+        if (count($tags) < 10) {
+            $additional_tags = array(
+                __('Bretagne', 'osmose-ads'),
+                __('France', 'osmose-ads'),
+                __('Qualité', 'osmose-ads'),
+                __('Service', 'osmose-ads'),
+                __('Entreprise', 'osmose-ads'),
+                __('Prestation', 'osmose-ads'),
+                __('Réparation', 'osmose-ads'),
+                __('Installation', 'osmose-ads'),
+            );
+            
+            // Ajouter jusqu'à avoir au moins 10 tags
+            foreach ($additional_tags as $additional_tag) {
+                if (count($tags) >= 10) {
+                    break;
+                }
+                if (!in_array($additional_tag, $tags)) {
+                    $tags[] = $additional_tag;
+                }
+            }
+        }
+        
+        // Nettoyer les tags
         $tags = array_map('trim', $tags);
         $tags = array_filter($tags);
-        $tags = array_slice($tags, 0, 10); // Max 10 tags
+        $tags = array_unique($tags);
+        
+        // S'assurer qu'on a au moins 10 tags
+        if (count($tags) < 10) {
+            // Ajouter des tags basés sur le département si disponible
+            if ($department) {
+                $dept_name = $this->get_department_name($department);
+                if ($dept_name && $dept_name !== $department) {
+                    $tags[] = $dept_name . ' ' . __('professionnel', 'osmose-ads');
+                    $tags[] = $dept_name . ' ' . __('expert', 'osmose-ads');
+                }
+            }
+            
+            // Ajouter des tags basés sur la ville si disponible
+            if ($city && is_array($city) && isset($city['name'])) {
+                $tags[] = $city['name'] . ' ' . __('professionnel', 'osmose-ads');
+                $tags[] = $city['name'] . ' ' . __('expert', 'osmose-ads');
+            }
+        }
+        
+        // Nettoyer à nouveau et prendre les 15 premiers (pour avoir une marge)
+        $tags = array_map('trim', $tags);
+        $tags = array_filter($tags);
+        $tags = array_unique($tags);
+        $tags = array_slice($tags, 0, 15); // Prendre jusqu'à 15 tags
+        
+        // S'assurer qu'on a au moins 10 tags
+        if (count($tags) < 10) {
+            // En dernier recours, ajouter des tags génériques
+            $fallback_tags = array(
+                __('Bâtiment', 'osmose-ads'),
+                __('Construction', 'osmose-ads'),
+                __('Habitat', 'osmose-ads'),
+                __('Maison', 'osmose-ads'),
+                __('Logement', 'osmose-ads'),
+            );
+            
+            foreach ($fallback_tags as $fallback_tag) {
+                if (count($tags) >= 10) {
+                    break;
+                }
+                if (!in_array($fallback_tag, $tags)) {
+                    $tags[] = $fallback_tag;
+                }
+            }
+        }
         
         return $tags;
     }
