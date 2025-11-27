@@ -393,107 +393,62 @@ class Osmose_Article_Generator {
         if ($department) {
             $dept_name = $this->get_department_name($department);
             if ($dept_name && $dept_name !== $department) {
-                // Remplacer TOUTES les occurrences du code département par le nom
-                // Ordre important : les patterns les plus spécifiques en premier
-                $patterns = array(
-                    // "département 56" -> "département Morbihan"
+                // APPROCHE AGRESSIVE : Remplacer TOUTES les occurrences du code département
+                // On fait plusieurs passes pour être sûr de tout remplacer
+                
+                // Pass 1 : Patterns spécifiques (les plus courants)
+                $specific_patterns = array(
                     '/\bdépartement\s+' . preg_quote($department, '/') . '\b/i' => 'département ' . $dept_name,
-                    // "dans le département 56" -> "dans le département Morbihan"
                     '/\bdans\s+le\s+département\s+' . preg_quote($department, '/') . '\b/i' => 'dans le département ' . $dept_name,
-                    // "du département 56" -> "du département Morbihan"
                     '/\bdu\s+département\s+' . preg_quote($department, '/') . '\b/i' => 'du département ' . $dept_name,
-                    // "de département 56" -> "de département Morbihan"
                     '/\bde\s+département\s+' . preg_quote($department, '/') . '\b/i' => 'de département ' . $dept_name,
-                    // "le département 56" -> "le département Morbihan"
                     '/\ble\s+département\s+' . preg_quote($department, '/') . '\b/i' => 'le département ' . $dept_name,
-                    // "en 56" -> "en Morbihan" (dans un contexte géographique)
                     '/\ben\s+' . preg_quote($department, '/') . '\b/i' => 'en ' . $dept_name,
-                    // "dans le 56" -> "dans le Morbihan"
                     '/\bdans\s+le\s+' . preg_quote($department, '/') . '\b/i' => 'dans le ' . $dept_name,
-                    // "dans 56" -> "dans Morbihan"
                     '/\bdans\s+' . preg_quote($department, '/') . '\b/i' => 'dans ' . $dept_name,
-                    // "du 56" -> "du Morbihan"
                     '/\bdu\s+' . preg_quote($department, '/') . '\b/i' => 'du ' . $dept_name,
-                    // "de 56" -> "de Morbihan"
                     '/\bde\s+' . preg_quote($department, '/') . '\b/i' => 'de ' . $dept_name,
                 );
                 
-                // Appliquer tous les patterns
-                foreach ($patterns as $pattern => $replacement) {
+                foreach ($specific_patterns as $pattern => $replacement) {
                     $content = preg_replace($pattern, $replacement, $content);
                 }
                 
-                // Remplacer les occurrences restantes du code dans un contexte géographique
-                // Chercher le code précédé ou suivi de mots géographiques
-                $geo_context_patterns = array(
-                    // "56" précédé de mots géographiques
-                    '/(\b(département|en|dans|du|de|ville|région|à|pour|le|la|les|un|une)\s+)' . preg_quote($department, '/') . '\b/i' => '$1' . $dept_name,
-                    // "56" suivi de mots géographiques
-                    '/\b' . preg_quote($department, '/') . '\s+(en|dans|du|de|pour|région|ville)/i' => $dept_name . ' $1',
+                // Pass 2 : Remplacer le code précédé de mots géographiques
+                $geo_before_patterns = array(
+                    '/(\b(département|en|dans|du|de|ville|région|à|pour|le|la|les|un|une|au|aux)\s+)' . preg_quote($department, '/') . '\b/i' => '$1' . $dept_name,
                 );
                 
-                foreach ($geo_context_patterns as $pattern => $replacement) {
+                foreach ($geo_before_patterns as $pattern => $replacement) {
                     $content = preg_replace($pattern, $replacement, $content);
                 }
                 
-                // Dernière passe : remplacer toutes les occurrences restantes du code
-                // qui apparaissent dans un contexte qui suggère qu'il s'agit du département
-                // On utilise une approche plus agressive : remplacer le code s'il apparaît près de mots géographiques
-                $content_copy = $content; // Copie pour le callback
-                $content = preg_replace_callback(
-                    '/\b' . preg_quote($department, '/') . '\b/i',
-                    function($matches) use ($department, $dept_name, &$content_copy) {
-                        // Trouver toutes les positions du match dans le contenu
-                        $offset = 0;
-                        $found = false;
-                        while (($pos = strpos($content_copy, $matches[0], $offset)) !== false) {
-                            // Extraire le contexte avant et après (50 caractères de chaque côté)
-                            $before = substr($content_copy, max(0, $pos - 50), 50);
-                            $after = substr($content_copy, $pos + strlen($matches[0]), 50);
-                            $context = strtolower($before . ' ' . $after);
-                            
-                            // Mots-clés géographiques qui indiquent qu'on parle du département
-                            $geo_keywords = array(
-                                'département', 'en', 'dans', 'du', 'de', 'ville', 'région', 
-                                'à', 'pour', 'le', 'la', 'les', 'bretagne', 'france',
-                                'travaux', 'rénovation', 'entreprise', 'local', 'régional'
-                            );
-                            
-                            // Si le contexte contient des mots géographiques, remplacer
-                            foreach ($geo_keywords as $keyword) {
-                                if (stripos($context, $keyword) !== false) {
-                                    $found = true;
-                                    break 2; // Sortir des deux boucles
-                                }
-                            }
-                            
-                            $offset = $pos + 1;
-                        }
-                        
-                        if ($found) {
-                            return $dept_name;
-                        }
-                        
-                        return $matches[0];
-                    },
-                    $content
-                );
-                
-                // Approche finale : remplacer toutes les occurrences restantes si elles apparaissent
-                // dans une phrase contenant des mots géographiques (plus agressif)
+                // Pass 3 : Remplacer par analyse de phrases (plus agressif)
+                // Découper en phrases et analyser chaque phrase
                 $sentences = preg_split('/([.!?]+\s*)/', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
                 $new_sentences = array();
+                
                 foreach ($sentences as $sentence) {
-                    // Si la phrase contient le code département ET des mots géographiques, remplacer
+                    // Si la phrase contient le code département
                     if (preg_match('/\b' . preg_quote($department, '/') . '\b/i', $sentence)) {
-                        $geo_words = array('département', 'en', 'dans', 'du', 'de', 'ville', 'région', 'bretagne', 'france', 'travaux', 'rénovation');
+                        // Liste de mots géographiques qui indiquent qu'on parle du département
+                        $geo_words = array(
+                            'département', 'en', 'dans', 'du', 'de', 'ville', 'région', 
+                            'bretagne', 'france', 'travaux', 'rénovation', 'entreprise',
+                            'local', 'régional', 'à', 'pour', 'le', 'la', 'les'
+                        );
+                        
+                        // Vérifier si la phrase contient des mots géographiques
                         $has_geo = false;
+                        $sentence_lower = strtolower($sentence);
                         foreach ($geo_words as $geo_word) {
-                            if (stripos($sentence, $geo_word) !== false) {
+                            if (stripos($sentence_lower, $geo_word) !== false) {
                                 $has_geo = true;
                                 break;
                             }
                         }
+                        
+                        // Si contexte géographique détecté, remplacer TOUTES les occurrences du code
                         if ($has_geo) {
                             $sentence = preg_replace('/\b' . preg_quote($department, '/') . '\b/i', $dept_name, $sentence);
                         }
@@ -501,6 +456,81 @@ class Osmose_Article_Generator {
                     $new_sentences[] = $sentence;
                 }
                 $content = implode('', $new_sentences);
+                
+                // Pass 4 : Dernière passe agressive - remplacer toutes les occurrences restantes
+                // dans un contexte qui contient des mots-clés géographiques (100 caractères autour)
+                $content = preg_replace_callback(
+                    '/\b' . preg_quote($department, '/') . '\b/i',
+                    function($matches) use ($dept_name) {
+                        // Utiliser une variable statique pour stocker le contenu complet
+                        static $full_content = null;
+                        static $match_count = 0;
+                        
+                        if ($full_content === null) {
+                            // Récupérer le contenu depuis la variable globale ou utiliser une autre méthode
+                            return $dept_name; // Par défaut, remplacer si on n'a pas le contexte
+                        }
+                        
+                        $match_count++;
+                        $pos = 0;
+                        $found_pos = 0;
+                        
+                        // Trouver la position de cette occurrence
+                        for ($i = 0; $i < $match_count; $i++) {
+                            $found_pos = strpos($full_content, $matches[0], $pos);
+                            if ($found_pos === false) {
+                                return $dept_name; // Si on ne trouve pas, remplacer par sécurité
+                            }
+                            $pos = $found_pos + 1;
+                        }
+                        
+                        // Extraire le contexte (100 caractères avant et après)
+                        $before = substr($full_content, max(0, $found_pos - 100), 100);
+                        $after = substr($full_content, $found_pos + strlen($matches[0]), 100);
+                        $context = strtolower($before . ' ' . $after);
+                        
+                        // Mots-clés géographiques
+                        $geo_keywords = array(
+                            'département', 'en', 'dans', 'du', 'de', 'ville', 'région',
+                            'bretagne', 'france', 'travaux', 'rénovation', 'entreprise',
+                            'local', 'régional', 'à', 'pour'
+                        );
+                        
+                        // Si contexte géographique, remplacer
+                        foreach ($geo_keywords as $keyword) {
+                            if (stripos($context, $keyword) !== false) {
+                                return $dept_name;
+                            }
+                        }
+                        
+                        return $matches[0];
+                    },
+                    $content
+                );
+                
+                // Pass 5 : Remplacement final très agressif - si le code apparaît encore,
+                // le remplacer s'il est dans un paragraphe qui contient des mots géographiques
+                $paragraphs = preg_split('/(<\/p>|<\/h2>|<\/h3>|<\/h4>)/i', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
+                $new_paragraphs = array();
+                
+                foreach ($paragraphs as $para) {
+                    if (preg_match('/\b' . preg_quote($department, '/') . '\b/i', $para)) {
+                        $para_lower = strtolower($para);
+                        $geo_words = array('département', 'en', 'dans', 'du', 'de', 'ville', 'région', 'bretagne', 'france');
+                        $has_geo = false;
+                        foreach ($geo_words as $geo_word) {
+                            if (stripos($para_lower, $geo_word) !== false) {
+                                $has_geo = true;
+                                break;
+                            }
+                        }
+                        if ($has_geo) {
+                            $para = preg_replace('/\b' . preg_quote($department, '/') . '\b/i', $dept_name, $para);
+                        }
+                    }
+                    $new_paragraphs[] = $para;
+                }
+                $content = implode('', $new_paragraphs);
             }
         }
         
