@@ -208,12 +208,81 @@ if (isset($_POST['import_communes']) && wp_verify_nonce($_POST['import_nonce'], 
     }
 }
 
+// Rafraîchir les noms de départements/régions manquants
+if (isset($_POST['refresh_city_names']) && wp_verify_nonce($_POST['refresh_city_names_nonce'], 'osmose_ads_refresh_city_names')) {
+    if (!class_exists('France_Geo_API')) {
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/services/class-france-geo-api.php';
+    }
+
+    $geo_api = new France_Geo_API();
+    $departments = $geo_api->get_departments();
+    $regions = $geo_api->get_regions();
+
+    if (is_wp_error($departments) || is_wp_error($regions)) {
+        $refresh_error = __('Impossible de contacter l\'API pour récupérer les listes de départements/régions. Veuillez réessayer.', 'osmose-ads');
+    } else {
+        $dept_map = array();
+        foreach ($departments as $dept) {
+            if (!empty($dept['code'])) {
+                $dept_map[$dept['code']] = $dept['nom'] ?? '';
+            }
+        }
+
+        $region_map = array();
+        foreach ($regions as $region) {
+            if (!empty($region['code'])) {
+                $region_map[$region['code']] = $region['nom'] ?? '';
+            }
+        }
+
+        $city_ids = get_posts(array(
+            'post_type' => 'city',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'fields' => 'ids',
+        ));
+
+        $updated_departments = 0;
+        $updated_regions = 0;
+
+        if (!empty($city_ids)) {
+            foreach ($city_ids as $city_id) {
+                $dept_code = get_post_meta($city_id, 'department', true);
+                $dept_name = get_post_meta($city_id, 'department_name', true);
+                if (!empty($dept_code) && empty($dept_name) && isset($dept_map[$dept_code]) && !empty($dept_map[$dept_code])) {
+                    update_post_meta($city_id, 'department_name', $dept_map[$dept_code]);
+                    $updated_departments++;
+                }
+
+                $region_code = get_post_meta($city_id, 'region', true);
+                $region_name = get_post_meta($city_id, 'region_name', true);
+                if (!empty($region_code) && empty($region_name) && isset($region_map[$region_code]) && !empty($region_map[$region_code])) {
+                    update_post_meta($city_id, 'region_name', $region_map[$region_code]);
+                    $updated_regions++;
+                }
+            }
+        }
+
+        $refresh_message = sprintf(
+            __('Mise à jour terminée : %d nom(s) de département et %d nom(s) de région complétés.', 'osmose-ads'),
+            $updated_departments,
+            $updated_regions
+        );
+    }
+}
+
 // Afficher les messages
 if (isset($import_success) && $import_success) {
     echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($import_message) . '</p></div>';
 }
 if (isset($delete_success) && $delete_success) {
     echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($delete_message) . '</p></div>';
+}
+if (!empty($refresh_message)) {
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($refresh_message) . '</p></div>';
+}
+if (!empty($refresh_error)) {
+    echo '<div class="notice notice-error is-dismissible"><p>' . esc_html($refresh_error) . '</p></div>';
 }
 
 $cities = get_posts(array(
@@ -237,22 +306,32 @@ $cities = get_posts(array(
 <div class="row mb-4">
     <div class="col-12">
         <div class="osmose-ads-card">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <h2 class="mb-0">
                     <i class="bi bi-list-ul me-2"></i>
                     <?php _e('Liste des Villes', 'osmose-ads'); ?>
                     <span class="badge bg-primary ms-2"><?php echo count($cities); ?></span>
                 </h2>
-                <?php if (!empty($cities)): ?>
-                    <form method="post" style="display: inline;" onsubmit="return confirm('<?php _e('Êtes-vous sûr de vouloir supprimer TOUTES les villes ? Cette action est irréversible !', 'osmose-ads'); ?>');">
-                        <?php wp_nonce_field('osmose_ads_delete_all_cities', 'delete_all_nonce'); ?>
-                        <input type="hidden" name="delete_all_cities" value="1">
-                        <button type="submit" class="btn btn-danger btn-sm">
-                            <i class="bi bi-trash me-1"></i>
-                            <?php _e('Supprimer toutes les villes', 'osmose-ads'); ?>
+                <div class="d-flex align-items-center gap-2">
+                    <?php if (!empty($cities)): ?>
+                        <form method="post" style="display: inline;" onsubmit="return confirm('<?php _e('Êtes-vous sûr de vouloir supprimer TOUTES les villes ? Cette action est irréversible !', 'osmose-ads'); ?>');">
+                            <?php wp_nonce_field('osmose_ads_delete_all_cities', 'delete_all_nonce'); ?>
+                            <input type="hidden" name="delete_all_cities" value="1">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="bi bi-trash me-1"></i>
+                                <?php _e('Supprimer toutes les villes', 'osmose-ads'); ?>
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                    <form method="post" style="display: inline;">
+                        <?php wp_nonce_field('osmose_ads_refresh_city_names', 'refresh_city_names_nonce'); ?>
+                        <input type="hidden" name="refresh_city_names" value="1">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm" title="<?php esc_attr_e('Compléter les noms de départements/régions manquants via l’API officielle', 'osmose-ads'); ?>">
+                            <i class="bi bi-arrow-repeat me-1"></i>
+                            <?php _e('Mettre à jour les noms', 'osmose-ads'); ?>
                         </button>
                     </form>
-                <?php endif; ?>
+                </div>
             </div>
             
             <div class="cities-scroll-container" style="max-height: 500px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -275,8 +354,36 @@ $cities = get_posts(array(
                                 <tr>
                                     <td><?php echo esc_html($city->post_title); ?></td>
                                     <td><?php echo esc_html($city_meta['postal_code'][0] ?? '-'); ?></td>
-                                    <td><?php echo esc_html($city_meta['department'][0] ?? '-'); ?></td>
-                                    <td><?php echo esc_html($city_meta['region'][0] ?? '-'); ?></td>
+                                    <td>
+                                        <?php
+                                        $dept_code = $city_meta['department'][0] ?? '';
+                                        $dept_name = $city_meta['department_name'][0] ?? '';
+                                        if ($dept_name && $dept_code) {
+                                            echo esc_html($dept_name . ' (' . $dept_code . ')');
+                                        } elseif ($dept_name) {
+                                            echo esc_html($dept_name);
+                                        } elseif ($dept_code) {
+                                            echo esc_html($dept_code);
+                                        } else {
+                                            echo '-';
+                                        }
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        $region_code = $city_meta['region'][0] ?? '';
+                                        $region_name = $city_meta['region_name'][0] ?? '';
+                                        if ($region_name && $region_code) {
+                                            echo esc_html($region_name . ' (' . $region_code . ')');
+                                        } elseif ($region_name) {
+                                            echo esc_html($region_name);
+                                        } elseif ($region_code) {
+                                            echo esc_html($region_code);
+                                        } else {
+                                            echo '-';
+                                        }
+                                        ?>
+                                    </td>
                                     <td><?php echo esc_html($city_meta['population'][0] ?? '-'); ?></td>
                                     <td>
                                         <a href="<?php echo get_delete_post_link($city->ID); ?>" class="btn btn-sm btn-danger" onclick="return confirm('<?php _e('Êtes-vous sûr de vouloir supprimer cette ville ?', 'osmose-ads'); ?>');">
