@@ -80,6 +80,11 @@ $nav_items = array(
         'icon' => 'dashicons-location-alt',
         'url' => admin_url('admin.php?page=osmose-ads-cities'),
     ),
+    'osmose-ads-articles' => array(
+        'title' => __('Articles', 'osmose-ads'),
+        'icon' => 'dashicons-edit-page',
+        'url' => admin_url('admin.php?page=osmose-ads-articles'),
+    ),
     'osmose-ads-settings' => array(
         'title' => __('Réglages', 'osmose-ads'),
         'icon' => 'dashicons-admin-settings',

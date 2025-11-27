@@ -13,6 +13,7 @@ $setup_completed = get_option('osmose_ads_setup_completed', false);
 $templates_count = wp_count_posts('ad_template');
 $ads_count = wp_count_posts('ad');
 $cities_count = wp_count_posts('city');
+$articles_count = wp_count_posts('osmose_article');
 
 // Statistiques d'appels
 global $wpdb;
@@ -114,6 +115,31 @@ $ads_with_tracking = get_posts(array(
                         <p><?php _e('Villes', 'osmose-ads'); ?></p>
                         <a href="<?php echo admin_url('admin.php?page=osmose-ads-cities'); ?>" class="osmose-btn osmose-btn-outline">
                             <?php _e('Gérer les Villes', 'osmose-ads'); ?>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="osmose-ads-card stat-box">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                        <span class="dashicons dashicons-edit-page"></span>
+                    </div>
+                    <div class="stat-content">
+                        <h3><?php echo number_format_i18n($articles_count->publish ?? 0); ?></h3>
+                        <p><?php _e('Articles Générés', 'osmose-ads'); ?></p>
+                        <small style="display: block; margin-top: 5px; color: #6b7280;">
+                            <?php 
+                            $articles_today = $wpdb->get_var($wpdb->prepare(
+                                "SELECT COUNT(*) FROM {$wpdb->posts} 
+                                 WHERE post_type = 'osmose_article' 
+                                 AND post_status = 'publish' 
+                                 AND DATE(post_date) = %s",
+                                current_time('Y-m-d')
+                            ));
+                            echo number_format_i18n($articles_today); 
+                            ?> <?php _e('aujourd\'hui', 'osmose-ads'); ?>
+                        </small>
+                        <a href="<?php echo admin_url('admin.php?page=osmose-ads-articles'); ?>" class="osmose-btn osmose-btn-outline">
+                            <?php _e('Voir les Articles', 'osmose-ads'); ?>
                         </a>
                     </div>
                 </div>
