@@ -105,21 +105,39 @@ class Osmose_Ads_Public {
         // Vérifier l'URL directement (plus fiable que les query vars)
         $request_uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
         $is_sitemap = false;
+        $sitemap_index = false;
+        $sitemap_number = null;
         
-        // Vérifier si l'URL contient sitemap-ads.xml
-        if (strpos($request_uri, 'sitemap-ads.xml') !== false) {
+        // Vérifier si l'URL contient sitemap-ads.xml (index ou numéroté)
+        if (preg_match('/sitemap-ads(?:-(\d+))?\.xml$/', $request_uri, $matches)) {
             $is_sitemap = true;
+            if (empty($matches[1])) {
+                // C'est le sitemap index
+                $sitemap_index = true;
+            } else {
+                // C'est un sitemap numéroté
+                $sitemap_number = intval($matches[1]);
+            }
         }
         
         // Vérifier aussi via query vars (si les rewrite rules sont flushées)
         global $wp_query;
         if (isset($wp_query->query_vars['osmose_ads_sitemap'])) {
             $is_sitemap = true;
+            $sitemap_index = true; // Par défaut, c'est l'index
+        }
+        
+        if (isset($wp_query->query_vars['osmose_ads_sitemap_num'])) {
+            $is_sitemap = true;
+            $sitemap_number = intval($wp_query->query_vars['osmose_ads_sitemap_num']);
         }
         
         if (!$is_sitemap) {
             return;
         }
+
+        // Nombre maximum de liens par sitemap
+        $max_links_per_sitemap = 4000;
 
         // Récupérer toutes les annonces publiées
         $ads = get_posts(array(
@@ -133,44 +151,115 @@ class Osmose_Ads_Public {
         // En-têtes XML
         header('Content-Type: application/xml; charset=utf-8');
         
+        // Si c'est le sitemap index, générer l'index
+        if ($sitemap_index) {
+            $this->generate_sitemap_index($ads, $max_links_per_sitemap);
+            exit;
+        }
+        
+        // Sinon, générer le sitemap numéroté
+        if ($sitemap_number !== null) {
+            $this->generate_sitemap_file($ads, $sitemap_number, $max_links_per_sitemap);
+            exit;
+        }
+    }
+    
+    /**
+     * Générer le sitemap index qui liste tous les sitemaps
+     */
+    private function generate_sitemap_index($ads, $max_links_per_sitemap) {
+        $total_ads = count($ads);
+        $num_sitemaps = $total_ads > 0 ? ceil($total_ads / $max_links_per_sitemap) : 0;
+        
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        
+        // Toujours ajouter le sitemap de la page d'accueil
+        $home_sitemap_url = home_url('/sitemap-ads-0.xml');
+        $lastmod = get_lastpostmodified('GMT');
+        echo "  <sitemap>\n";
+        echo "    <loc>" . esc_url($home_sitemap_url) . "</loc>\n";
+        echo "    <lastmod>" . esc_html($lastmod ? date('c', strtotime($lastmod)) : date('c')) . "</lastmod>\n";
+        echo "  </sitemap>\n";
+        
+        // Ajouter les sitemaps des annonces (seulement s'il y en a)
+        if ($num_sitemaps > 0) {
+            for ($i = 1; $i <= $num_sitemaps; $i++) {
+                $sitemap_url = home_url('/sitemap-ads-' . $i . '.xml');
+                $start_index = ($i - 1) * $max_links_per_sitemap;
+                $end_index = min($start_index + $max_links_per_sitemap, $total_ads);
+                $count = $end_index - $start_index;
+                
+                // Calculer la date de modification la plus récente pour ce sitemap
+                $lastmod = date('c');
+                if ($count > 0 && isset($ads[$start_index])) {
+                    $lastmod = $ads[$start_index]->post_modified_gmt;
+                    $lastmod = $lastmod ? date('c', strtotime($lastmod)) : date('c');
+                }
+                
+                echo "  <sitemap>\n";
+                echo "    <loc>" . esc_url($sitemap_url) . "</loc>\n";
+                echo "    <lastmod>" . esc_html($lastmod) . "</lastmod>\n";
+                echo "  </sitemap>\n";
+            }
+        }
+        
+        echo '</sitemapindex>';
+    }
+    
+    /**
+     * Générer un fichier sitemap spécifique
+     */
+    private function generate_sitemap_file($ads, $sitemap_number, $max_links_per_sitemap) {
+        $total_ads = count($ads);
+        
         echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
         echo '        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' . "\n";
         echo '        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . "\n";
         echo '        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">' . "\n";
-
-        // URL de la page d'accueil
-        $home_url = home_url('/');
-        $lastmod = get_lastpostmodified('GMT');
-        echo "  <url>\n";
-        echo "    <loc>" . esc_url($home_url) . "</loc>\n";
-        echo "    <lastmod>" . esc_html($lastmod ? date('c', strtotime($lastmod)) : date('c')) . "</lastmod>\n";
-        echo "    <changefreq>daily</changefreq>\n";
-        echo "    <priority>1.0</priority>\n";
-        echo "  </url>\n";
-
-        // URLs des annonces
-        foreach ($ads as $ad) {
-            $url = get_permalink($ad->ID);
-            $modified = $ad->post_modified_gmt;
-            $modified_date = $modified ? date('c', strtotime($modified)) : date('c');
-            
-            // Déterminer la priorité (peut être ajustée selon vos besoins)
-            $priority = '0.8';
-            
-            // Déterminer la fréquence de changement
-            $changefreq = 'weekly';
-            
+        
+        // Sitemap 0 = page d'accueil uniquement
+        if ($sitemap_number === 0) {
+            $home_url = home_url('/');
+            $lastmod = get_lastpostmodified('GMT');
             echo "  <url>\n";
-            echo "    <loc>" . esc_url($url) . "</loc>\n";
-            echo "    <lastmod>" . esc_html($modified_date) . "</lastmod>\n";
-            echo "    <changefreq>" . esc_html($changefreq) . "</changefreq>\n";
-            echo "    <priority>" . esc_html($priority) . "</priority>\n";
+            echo "    <loc>" . esc_url($home_url) . "</loc>\n";
+            echo "    <lastmod>" . esc_html($lastmod ? date('c', strtotime($lastmod)) : date('c')) . "</lastmod>\n";
+            echo "    <changefreq>daily</changefreq>\n";
+            echo "    <priority>1.0</priority>\n";
             echo "  </url>\n";
+        } else {
+            // Sitemaps numérotés = annonces
+            $start_index = ($sitemap_number - 1) * $max_links_per_sitemap;
+            $end_index = min($start_index + $max_links_per_sitemap, $total_ads);
+            
+            for ($i = $start_index; $i < $end_index; $i++) {
+                if (!isset($ads[$i])) {
+                    continue;
+                }
+                
+                $ad = $ads[$i];
+                $url = get_permalink($ad->ID);
+                $modified = $ad->post_modified_gmt;
+                $modified_date = $modified ? date('c', strtotime($modified)) : date('c');
+                
+                // Déterminer la priorité (peut être ajustée selon vos besoins)
+                $priority = '0.8';
+                
+                // Déterminer la fréquence de changement
+                $changefreq = 'weekly';
+                
+                echo "  <url>\n";
+                echo "    <loc>" . esc_url($url) . "</loc>\n";
+                echo "    <lastmod>" . esc_html($modified_date) . "</lastmod>\n";
+                echo "    <changefreq>" . esc_html($changefreq) . "</changefreq>\n";
+                echo "    <priority>" . esc_html($priority) . "</priority>\n";
+                echo "  </url>\n";
+            }
         }
-
+        
         echo '</urlset>';
-        exit;
     }
 }
 

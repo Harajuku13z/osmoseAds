@@ -143,31 +143,93 @@ $services = get_option('osmose_ads_services', array());
     <!-- Section Sitemap -->
     <div class="card" style="max-width: 800px; margin-top: 30px;">
         <h2 style="margin-top: 0;"><?php _e('Sitemap XML', 'osmose-ads'); ?></h2>
-        <p><?php _e('Le sitemap XML contient toutes vos annonces publiées pour faciliter l\'indexation par les moteurs de recherche.', 'osmose-ads'); ?></p>
+        <p><?php _e('Le sitemap XML est divisé en plusieurs fichiers pour optimiser les performances. Chaque fichier contient maximum 4000 liens.', 'osmose-ads'); ?></p>
         
         <?php
-        $sitemap_url = home_url('/sitemap-ads.xml');
+        $sitemap_index_url = home_url('/sitemap-ads.xml');
         $ads_count = wp_count_posts('ad');
         $published_ads = isset($ads_count->publish) ? $ads_count->publish : 0;
+        $max_links_per_sitemap = 4000;
+        $num_sitemaps = $published_ads > 0 ? ceil($published_ads / $max_links_per_sitemap) : 1;
         ?>
         
         <table class="form-table">
             <tr>
-                <th scope="row"><?php _e('URL du Sitemap', 'osmose-ads'); ?></th>
+                <th scope="row"><?php _e('Sitemap Index (Principal)', 'osmose-ads'); ?></th>
                 <td>
-                    <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 3px;"><?php echo esc_url($sitemap_url); ?></code>
-                    <a href="<?php echo esc_url($sitemap_url); ?>" target="_blank" class="button" style="margin-left: 10px;"><?php _e('Voir le Sitemap', 'osmose-ads'); ?></a>
-                    <p class="description"><?php _e('URL du sitemap XML contenant toutes les annonces publiées', 'osmose-ads'); ?></p>
+                    <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 3px;"><?php echo esc_url($sitemap_index_url); ?></code>
+                    <a href="<?php echo esc_url($sitemap_index_url); ?>" target="_blank" class="button" style="margin-left: 10px;"><?php _e('Voir le Sitemap Index', 'osmose-ads'); ?></a>
+                    <p class="description"><?php _e('URL du sitemap index qui liste tous les sitemaps individuels', 'osmose-ads'); ?></p>
                 </td>
             </tr>
             
             <tr>
-                <th scope="row"><?php _e('Annonces dans le Sitemap', 'osmose-ads'); ?></th>
+                <th scope="row"><?php _e('Annonces totales', 'osmose-ads'); ?></th>
                 <td>
-                    <strong><?php echo intval($published_ads); ?></strong> <?php _e('annonce(s) publiée(s)', 'osmose-ads'); ?>
-                    <p class="description"><?php _e('Nombre d\'annonces actuellement incluses dans le sitemap', 'osmose-ads'); ?></p>
+                    <strong><?php echo number_format($published_ads, 0, ',', ' '); ?></strong> <?php _e('annonce(s) publiée(s)', 'osmose-ads'); ?>
                 </td>
             </tr>
+            
+            <tr>
+                <th scope="row"><?php _e('Fichiers Sitemap', 'osmose-ads'); ?></th>
+                <td>
+                    <strong><?php echo intval($num_sitemaps); ?></strong> <?php _e('fichier(s) sitemap', 'osmose-ads'); ?>
+                    <p class="description"><?php _e('Nombre de fichiers sitemap générés (max 4000 liens par fichier)', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            
+            <?php if ($num_sitemaps > 0): ?>
+            <tr>
+                <th scope="row"><?php _e('Liste des Sitemaps', 'osmose-ads'); ?></th>
+                <td>
+                    <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #f9f9f9; border-radius: 3px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #ddd;">
+                                    <th style="text-align: left; padding: 8px;"><?php _e('Fichier', 'osmose-ads'); ?></th>
+                                    <th style="text-align: left; padding: 8px;"><?php _e('URL', 'osmose-ads'); ?></th>
+                                    <th style="text-align: center; padding: 8px;"><?php _e('Liens', 'osmose-ads'); ?></th>
+                                    <th style="text-align: center; padding: 8px;"><?php _e('Action', 'osmose-ads'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                // Sitemap 0 = page d'accueil
+                                $home_url = home_url('/sitemap-ads-0.xml');
+                                ?>
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 8px;"><strong>sitemap-ads-0.xml</strong></td>
+                                    <td style="padding: 8px;"><code style="font-size: 11px;"><?php echo esc_url($home_url); ?></code></td>
+                                    <td style="text-align: center; padding: 8px;">1</td>
+                                    <td style="text-align: center; padding: 8px;">
+                                        <a href="<?php echo esc_url($home_url); ?>" target="_blank" class="button button-small"><?php _e('Voir', 'osmose-ads'); ?></a>
+                                    </td>
+                                </tr>
+                                <?php
+                                // Sitemaps des annonces
+                                for ($i = 1; $i <= $num_sitemaps; $i++) {
+                                    $sitemap_url = home_url('/sitemap-ads-' . $i . '.xml');
+                                    $start_index = ($i - 1) * $max_links_per_sitemap;
+                                    $end_index = min($start_index + $max_links_per_sitemap, $published_ads);
+                                    $count = $end_index - $start_index;
+                                    ?>
+                                    <tr style="border-bottom: 1px solid #eee;">
+                                        <td style="padding: 8px;"><strong>sitemap-ads-<?php echo intval($i); ?>.xml</strong></td>
+                                        <td style="padding: 8px;"><code style="font-size: 11px;"><?php echo esc_url($sitemap_url); ?></code></td>
+                                        <td style="text-align: center; padding: 8px;"><?php echo number_format($count, 0, ',', ' '); ?></td>
+                                        <td style="text-align: center; padding: 8px;">
+                                            <a href="<?php echo esc_url($sitemap_url); ?>" target="_blank" class="button button-small"><?php _e('Voir', 'osmose-ads'); ?></a>
+                                        </td>
+                                    </tr>
+                                    <?php
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+            <?php endif; ?>
             
             <tr>
                 <th scope="row"><?php _e('Actions', 'osmose-ads'); ?></th>
@@ -185,9 +247,10 @@ $services = get_option('osmose_ads_services', array());
         <div class="notice notice-info" style="margin-top: 20px;">
             <p><strong><?php _e('Comment utiliser le Sitemap :', 'osmose-ads'); ?></strong></p>
             <ul style="margin-left: 20px;">
-                <li><?php _e('Soumettez l\'URL du sitemap à Google Search Console', 'osmose-ads'); ?></li>
-                <li><?php _e('Ajoutez l\'URL dans votre fichier robots.txt :', 'osmose-ads'); ?> <code>Sitemap: <?php echo esc_url($sitemap_url); ?></code></li>
-                <li><?php _e('Le sitemap est automatiquement mis à jour lors de la création de nouvelles annonces', 'osmose-ads'); ?></li>
+                <li><?php _e('Soumettez uniquement l\'URL du sitemap index à Google Search Console :', 'osmose-ads'); ?> <code><?php echo esc_url($sitemap_index_url); ?></code></li>
+                <li><?php _e('Ajoutez l\'URL dans votre fichier robots.txt :', 'osmose-ads'); ?> <code>Sitemap: <?php echo esc_url($sitemap_index_url); ?></code></li>
+                <li><?php _e('Le sitemap index référence automatiquement tous les sitemaps individuels', 'osmose-ads'); ?></li>
+                <li><?php _e('Chaque fichier sitemap contient maximum 4000 liens pour optimiser les performances', 'osmose-ads'); ?></li>
             </ul>
         </div>
     </div>

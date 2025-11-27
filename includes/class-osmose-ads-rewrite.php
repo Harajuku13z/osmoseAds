@@ -54,9 +54,13 @@ class Osmose_Ads_Rewrite {
         add_rewrite_rule('^osmose-call-track/?$', 'index.php?osmose_call_track=1', 'top');
         add_rewrite_tag('%osmose_call_track%', '([0-9]+)');
         
-        // Ajouter une règle de réécriture pour le sitemap XML
+        // Ajouter une règle de réécriture pour le sitemap XML index
         add_rewrite_rule('^sitemap-ads\.xml$', 'index.php?osmose_ads_sitemap=1', 'top');
         add_rewrite_tag('%osmose_ads_sitemap%', '([0-9]+)');
+        
+        // Ajouter une règle de réécriture pour les sitemaps numérotés
+        add_rewrite_rule('^sitemap-ads-(\d+)\.xml$', 'index.php?osmose_ads_sitemap_num=$matches[1]', 'top');
+        add_rewrite_tag('%osmose_ads_sitemap_num%', '([0-9]+)');
     }
 
     /**
@@ -178,6 +182,7 @@ class Osmose_Ads_Rewrite {
 
     public function add_query_vars($vars) {
         $vars[] = 'osmose_ads_sitemap';
+        $vars[] = 'osmose_ads_sitemap_num';
         return $vars;
     }
 

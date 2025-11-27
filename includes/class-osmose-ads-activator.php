@@ -17,6 +17,10 @@ class Osmose_Ads_Activator {
         add_rewrite_rule('^sitemap-ads\.xml$', 'index.php?osmose_ads_sitemap=1', 'top');
         add_rewrite_tag('%osmose_ads_sitemap%', '([0-9]+)');
         
+        // Ajouter une règle de réécriture pour les sitemaps numérotés
+        add_rewrite_rule('^sitemap-ads-(\d+)\.xml$', 'index.php?osmose_ads_sitemap_num=$matches[1]', 'top');
+        add_rewrite_tag('%osmose_ads_sitemap_num%', '([0-9]+)');
+        
         // Flush rewrite rules pour appliquer les nouvelles règles IMMÉDIATEMENT
         flush_rewrite_rules(false);
         
