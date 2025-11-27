@@ -422,19 +422,24 @@ class Osmose_Article_Generator {
                 // Utiliser preg_replace_callback pour vérifier le contexte
                 $content = preg_replace_callback(
                     '/\b' . preg_quote($department, '/') . '\b/i',
-                    function($matches) use ($department, $dept_name, $content) {
-                        $pos = $matches[0][1]; // Position du match
-                        $before = substr($content, max(0, $pos - 30), 30);
-                        $after = substr($content, $pos + strlen($matches[0]), 30);
-                        $context = strtolower($before . ' ' . $after);
-                        
-                        // Si le contexte contient des mots géographiques, remplacer
-                        if (preg_match('/\b(département|en|dans|du|de|ville|région|à|pour)\b/i', $context)) {
-                            return $dept_name;
+                    function($matches) use ($department, $dept_name) {
+                        // Récupérer le contenu complet depuis la variable de closure
+                        static $full_content = null;
+                        if ($full_content === null) {
+                            // On ne peut pas accéder directement à $content, donc on utilise une approche différente
+                            // On va simplement remplacer si le contexte avant/après le match contient des mots géographiques
+                            return $matches[0]; // On laisse tel quel pour l'instant, les patterns spécifiques ci-dessus gèrent déjà
                         }
-                        
                         return $matches[0];
                     },
+                    $content
+                );
+                
+                // Approche alternative : remplacer les occurrences restantes dans un contexte géographique
+                // Chercher "22" précédé ou suivi de mots géographiques
+                $content = preg_replace(
+                    '/(\b(département|en|dans|du|de|ville|région|à|pour)\s+)' . preg_quote($department, '/') . '\b/i',
+                    '$1' . $dept_name,
                     $content
                 );
             }
