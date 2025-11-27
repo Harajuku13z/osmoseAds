@@ -112,15 +112,54 @@ class Osmose_Ads_Activator {
             KEY idx_page_url (page_url(255))
         ) $charset_collate;";
         
+        // Table pour tracker les visites des annonces
+        $table_visits = $wpdb->prefix . 'osmose_ads_visits';
+        
+        $sql_visits = "CREATE TABLE IF NOT EXISTS $table_visits (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            ad_id bigint(20) UNSIGNED NOT NULL,
+            ad_slug varchar(255),
+            page_url varchar(500),
+            user_ip varchar(45),
+            user_agent text,
+            referrer varchar(500),
+            referrer_domain varchar(255),
+            utm_source varchar(100),
+            utm_medium varchar(100),
+            utm_campaign varchar(100),
+            device_type varchar(50),
+            browser varchar(100),
+            country varchar(100),
+            city_name varchar(255),
+            template_id bigint(20) UNSIGNED,
+            visit_date date,
+            visit_time datetime DEFAULT CURRENT_TIMESTAMP,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_ad_id (ad_id),
+            KEY idx_visit_date (visit_date),
+            KEY idx_visit_time (visit_time),
+            KEY idx_referrer_domain (referrer_domain),
+            KEY idx_template_id (template_id),
+            KEY idx_ad_visit_date (ad_id, visit_date)
+        ) $charset_collate;";
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql_templates);
         dbDelta($sql_calls);
+        dbDelta($sql_visits);
         
         // Vérifier que les tables ont bien été créées
         if ($wpdb->get_var("SHOW TABLES LIKE '$table_calls'") == $table_calls) {
             error_log('Osmose ADS: Call tracking table created successfully during activation');
         } else {
             error_log('Osmose ADS: WARNING - Failed to create call tracking table during activation');
+        }
+        
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_visits'") == $table_visits) {
+            error_log('Osmose ADS: Visits tracking table created successfully during activation');
+        } else {
+            error_log('Osmose ADS: WARNING - Failed to create visits tracking table during activation');
         }
     }
 

@@ -34,6 +34,11 @@ if (!class_exists('Ad_Template')) {
     require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-ad-template.php';
 }
 
+// Charger la classe public pour les fonctions de tracking
+if (!function_exists('osmose_ads_track_visit')) {
+    require_once OSMOSE_ADS_PLUGIN_DIR . 'public/class-osmose-ads-public.php';
+}
+
 // Récupérer l'annonce
 global $wp_query;
 $ad_slug = get_query_var('ad_slug');
@@ -96,6 +101,9 @@ try {
     
     $view_count = intval(get_post_meta($ad->post_id, 'view_count', true)) ?: 0;
     update_post_meta($ad->post_id, 'view_count', $view_count + 1);
+    
+    // Enregistrer la visite détaillée
+    osmose_ads_track_visit($ad_id, $ad_slug_for_tracking, $current_url, $template ? $template->post_id : null, $city);
     
     global $wpdb;
     $table_name = $wpdb->prefix . 'osmose_ads_call_tracking';

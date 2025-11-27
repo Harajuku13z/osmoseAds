@@ -180,6 +180,15 @@ class Osmose_Ads_Admin {
         
         add_submenu_page(
             'osmose-ads',
+            __('Statistiques de Visites', 'osmose-ads'),
+            __('Statistiques de Visites', 'osmose-ads'),
+            'manage_options',
+            'osmose-ads-visits',
+            array($this, 'display_visit_stats')
+        );
+        
+        add_submenu_page(
+            'osmose-ads',
             __('Réglages', 'osmose-ads'),
             __('Réglages', 'osmose-ads'),
             'manage_options',
@@ -248,6 +257,10 @@ class Osmose_Ads_Admin {
     
     public function display_call_stats() {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/call-stats.php';
+    }
+    
+    public function display_visit_stats() {
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/visit-stats.php';
     }
     
     /**

@@ -174,5 +174,192 @@ class Osmose_Ads_Public {
     }
 }
 
+/**
+ * Fonction helper pour tracker les visites des annonces
+ * 
+ * @param int $ad_id ID de l'annonce
+ * @param string $ad_slug Slug de l'annonce
+ * @param string $page_url URL de la page
+ * @param int|null $template_id ID du template
+ * @param object|null $city Objet City
+ */
+if (!function_exists('osmose_ads_track_visit')) {
+    function osmose_ads_track_visit($ad_id, $ad_slug, $page_url, $template_id = null, $city = null) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'osmose_ads_visits';
+        
+        // Vérifier que la table existe
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+            // Créer la table si elle n'existe pas
+            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+            $charset_collate = $wpdb->get_charset_collate();
+            
+            $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+                id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+                ad_id bigint(20) UNSIGNED NOT NULL,
+                ad_slug varchar(255),
+                page_url varchar(500),
+                user_ip varchar(45),
+                user_agent text,
+                referrer varchar(500),
+                referrer_domain varchar(255),
+                utm_source varchar(100),
+                utm_medium varchar(100),
+                utm_campaign varchar(100),
+                device_type varchar(50),
+                browser varchar(100),
+                country varchar(100),
+                city_name varchar(255),
+                template_id bigint(20) UNSIGNED,
+                visit_date date,
+                visit_time datetime DEFAULT CURRENT_TIMESTAMP,
+                created_at datetime DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_ad_id (ad_id),
+                KEY idx_visit_date (visit_date),
+                KEY idx_visit_time (visit_time),
+                KEY idx_referrer_domain (referrer_domain),
+                KEY idx_template_id (template_id),
+                KEY idx_ad_visit_date (ad_id, visit_date)
+            ) $charset_collate;";
+            
+            dbDelta($sql);
+        }
+        
+        // Récupérer les informations du visiteur
+        $user_ip = osmose_ads_get_user_ip();
+        $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+        $referrer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
+        
+        // Extraire le domaine du referrer
+        $referrer_domain = '';
+        if (!empty($referrer)) {
+            $parsed_url = parse_url($referrer);
+            $referrer_domain = isset($parsed_url['host']) ? $parsed_url['host'] : '';
+        }
+        
+        // Récupérer les paramètres UTM
+        $utm_source = isset($_GET['utm_source']) ? sanitize_text_field($_GET['utm_source']) : '';
+        $utm_medium = isset($_GET['utm_medium']) ? sanitize_text_field($_GET['utm_medium']) : '';
+        $utm_campaign = isset($_GET['utm_campaign']) ? sanitize_text_field($_GET['utm_campaign']) : '';
+        
+        // Détecter le type d'appareil et le navigateur
+        $device_type = osmose_ads_detect_device_type($user_agent);
+        $browser = osmose_ads_detect_browser($user_agent);
+        
+        // Récupérer le nom de la ville
+        $city_name = '';
+        if ($city && is_object($city)) {
+            $city_name = method_exists($city, 'get_name') ? $city->get_name() : (isset($city->name) ? $city->name : '');
+        }
+        
+        // Date de la visite
+        $visit_date = current_time('Y-m-d');
+        $visit_time = current_time('mysql');
+        
+        // Insérer la visite dans la base de données
+        $wpdb->insert(
+            $table_name,
+            array(
+                'ad_id' => $ad_id,
+                'ad_slug' => $ad_slug,
+                'page_url' => $page_url,
+                'user_ip' => $user_ip,
+                'user_agent' => $user_agent,
+                'referrer' => $referrer,
+                'referrer_domain' => $referrer_domain,
+                'utm_source' => $utm_source,
+                'utm_medium' => $utm_medium,
+                'utm_campaign' => $utm_campaign,
+                'device_type' => $device_type,
+                'browser' => $browser,
+                'city_name' => $city_name,
+                'template_id' => $template_id,
+                'visit_date' => $visit_date,
+                'visit_time' => $visit_time,
+            ),
+            array(
+                '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s'
+            )
+        );
+    }
+    
+    /**
+     * Récupérer l'IP du visiteur (anonymisée pour le RGPD)
+     */
+    function osmose_ads_get_user_ip() {
+        $ip_keys = array('HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR');
+        foreach ($ip_keys as $key) {
+            if (array_key_exists($key, $_SERVER) === true) {
+                foreach (explode(',', $_SERVER[$key]) as $ip) {
+                    $ip = trim($ip);
+                    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false) {
+                        // Anonymiser l'IP (dernier octet)
+                        $ip_parts = explode('.', $ip);
+                        if (count($ip_parts) === 4) {
+                            $ip_parts[3] = '0';
+                            return implode('.', $ip_parts);
+                        }
+                        return $ip;
+                    }
+                }
+            }
+        }
+        // Fallback
+        $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+        $ip_parts = explode('.', $ip);
+        if (count($ip_parts) === 4) {
+            $ip_parts[3] = '0';
+            return implode('.', $ip_parts);
+        }
+        return $ip;
+    }
+    
+    /**
+     * Détecter le type d'appareil
+     */
+    function osmose_ads_detect_device_type($user_agent) {
+        if (empty($user_agent)) {
+            return 'Unknown';
+        }
+        
+        $user_agent_lower = strtolower($user_agent);
+        
+        if (preg_match('/mobile|android|iphone|ipod|blackberry|opera mini|opera mobi|skyfire|maemo|windows phone|palm|iemobile|symbian|symbianos|fennec/i', $user_agent_lower)) {
+            return 'Mobile';
+        } elseif (preg_match('/tablet|ipad|playbook|silk/i', $user_agent_lower)) {
+            return 'Tablet';
+        } else {
+            return 'Desktop';
+        }
+    }
+    
+    /**
+     * Détecter le navigateur
+     */
+    function osmose_ads_detect_browser($user_agent) {
+        if (empty($user_agent)) {
+            return 'Unknown';
+        }
+        
+        $user_agent_lower = strtolower($user_agent);
+        
+        if (strpos($user_agent_lower, 'chrome') !== false && strpos($user_agent_lower, 'edg') === false) {
+            return 'Chrome';
+        } elseif (strpos($user_agent_lower, 'firefox') !== false) {
+            return 'Firefox';
+        } elseif (strpos($user_agent_lower, 'safari') !== false && strpos($user_agent_lower, 'chrome') === false) {
+            return 'Safari';
+        } elseif (strpos($user_agent_lower, 'edg') !== false) {
+            return 'Edge';
+        } elseif (strpos($user_agent_lower, 'opera') !== false || strpos($user_agent_lower, 'opr') !== false) {
+            return 'Opera';
+        } else {
+            return 'Other';
+        }
+    }
+}
+
 
 
