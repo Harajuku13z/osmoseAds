@@ -144,36 +144,31 @@ class Osmose_Ads_Public {
             return;
         }
 
+        // Augmenter temporairement la limite de mémoire pour la génération du sitemap
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(300);
+
         // Nombre maximum de liens par sitemap
         $max_links_per_sitemap = 4000;
-
-        // Récupérer toutes les annonces publiées
-        $ads = get_posts(array(
-            'post_type' => 'ad',
-            'post_status' => 'publish',
-            'posts_per_page' => -1,
-            'orderby' => 'modified',
-            'order' => 'DESC',
-        ));
 
         // En-têtes XML
         header('Content-Type: application/xml; charset=utf-8');
         header('X-Robots-Tag: noindex');
         
-        // Si c'est le sitemap index, générer l'index
+        // Si c'est le sitemap index, générer l'index (sans charger toutes les annonces)
         if ($sitemap_index) {
-            $this->generate_sitemap_index($ads, $max_links_per_sitemap);
+            $this->generate_sitemap_index_optimized($max_links_per_sitemap);
             exit;
         }
         
-        // Sinon, générer le sitemap numéroté
+        // Sinon, générer le sitemap numéroté (seulement les annonces nécessaires)
         if ($sitemap_number !== null) {
-            $this->generate_sitemap_file($ads, $sitemap_number, $max_links_per_sitemap);
+            $this->generate_sitemap_file_optimized($sitemap_number, $max_links_per_sitemap);
             exit;
         }
         
         // Si on arrive ici sans avoir généré de sitemap, générer l'index par défaut
-        $this->generate_sitemap_index($ads, $max_links_per_sitemap);
+        $this->generate_sitemap_index_optimized($max_links_per_sitemap);
         exit;
     }
     
@@ -279,6 +274,142 @@ class Osmose_Ads_Public {
                 echo "    <changefreq>" . esc_html($changefreq) . "</changefreq>\n";
                 echo "    <priority>" . esc_html($priority) . "</priority>\n";
                 echo "  </url>\n";
+            }
+        }
+        
+        echo '</urlset>';
+    }
+    
+    /**
+     * Générer le sitemap index optimisé (sans charger toutes les annonces)
+     */
+    private function generate_sitemap_index_optimized($max_links_per_sitemap) {
+        global $wpdb;
+        
+        // Compter le nombre total d'annonces publiées sans les charger
+        $total_ads = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish'",
+            'ad'
+        ));
+        
+        $num_sitemaps = $total_ads > 0 ? ceil($total_ads / $max_links_per_sitemap) : 0;
+        
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        
+        // Toujours ajouter le sitemap de la page d'accueil
+        $home_sitemap_url = home_url('/sitemap-ads-0.xml');
+        $lastmod = get_lastpostmodified('GMT');
+        $lastmod_date = $lastmod ? date('c', strtotime($lastmod)) : date('c');
+        echo "  <sitemap>\n";
+        echo "    <loc>" . esc_url($home_sitemap_url) . "</loc>\n";
+        echo "    <lastmod>" . esc_html($lastmod_date) . "</lastmod>\n";
+        echo "  </sitemap>\n";
+        
+        // Ajouter les sitemaps des annonces (seulement s'il y en a)
+        if ($num_sitemaps > 0) {
+            for ($i = 1; $i <= $num_sitemaps; $i++) {
+                $sitemap_url = home_url('/sitemap-ads-' . $i . '.xml');
+                
+                // Récupérer la date de modification la plus récente pour ce batch (sans charger tous les posts)
+                $start_index = ($i - 1) * $max_links_per_sitemap;
+                $lastmod_query = $wpdb->prepare(
+                    "SELECT post_modified_gmt FROM {$wpdb->posts} 
+                     WHERE post_type = %s AND post_status = 'publish' 
+                     ORDER BY post_modified_gmt DESC 
+                     LIMIT 1 OFFSET %d",
+                    'ad',
+                    $start_index
+                );
+                $lastmod_gmt = $wpdb->get_var($lastmod_query);
+                $lastmod = $lastmod_gmt ? date('c', strtotime($lastmod_gmt)) : date('c');
+                
+                echo "  <sitemap>\n";
+                echo "    <loc>" . esc_url($sitemap_url) . "</loc>\n";
+                echo "    <lastmod>" . esc_html($lastmod) . "</lastmod>\n";
+                echo "  </sitemap>\n";
+            }
+        }
+        
+        echo '</sitemapindex>';
+    }
+    
+    /**
+     * Générer un fichier sitemap spécifique optimisé (seulement les annonces nécessaires)
+     */
+    private function generate_sitemap_file_optimized($sitemap_number, $max_links_per_sitemap) {
+        global $wpdb;
+        
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
+        echo '        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' . "\n";
+        echo '        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . "\n";
+        echo '        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">' . "\n";
+        
+        // Sitemap 0 = page d'accueil uniquement
+        if ($sitemap_number === 0) {
+            $home_url = home_url('/');
+            $lastmod = get_lastpostmodified('GMT');
+            $lastmod_date = $lastmod ? date('c', strtotime($lastmod)) : date('c');
+            echo "  <url>\n";
+            echo "    <loc>" . esc_url($home_url) . "</loc>\n";
+            echo "    <lastmod>" . esc_html($lastmod_date) . "</lastmod>\n";
+            echo "    <changefreq>daily</changefreq>\n";
+            echo "    <priority>1.0</priority>\n";
+            echo "  </url>\n";
+        } else {
+            // Sitemaps numérotés = annonces
+            // Récupérer uniquement les annonces nécessaires pour ce sitemap
+            $start_index = ($sitemap_number - 1) * $max_links_per_sitemap;
+            
+            $ads = $wpdb->get_results($wpdb->prepare(
+                "SELECT ID, post_name, post_modified_gmt 
+                 FROM {$wpdb->posts} 
+                 WHERE post_type = %s AND post_status = 'publish' 
+                 ORDER BY post_modified_gmt DESC 
+                 LIMIT %d OFFSET %d",
+                'ad',
+                $max_links_per_sitemap,
+                $start_index
+            ));
+            
+            if ($ads && is_array($ads)) {
+                foreach ($ads as $ad) {
+                    if (!isset($ad->ID) || !isset($ad->post_name)) {
+                        continue;
+                    }
+                    
+                    // Utiliser get_permalink mais seulement pour ce post (beaucoup plus léger que de charger tous les posts)
+                    // On crée un objet post minimal pour get_permalink
+                    $post_obj = new stdClass();
+                    $post_obj->ID = $ad->ID;
+                    $post_obj->post_name = $ad->post_name;
+                    $post_obj->post_type = 'ad';
+                    $post_obj->post_status = 'publish';
+                    
+                    // Utiliser get_permalink avec l'ID directement (plus efficace)
+                    $url = get_permalink($ad->ID);
+                    if (!$url) {
+                        // Fallback : construire l'URL manuellement si get_permalink échoue
+                        $url = home_url('/' . $ad->post_name . '/');
+                    }
+                    
+                    $modified = isset($ad->post_modified_gmt) ? $ad->post_modified_gmt : '';
+                    $modified_date = $modified ? date('c', strtotime($modified)) : date('c');
+                    
+                    // Déterminer la priorité (peut être ajustée selon vos besoins)
+                    $priority = '0.8';
+                    
+                    // Déterminer la fréquence de changement
+                    $changefreq = 'weekly';
+                    
+                    echo "  <url>\n";
+                    echo "    <loc>" . esc_url($url) . "</loc>\n";
+                    echo "    <lastmod>" . esc_html($modified_date) . "</lastmod>\n";
+                    echo "    <changefreq>" . esc_html($changefreq) . "</changefreq>\n";
+                    echo "    <priority>" . esc_html($priority) . "</priority>\n";
+                    echo "  </url>\n";
+                }
             }
         }
         
