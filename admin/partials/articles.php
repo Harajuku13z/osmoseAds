@@ -14,10 +14,23 @@ if (isset($_POST['generate_article_manual']) && check_admin_referer('osmose_gene
     $result = $generator->generate_article();
     
     if ($result && !is_wp_error($result)) {
-        echo '<div class="notice notice-success"><p>' . __('Article généré avec succès!', 'osmose-ads') . '</p></div>';
+        // Stocker le message de succès dans un transient
+        set_transient('osmose_article_generation_success', array(
+            'message' => __('Article généré avec succès!', 'osmose-ads'),
+            'article_id' => $result,
+        ), 30);
+        
+        // Rediriger pour éviter la double soumission
+        wp_redirect(add_query_arg('generated', '1', admin_url('admin.php?page=osmose-ads-articles')));
+        exit;
     } else {
+        // Stocker le message d'erreur dans un transient
         $error_msg = is_wp_error($result) ? $result->get_error_message() : __('Erreur lors de la génération de l\'article.', 'osmose-ads');
-        echo '<div class="notice notice-error"><p>' . esc_html($error_msg) . '</p></div>';
+        set_transient('osmose_article_generation_error', $error_msg, 30);
+        
+        // Rediriger pour éviter la double soumission
+        wp_redirect(add_query_arg('error', '1', admin_url('admin.php?page=osmose-ads-articles')));
+        exit;
     }
 }
 
@@ -129,6 +142,36 @@ $articles_query = new WP_Query(array(
 ));
 
 require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
+
+// Afficher les messages de succès/erreur après le header
+$success_message = get_transient('osmose_article_generation_success');
+if ($success_message !== false) {
+    delete_transient('osmose_article_generation_success');
+    $article_id = isset($success_message['article_id']) ? $success_message['article_id'] : 0;
+    $article_link = $article_id ? get_edit_post_link($article_id) : '';
+    ?>
+    <div class="notice notice-success is-dismissible">
+        <p>
+            <strong><?php echo esc_html($success_message['message']); ?></strong>
+            <?php if ($article_link): ?>
+                <a href="<?php echo esc_url($article_link); ?>" class="button button-small" style="margin-left: 10px;">
+                    <?php _e('Voir l\'article', 'osmose-ads'); ?>
+                </a>
+            <?php endif; ?>
+        </p>
+    </div>
+    <?php
+}
+
+$error_message = get_transient('osmose_article_generation_error');
+if ($error_message !== false) {
+    delete_transient('osmose_article_generation_error');
+    ?>
+    <div class="notice notice-error is-dismissible">
+        <p><strong><?php echo esc_html($error_message); ?></strong></p>
+    </div>
+    <?php
+}
 ?>
 
 <div class="wrap osmose-ads-admin">
