@@ -196,6 +196,13 @@ class Osmose_Ads_Rewrite {
             return $template;
         }
         
+        // Vérifier si on doit forcer le template (défini dans force_template_redirect)
+        if (isset($GLOBALS['osmose_ads_force_template']) && $GLOBALS['osmose_ads_force_template']) {
+            if (isset($GLOBALS['osmose_ads_template_path']) && file_exists($GLOBALS['osmose_ads_template_path'])) {
+                return $GLOBALS['osmose_ads_template_path'];
+            }
+        }
+        
         // S'assurer que le post est chargé
         if (!$post && isset($wp_query->post)) {
             $post = $wp_query->post;
@@ -318,6 +325,7 @@ class Osmose_Ads_Rewrite {
 
     /**
      * Forcer le chargement du template pour les articles générés (approche agressive)
+     * Cette fonction vérifie très tôt et force WordPress à utiliser le bon template
      */
     public function force_template_redirect() {
         global $post, $wp_query;
@@ -356,21 +364,21 @@ class Osmose_Ads_Rewrite {
             }
         }
         
+        // Si on doit utiliser le template des annonces, forcer WordPress à le charger
         if ($should_use_ad_template) {
+            // Stocker le template dans une variable globale pour que template_include le récupère
+            $GLOBALS['osmose_ads_force_template'] = true;
+            
             // Vérifier si un template single-ad.php existe dans le thème
             $theme_template = locate_template(array('single-ad.php'));
             if ($theme_template && file_exists($theme_template)) {
-                // Forcer le chargement du template
-                include($theme_template);
-                exit;
-            }
-            
-            // Utiliser le template du plugin
-            $plugin_template = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/single-ad.php';
-            if (file_exists($plugin_template)) {
-                // Forcer le chargement du template
-                include($plugin_template);
-                exit;
+                $GLOBALS['osmose_ads_template_path'] = $theme_template;
+            } else {
+                // Utiliser le template du plugin
+                $plugin_template = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/single-ad.php';
+                if (file_exists($plugin_template)) {
+                    $GLOBALS['osmose_ads_template_path'] = $plugin_template;
+                }
             }
         }
     }
