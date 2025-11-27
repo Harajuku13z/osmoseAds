@@ -27,16 +27,30 @@ if (isset($_POST['osmose_articles_config_save']) && check_admin_referer('osmose_
         // Réindexer le tableau pour éviter les problèmes d'indices
         $article_images_raw = array_values($_POST['article_images']);
         foreach ($article_images_raw as $img_data) {
+            // Vérifier que c'est bien un tableau
+            if (!is_array($img_data)) {
+                continue;
+            }
+            
             $img_id = isset($img_data['image_id']) ? intval($img_data['image_id']) : 0;
             $keywords = isset($img_data['keywords']) ? sanitize_text_field($img_data['keywords']) : '';
             
-            // Sauvegarder même si image_id est 0 (pour permettre de sauvegarder les mots-clés avant de sélectionner l'image)
-            $article_images[] = array(
-                'image_id' => $img_id,
-                'keywords' => $keywords,
-            );
+            // Ne sauvegarder que si on a au moins un image_id OU des keywords (pour permettre de sauvegarder les mots-clés avant de sélectionner l'image)
+            if ($img_id > 0 || !empty($keywords)) {
+                $article_images[] = array(
+                    'image_id' => $img_id,
+                    'keywords' => $keywords,
+                );
+            }
         }
     }
+    
+    // Debug: logger pour vérifier ce qui est reçu
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('Osmose ADS: Article images POST data: ' . print_r($_POST['article_images'] ?? array(), true));
+        error_log('Osmose ADS: Article images processed: ' . print_r($article_images, true));
+    }
+    
     update_option('osmose_articles_images', $article_images);
     
     // Sauvegarder le planning
@@ -367,14 +381,24 @@ jQuery(document).ready(function($) {
             // Mettre à jour l'index du bouton
             $item.find('.select-article-image').attr('data-index', newIndex);
             
-            // Mettre à jour les noms des champs
+            // Mettre à jour les noms des champs avec les bons indices
             $item.find('.article-image-id').attr('name', 'article_images[' + newIndex + '][image_id]').attr('data-index', newIndex);
             $item.find('.article-image-keywords').attr('name', 'article_images[' + newIndex + '][keywords]');
         });
         
-        // Mettre à jour le compteur pour les nouvelles images
-        articleImageIndex = $('#article-images-container .article-image-item').length;
+        // Mettre à jour le compteur pour les nouvelles images (utiliser le max des indices existants + 1)
+        var maxIndex = -1;
+        $('#article-images-container .article-image-item').each(function() {
+            var currentIndex = parseInt($(this).find('.select-article-image').attr('data-index')) || 0;
+            if (currentIndex > maxIndex) {
+                maxIndex = currentIndex;
+            }
+        });
+        articleImageIndex = maxIndex + 1;
     }
+    
+    // Réindexer au chargement de la page pour s'assurer que les indices sont corrects
+    reindexArticleImages();
 });
 </script>
 
