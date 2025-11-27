@@ -297,16 +297,8 @@ class Osmose_Ads_Public {
         echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
         
-        // Toujours ajouter le sitemap de la page d'accueil
-        $home_sitemap_url = home_url('/sitemap-ads-0.xml');
-        $lastmod = get_lastpostmodified('GMT');
-        $lastmod_date = $lastmod ? date('c', strtotime($lastmod)) : date('c');
-        echo "  <sitemap>\n";
-        echo "    <loc>" . esc_url($home_sitemap_url) . "</loc>\n";
-        echo "    <lastmod>" . esc_html($lastmod_date) . "</lastmod>\n";
-        echo "  </sitemap>\n";
-        
-        // Ajouter les sitemaps des annonces (seulement s'il y en a)
+        // Ajouter les sitemaps des annonces (la page d'accueil sera incluse dans le premier sitemap)
+        // Si pas d'annonces, créer quand même un sitemap avec la page d'accueil
         if ($num_sitemaps > 0) {
             for ($i = 1; $i <= $num_sitemaps; $i++) {
                 $sitemap_url = home_url('/sitemap-ads-' . $i . '.xml');
@@ -329,6 +321,15 @@ class Osmose_Ads_Public {
                 echo "    <lastmod>" . esc_html($lastmod) . "</lastmod>\n";
                 echo "  </sitemap>\n";
             }
+        } else {
+            // Si pas d'annonces, créer un sitemap avec seulement la page d'accueil
+            $sitemap_url = home_url('/sitemap-ads-1.xml');
+            $lastmod = get_lastpostmodified('GMT');
+            $lastmod_date = $lastmod ? date('c', strtotime($lastmod)) : date('c');
+            echo "  <sitemap>\n";
+            echo "    <loc>" . esc_url($sitemap_url) . "</loc>\n";
+            echo "    <lastmod>" . esc_html($lastmod_date) . "</lastmod>\n";
+            echo "  </sitemap>\n";
         }
         
         echo '</sitemapindex>';
@@ -346,8 +347,15 @@ class Osmose_Ads_Public {
         echo '        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . "\n";
         echo '        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">' . "\n";
         
-        // Sitemap 0 = page d'accueil uniquement
+        // Sitemap 0 n'existe plus - rediriger vers sitemap 1
         if ($sitemap_number === 0) {
+            // Rediriger vers le sitemap 1
+            wp_redirect(home_url('/sitemap-ads-1.xml'), 301);
+            exit;
+        }
+        
+        // Toujours inclure la page d'accueil dans le premier sitemap
+        if ($sitemap_number === 1) {
             $home_url = home_url('/');
             $lastmod = get_lastpostmodified('GMT');
             $lastmod_date = $lastmod ? date('c', strtotime($lastmod)) : date('c');
@@ -357,10 +365,20 @@ class Osmose_Ads_Public {
             echo "    <changefreq>daily</changefreq>\n";
             echo "    <priority>1.0</priority>\n";
             echo "  </url>\n";
+        }
+        
+        // Sitemaps numérotés = annonces
+        // Récupérer uniquement les annonces nécessaires pour ce sitemap
+        $start_index = ($sitemap_number - 1) * $max_links_per_sitemap;
+        
+        // Pour le sitemap 1, on a déjà inclus la page d'accueil, donc on réduit d'1 le nombre d'annonces
+        if ($sitemap_number === 1) {
+            $limit = $max_links_per_sitemap - 1;
         } else {
-            // Sitemaps numérotés = annonces
-            // Récupérer uniquement les annonces nécessaires pour ce sitemap
-            $start_index = ($sitemap_number - 1) * $max_links_per_sitemap;
+            $limit = $max_links_per_sitemap;
+        }
+        
+        if ($limit > 0) {
             
             $ads = $wpdb->get_results($wpdb->prepare(
                 "SELECT ID, post_name, post_modified_gmt 
@@ -369,7 +387,7 @@ class Osmose_Ads_Public {
                  ORDER BY post_modified_gmt DESC 
                  LIMIT %d OFFSET %d",
                 'ad',
-                $max_links_per_sitemap,
+                $limit,
                 $start_index
             ));
             
