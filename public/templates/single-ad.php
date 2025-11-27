@@ -206,9 +206,20 @@ get_header();
                 </h1>
                 <p class="osmose-hero-description">
                     <?php 
-                    $city_name = $city ? $city->post_title : '';
-                    $dept = $city ? get_post_meta($city->ID, 'department', true) : '';
-                    echo esc_html(sprintf(__('Service professionnel à %s - Devis gratuit et intervention rapide', 'osmose-ads'), $city_name ?: '')); 
+                    if ($is_article) {
+                        // Pour les articles, utiliser les meta directement
+                        $city_name = get_post_meta($ad->post_id, 'article_city', true);
+                        $dept_name = get_post_meta($ad->post_id, 'article_department_name', true);
+                        $description = get_post_field('post_excerpt', $ad->post_id);
+                        if (empty($description)) {
+                            $description = sprintf(__('Article informatif sur %s', 'osmose-ads'), $city_name ?: ($dept_name ?: ''));
+                        }
+                        echo esc_html($description);
+                    } else {
+                        $city_name = $city ? $city->post_title : '';
+                        $dept = $city ? get_post_meta($city->ID, 'department', true) : '';
+                        echo esc_html(sprintf(__('Service professionnel à %s - Devis gratuit et intervention rapide', 'osmose-ads'), $city_name ?: '')); 
+                    }
                     ?>
                 </p>
                 <div class="osmose-hero-buttons">
