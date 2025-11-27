@@ -99,16 +99,54 @@ class Osmose_Article_Cron {
      */
     public function generate_articles_at_hour() {
         $articles_per_day = get_option('osmose_articles_per_day', 1);
+        $expected_count = $articles_per_day;
+        $success_count = 0;
+        $errors = array();
         
         // Générer le nombre d'articles configuré
         for ($i = 0; $i < $articles_per_day; $i++) {
             $result = $this->generator->generate_article();
             
             if (!is_wp_error($result) && $result) {
+                $success_count++;
                 // Planifier la publication selon l'heure configurée
                 $this->schedule_publication($result);
+            } else {
+                $error_msg = is_wp_error($result) ? $result->get_error_message() : __('Erreur inconnue lors de la génération', 'osmose-ads');
+                $errors[] = $error_msg;
             }
         }
+        
+        // Enregistrer un échec si aucun article n'a été créé
+        if ($success_count === 0 && $expected_count > 0) {
+            $this->record_generation_failure($expected_count, $errors);
+        } elseif ($success_count < $expected_count) {
+            // Enregistrer un échec partiel
+            $this->record_generation_failure($expected_count - $success_count, $errors, true);
+        }
+    }
+    
+    /**
+     * Enregistrer un échec de génération
+     */
+    private function record_generation_failure($expected_count, $errors = array(), $partial = false) {
+        $failures = get_option('osmose_articles_generation_failures', array());
+        
+        $failure = array(
+            'date' => current_time('mysql'),
+            'timestamp' => current_time('timestamp'),
+            'expected_count' => $expected_count,
+            'errors' => $errors,
+            'partial' => $partial,
+        );
+        
+        // Ajouter l'échec au début du tableau
+        array_unshift($failures, $failure);
+        
+        // Garder seulement les 50 derniers échecs
+        $failures = array_slice($failures, 0, 50);
+        
+        update_option('osmose_articles_generation_failures', $failures);
     }
     
     /**
