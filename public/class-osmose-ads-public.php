@@ -5,11 +5,36 @@
 class Osmose_Ads_Public {
 
     public function enqueue_styles() {
-        // Charger uniquement sur les pages d'annonces
+        // Charger uniquement sur les pages d'annonces et articles générés
         global $wp_query, $post;
-        $is_ad_page = is_singular('ad') || get_query_var('ad_slug') || 
-                      (isset($wp_query->query_vars['ad_slug']) && !empty($wp_query->query_vars['ad_slug'])) ||
-                      (isset($post) && $post->post_type === 'ad');
+        
+        $is_ad_page = false;
+        
+        // Vérifier si c'est une annonce
+        if (is_singular('ad') || get_query_var('ad_slug') || 
+            (isset($wp_query->query_vars['ad_slug']) && !empty($wp_query->query_vars['ad_slug'])) ||
+            (isset($post) && $post->post_type === 'ad')) {
+            $is_ad_page = true;
+        }
+        
+        // Vérifier si c'est un article généré (post avec meta article_auto_generated)
+        if (!$is_ad_page && isset($post) && $post->post_type === 'post' && isset($post->ID)) {
+            $is_generated_article = get_post_meta($post->ID, 'article_auto_generated', true);
+            if ($is_generated_article === '1' || $is_generated_article === 1) {
+                $is_ad_page = true;
+            }
+        }
+        
+        // Vérifier aussi via queried_object
+        if (!$is_ad_page) {
+            $queried_object = get_queried_object();
+            if ($queried_object && isset($queried_object->post_type) && $queried_object->post_type === 'post' && isset($queried_object->ID)) {
+                $is_generated_article = get_post_meta($queried_object->ID, 'article_auto_generated', true);
+                if ($is_generated_article === '1' || $is_generated_article === 1) {
+                    $is_ad_page = true;
+                }
+            }
+        }
         
         if ($is_ad_page) {
             wp_enqueue_style(
@@ -32,9 +57,34 @@ class Osmose_Ads_Public {
     public function enqueue_scripts() {
         // Charger sur toutes les pages où des annonces peuvent être affichées
         global $wp_query, $post;
-        $is_ad_page = is_singular('ad') || get_query_var('ad_slug') || 
-                      (isset($wp_query->query_vars['ad_slug']) && !empty($wp_query->query_vars['ad_slug'])) ||
-                      (isset($post) && $post->post_type === 'ad');
+        
+        $is_ad_page = false;
+        
+        // Vérifier si c'est une annonce
+        if (is_singular('ad') || get_query_var('ad_slug') || 
+            (isset($wp_query->query_vars['ad_slug']) && !empty($wp_query->query_vars['ad_slug'])) ||
+            (isset($post) && $post->post_type === 'ad')) {
+            $is_ad_page = true;
+        }
+        
+        // Vérifier si c'est un article généré (post avec meta article_auto_generated)
+        if (!$is_ad_page && isset($post) && $post->post_type === 'post' && isset($post->ID)) {
+            $is_generated_article = get_post_meta($post->ID, 'article_auto_generated', true);
+            if ($is_generated_article === '1' || $is_generated_article === 1) {
+                $is_ad_page = true;
+            }
+        }
+        
+        // Vérifier aussi via queried_object
+        if (!$is_ad_page) {
+            $queried_object = get_queried_object();
+            if ($queried_object && isset($queried_object->post_type) && $queried_object->post_type === 'post' && isset($queried_object->ID)) {
+                $is_generated_article = get_post_meta($queried_object->ID, 'article_auto_generated', true);
+                if ($is_generated_article === '1' || $is_generated_article === 1) {
+                    $is_ad_page = true;
+                }
+            }
+        }
         
         if ($is_ad_page) {
             wp_enqueue_script(
