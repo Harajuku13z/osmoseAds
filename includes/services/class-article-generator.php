@@ -681,18 +681,36 @@ class Osmose_Article_Generator {
     }
     
     /**
-     * Générer la meta description pour SEO
+     * Générer la meta description pour SEO (120-140 caractères)
      */
     private function generate_meta_description($keyword, $dept_name, $city_name) {
         $company_name = get_bloginfo('name');
         
+        // Construire une description optimisée entre 120 et 140 caractères
         $description = "Expert en {$keyword}";
         if ($city_name && $dept_name) {
-            $description .= " à {$city_name} dans le département {$dept_name}";
+            $description .= " à {$city_name} ({$dept_name})";
         } elseif ($dept_name) {
             $description .= " en {$dept_name}";
         }
-        $description .= ". {$company_name} vous accompagne avec des solutions professionnelles. Devis gratuit et intervention rapide.";
+        $description .= ". {$company_name} - Devis gratuit.";
+        
+        // Ajuster la longueur si nécessaire (cible: 120-140 caractères)
+        if (strlen($description) < 120) {
+            // Ajouter des informations supplémentaires
+            $description = "Expert en {$keyword}";
+            if ($city_name && $dept_name) {
+                $description .= " à {$city_name} ({$dept_name})";
+            } elseif ($dept_name) {
+                $description .= " en {$dept_name}";
+            }
+            $description .= ". {$company_name} vous accompagne. Devis gratuit et intervention rapide.";
+        }
+        
+        // Limiter à 140 caractères maximum
+        if (strlen($description) > 140) {
+            $description = substr($description, 0, 137) . '...';
+        }
         
         // Limiter à 160 caractères pour SEO
         if (strlen($description) > 160) {
@@ -805,27 +823,55 @@ class Osmose_Article_Generator {
             return $content;
         }
         
-        // Mots-clés pour détecter où insérer le lien
-        $link_keywords = array('devis', 'estimation', 'simulateur', 'calculer', 'demander', 'contact', 'appeler');
+        // Mots-clés pour détecter où insérer le lien (plus de mots-clés pour plus d'opportunités)
+        $link_keywords = array(
+            'devis', 'estimation', 'simulateur', 'calculer', 'demander', 
+            'contact', 'appeler', 'devis gratuit', 'estimation gratuite',
+            'simulation', 'calcul', 'tarif', 'prix', 'coût', 'budget',
+            'intervention', 'travaux', 'prestation', 'service'
+        );
+        
+        $links_added = 0;
+        $max_links = 3; // Maximum 3 liens internes dans l'article
         
         // Chercher les occurrences de ces mots-clés et ajouter un lien
         foreach ($link_keywords as $link_keyword) {
-            // Pattern pour trouver le mot-clé dans une phrase
+            if ($links_added >= $max_links) {
+                break;
+            }
+            
+            // Pattern pour trouver le mot-clé dans une phrase (mais pas déjà dans un lien)
             $pattern = '/\b(' . preg_quote($link_keyword, '/') . ')\b/i';
             
-            // Remplacer la première occurrence par un lien
-            $replacement = '<a href="' . esc_url($devis_url) . '" class="osmose-internal-link">$1</a>';
-            $content = preg_replace($pattern, $replacement, $content, 1);
+            // Vérifier que ce n'est pas déjà dans un lien
+            if (preg_match($pattern, $content, $matches, PREG_OFFSET_CAPTURE)) {
+                $pos = $matches[0][1];
+                $before = substr($content, max(0, $pos - 50), 50);
+                $after = substr($content, $pos, 100);
+                
+                // Si le mot-clé n'est pas déjà dans un lien
+                if (strpos($before . $after, '<a') === false || strpos($before . $after, '</a>') === false) {
+                    // Remplacer la première occurrence par un lien
+                    $replacement = '<a href="' . esc_url($devis_url) . '" class="osmose-internal-link" title="' . esc_attr__('Demander un devis gratuit', 'osmose-ads') . '">$1</a>';
+                    $content = preg_replace($pattern, $replacement, $content, 1);
+                    $links_added++;
+                }
+            }
         }
         
         // Si aucun lien n'a été ajouté, en ajouter un dans la conclusion
-        if (strpos($content, $devis_url) === false) {
-            $link_html = '<p><a href="' . esc_url($devis_url) . '" class="osmose-internal-link button">' . __('Demander un devis gratuit', 'osmose-ads') . '</a></p>';
+        if ($links_added === 0 || strpos($content, $devis_url) === false) {
+            $link_html = '<p style="margin-top: 20px;"><a href="' . esc_url($devis_url) . '" class="osmose-internal-link button" style="display: inline-block; padding: 12px 24px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">' . __('Demander un devis gratuit', 'osmose-ads') . '</a></p>';
             
-            // Ajouter le lien avant la dernière balise de fermeture ou à la fin
-            if (preg_match('/<\/h2>\s*$/', $content)) {
-                $content = preg_replace('/(<\/h2>\s*)$/', $link_html . "\n\n$1", $content);
+            // Chercher la conclusion (dernière section avant la fin)
+            if (preg_match('/<\/h2>\s*<p>.*?<\/p>\s*$/', $content)) {
+                // Ajouter avant le dernier </h2>
+                $content = preg_replace('/(<\/h2>\s*)(<p>.*?<\/p>\s*)$/', '$1' . $link_html . "\n\n$2", $content);
+            } elseif (preg_match('/<\/h3>\s*<p>.*?<\/p>\s*$/', $content)) {
+                // Ajouter avant le dernier </h3>
+                $content = preg_replace('/(<\/h3>\s*)(<p>.*?<\/p>\s*)$/', '$1' . $link_html . "\n\n$2", $content);
             } else {
+                // Ajouter à la fin
                 $content .= "\n\n" . $link_html;
             }
         }
