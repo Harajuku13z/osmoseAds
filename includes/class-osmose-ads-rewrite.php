@@ -189,9 +189,37 @@ class Osmose_Ads_Rewrite {
     public function template_loader($template) {
         global $wp_query, $post;
         
-        // Vérifier si c'est un post de type 'ad' ou un article généré (post avec meta article_auto_generated)
-        $is_ad = isset($post) && $post->post_type === 'ad';
-        $is_generated_article = isset($post) && $post->post_type === 'post' && get_post_meta($post->ID, 'article_auto_generated', true) === '1';
+        // Ne rien faire en admin
+        if (is_admin()) {
+            return $template;
+        }
+        
+        // Récupérer l'objet de la requête
+        $queried_object = get_queried_object();
+        
+        // Vérifier si c'est un post de type 'ad'
+        $is_ad = false;
+        $is_generated_article = false;
+        $post_id = 0;
+        
+        if ($queried_object && isset($queried_object->post_type)) {
+            $post_id = isset($queried_object->ID) ? $queried_object->ID : 0;
+            
+            if ($queried_object->post_type === 'ad') {
+                $is_ad = true;
+            } elseif ($queried_object->post_type === 'post' && $post_id > 0) {
+                // Vérifier si c'est un article généré
+                $is_generated_article = (get_post_meta($post_id, 'article_auto_generated', true) === '1');
+            }
+        } elseif (isset($post) && $post) {
+            $post_id = $post->ID;
+            
+            if ($post->post_type === 'ad') {
+                $is_ad = true;
+            } elseif ($post->post_type === 'post' && $post_id > 0) {
+                $is_generated_article = (get_post_meta($post_id, 'article_auto_generated', true) === '1');
+            }
+        }
         
         if ($is_ad || $is_generated_article) {
             // Si on est dans le blog (home, archive, category, search, tag, author), utiliser le template standard

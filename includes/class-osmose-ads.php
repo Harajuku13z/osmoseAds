@@ -145,7 +145,7 @@ class Osmose_Ads {
         $rewrite = new Osmose_Ads_Rewrite();
         $this->loader->add_action('init', $rewrite, 'add_rewrite_rules', 10);
         $this->loader->add_filter('query_vars', $rewrite, 'add_query_vars');
-        $this->loader->add_filter('template_include', $rewrite, 'template_loader', 5);
+        $this->loader->add_filter('template_include', $rewrite, 'template_loader', 1); // Priorité haute pour s'exécuter avant les autres
         
         // Intercepter les requêtes 404 pour vérifier si c'est une annonce
         $this->loader->add_action('parse_request', $this, 'intercept_ad_requests', 5);
