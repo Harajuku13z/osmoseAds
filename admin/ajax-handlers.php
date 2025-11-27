@@ -1339,6 +1339,11 @@ add_action('wp_ajax_osmose_ads_track_call', 'osmose_ads_track_call');
 add_action('wp_ajax_nopriv_osmose_ads_track_call', 'osmose_ads_track_call'); // Accessible publiquement
 
 function osmose_ads_handle_bulk_generate() {
+    // Augmenter les limites pour éviter les timeouts
+    @set_time_limit(300); // 5 minutes
+    @ini_set('max_execution_time', 300);
+    @ini_set('memory_limit', '512M');
+    
     // Vérifier que les classes existent
     if (!class_exists('Ad_Template')) {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-ad-template.php';
@@ -1360,6 +1365,10 @@ function osmose_ads_handle_bulk_generate() {
     $created = 0;
     $skipped = 0;
     $errors = 0;
+    
+    // Désactiver les hooks pour accélérer
+    remove_action('post_updated', 'wp_save_post_revision');
+    wp_suspend_cache_addition(true);
     
     foreach ($city_ids as $city_id) {
         // Vérifier si l'annonce existe déjà
@@ -1614,6 +1623,9 @@ function osmose_ads_handle_bulk_generate() {
         
         $created++;
     }
+    
+    // Réactiver le cache
+    wp_suspend_cache_addition(false);
     
     wp_send_json_success(array(
         'message' => sprintf(
