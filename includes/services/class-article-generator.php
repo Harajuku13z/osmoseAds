@@ -644,9 +644,32 @@ class Osmose_Article_Generator {
             'br' => array(),
         ));
         
-        // Nettoyer les espaces multiples
-        $content = preg_replace('/\s+/', ' ', $content);
-        $content = preg_replace('/\n\s*\n/', "\n\n", $content);
+        // Normaliser les sauts de ligne
+        $content = str_replace(array("\r\n", "\r"), "\n", $content);
+        
+        // Ajouter des espaces entre les balises de section pour une meilleure lisibilité
+        $content = preg_replace('/(<\/h2>)\s*(<h3>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/h3>)\s*(<h4>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/h2>)\s*(<p>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/h3>)\s*(<p>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/h4>)\s*(<p>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/p>)\s*(<h2>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/p>)\s*(<h3>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/ul>)\s*(<h2>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/ul>)\s*(<h3>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/ul>)\s*(<p>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/ol>)\s*(<h2>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/ol>)\s*(<h3>)/i', "$1\n\n$2", $content);
+        $content = preg_replace('/(<\/ol>)\s*(<p>)/i', "$1\n\n$2", $content);
+        
+        // S'assurer qu'il y a un saut de ligne après chaque balise de fermeture de paragraphe
+        $content = preg_replace('/(<\/p>)(?!\n)/i', "$1\n", $content);
+        
+        // Nettoyer les espaces multiples dans le texte (mais pas entre les balises)
+        $content = preg_replace('/[ \t]+/', ' ', $content);
+        
+        // Nettoyer les lignes vides multiples (garder max 2 lignes vides)
+        $content = preg_replace('/\n{3,}/', "\n\n", $content);
         
         return trim($content);
     }
