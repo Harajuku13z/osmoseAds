@@ -82,7 +82,7 @@ if ($auto_generate) {
             if ($scheduled_time < ($current_time - 300) && $scheduled_time >= strtotime('today')) {
                 // Vérifier si des articles ont été créés à cette heure ou après
                 $articles_after_time = get_posts(array(
-                    'post_type' => 'osmose_article',
+                    'post_type' => 'post',
                     'posts_per_page' => -1,
                     'post_status' => 'any',
                     'date_query' => array(
@@ -132,13 +132,20 @@ if ($auto_generate) {
 $paged = isset($_GET['paged']) ? intval($_GET['paged']) : 1;
 $per_page = 20;
 
-// Requête des articles
+// Requête des articles (posts WordPress avec meta article_auto_generated)
 $articles_query = new WP_Query(array(
-    'post_type' => 'osmose_article',
+    'post_type' => 'post',
     'posts_per_page' => $per_page,
     'paged' => $paged,
     'orderby' => 'date',
     'order' => 'DESC',
+    'meta_query' => array(
+        array(
+            'key' => 'article_auto_generated',
+            'value' => '1',
+            'compare' => '=',
+        ),
+    ),
 ));
 
 require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';

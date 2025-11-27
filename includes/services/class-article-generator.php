@@ -78,14 +78,15 @@ class Osmose_Article_Generator {
             // Générer l'extrait (excerpt) pour SEO
             $excerpt = $this->generate_excerpt($keyword, $department, $city);
             
-            // Créer l'article
+            // Créer l'article comme un post WordPress standard
             $post_data = array(
                 'post_title' => $title,
                 'post_content' => $content,
                 'post_excerpt' => $excerpt,
                 'post_status' => 'draft', // Brouillon par défaut, sera publié selon le planning
-                'post_type' => 'osmose_article',
+                'post_type' => 'post', // Utiliser le post_type standard pour apparaître dans edit.php
                 'post_author' => 1,
+                'post_category' => array(1), // Catégorie "Uncategorized" (ID 1 par défaut)
             );
             
             $post_id = wp_insert_post($post_data);
@@ -93,6 +94,10 @@ class Osmose_Article_Generator {
             if (is_wp_error($post_id)) {
                 return $post_id;
             }
+            
+            // S'assurer que la catégorie "Uncategorized" est assignée
+            $uncategorized_id = get_option('default_category', 1);
+            wp_set_post_categories($post_id, array($uncategorized_id));
             
             // Générer et sauvegarder les métadonnées SEO
             $dept_name = '';
