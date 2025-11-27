@@ -709,5 +709,167 @@ class Osmose_Article_Generator {
         
         return trim($content);
     }
+    
+    /**
+     * Ajouter des liens internes vers le CTA/devis dans le contenu
+     */
+    private function add_internal_links($content, $keyword) {
+        $devis_url = get_option('osmose_ads_devis_url', '');
+        
+        if (empty($devis_url)) {
+            return $content;
+        }
+        
+        // Mots-clés pour détecter où insérer le lien
+        $link_keywords = array('devis', 'estimation', 'simulateur', 'calculer', 'demander', 'contact', 'appeler');
+        
+        // Chercher les occurrences de ces mots-clés et ajouter un lien
+        foreach ($link_keywords as $link_keyword) {
+            // Pattern pour trouver le mot-clé dans une phrase
+            $pattern = '/\b(' . preg_quote($link_keyword, '/') . ')\b/i';
+            
+            // Remplacer la première occurrence par un lien
+            $replacement = '<a href="' . esc_url($devis_url) . '" class="osmose-internal-link">$1</a>';
+            $content = preg_replace($pattern, $replacement, $content, 1);
+        }
+        
+        // Si aucun lien n'a été ajouté, en ajouter un dans la conclusion
+        if (strpos($content, $devis_url) === false) {
+            $link_html = '<p><a href="' . esc_url($devis_url) . '" class="osmose-internal-link button">' . __('Demander un devis gratuit', 'osmose-ads') . '</a></p>';
+            
+            // Ajouter le lien avant la dernière balise de fermeture ou à la fin
+            if (preg_match('/<\/h2>\s*$/', $content)) {
+                $content = preg_replace('/(<\/h2>\s*)$/', $link_html . "\n\n$1", $content);
+            } else {
+                $content .= "\n\n" . $link_html;
+            }
+        }
+        
+        return $content;
+    }
+    
+    /**
+     * Insérer les images configurées dans le contenu
+     */
+    private function insert_article_images($content, $keyword, $title) {
+        // Récupérer les images configurées pour les articles
+        $article_images = get_option('osmose_articles_images', array());
+        
+        if (empty($article_images) || !is_array($article_images)) {
+            return $content;
+        }
+        
+        // Extraire les mots-clés du titre pour matcher avec les images
+        $title_keywords = $this->extract_keywords_from_title($title, $keyword);
+        
+        // Trouver les images correspondantes
+        $matching_images = array();
+        foreach ($article_images as $img_data) {
+            if (!isset($img_data['image_id']) || !isset($img_data['keywords'])) {
+                continue;
+            }
+            
+            $img_keywords = explode(',', strtolower($img_data['keywords']));
+            $img_keywords = array_map('trim', $img_keywords);
+            
+            // Vérifier si un mot-clé du titre correspond
+            foreach ($title_keywords as $title_kw) {
+                if (in_array(strtolower($title_kw), $img_keywords)) {
+                    $matching_images[] = $img_data;
+                    break;
+                }
+            }
+        }
+        
+        // Si aucune image ne correspond, prendre la première image disponible
+        if (empty($matching_images) && !empty($article_images)) {
+            $matching_images[] = $article_images[0];
+        }
+        
+        // Insérer au moins une image dans le contenu
+        if (!empty($matching_images)) {
+            $image_to_insert = $matching_images[0];
+            $image_id = intval($image_to_insert['image_id']);
+            
+            if ($image_id > 0) {
+                $image_url = wp_get_attachment_image_url($image_id, 'large');
+                $image_alt = get_post_meta($image_id, '_wp_attachment_image_alt', true);
+                if (empty($image_alt)) {
+                    $image_alt = $title;
+                }
+                
+                $image_html = '<figure class="osmose-article-image" style="margin: 20px 0; text-align: center;">';
+                $image_html .= '<img src="' . esc_url($image_url) . '" alt="' . esc_attr($image_alt) . '" style="max-width: 100%; height: auto; border-radius: 8px;">';
+                $image_html .= '</figure>';
+                
+                // Insérer l'image après le premier paragraphe ou après la première section
+                if (preg_match('/(<p[^>]*>.*?<\/p>)/s', $content, $matches)) {
+                    $content = str_replace($matches[0], $matches[0] . "\n\n" . $image_html, $content, 1);
+                } elseif (preg_match('/(<h2[^>]*>.*?<\/h2>)/s', $content, $matches)) {
+                    $content = str_replace($matches[0], $matches[0] . "\n\n" . $image_html, $content, 1);
+                } else {
+                    // Insérer au début
+                    $content = $image_html . "\n\n" . $content;
+                }
+            }
+        }
+        
+        return $content;
+    }
+    
+    /**
+     * Extraire les mots-clés du titre pour matcher avec les images
+     */
+    private function extract_keywords_from_title($title, $main_keyword) {
+        $keywords = array($main_keyword);
+        
+        // Extraire les mots significatifs du titre (plus de 4 caractères)
+        $words = preg_split('/\s+/', $title);
+        foreach ($words as $word) {
+            $word = preg_replace('/[^a-zA-ZÀ-ÿ]/', '', $word);
+            if (mb_strlen($word) > 4) {
+                $keywords[] = strtolower($word);
+            }
+        }
+        
+        return array_unique($keywords);
+    }
+    
+    /**
+     * Générer les tags WordPress pour l'article
+     */
+    private function generate_tags($keyword, $department, $city) {
+        $tags = array();
+        
+        // Ajouter le mot-clé principal
+        if (!empty($keyword)) {
+            $tags[] = $keyword;
+        }
+        
+        // Ajouter le département (nom complet uniquement)
+        if ($department) {
+            $dept_name = $this->get_department_name($department);
+            if ($dept_name && $dept_name !== $department) {
+                $tags[] = $dept_name;
+            }
+        }
+        
+        // Ajouter la ville
+        if ($city && is_array($city) && isset($city['name'])) {
+            $tags[] = $city['name'];
+        }
+        
+        // Ajouter des tags génériques
+        $tags[] = __('Rénovation', 'osmose-ads');
+        $tags[] = __('Travaux', 'osmose-ads');
+        $tags[] = __('Professionnel', 'osmose-ads');
+        
+        // Nettoyer et limiter les tags
+        $tags = array_map('trim', $tags);
+        $tags = array_filter($tags);
+        $tags = array_slice($tags, 0, 10); // Max 10 tags
+        
+        return $tags;
+    }
 }
 
