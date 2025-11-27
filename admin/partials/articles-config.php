@@ -21,6 +21,23 @@ if (isset($_POST['osmose_articles_config_save']) && check_admin_referer('osmose_
     $favorite_departments = isset($_POST['favorite_departments']) ? array_map('sanitize_text_field', $_POST['favorite_departments']) : array();
     update_option('osmose_articles_favorite_departments', $favorite_departments);
     
+    // Sauvegarder les images pour articles
+    $article_images = array();
+    if (isset($_POST['article_images']) && is_array($_POST['article_images'])) {
+        foreach ($_POST['article_images'] as $img_data) {
+            $img_id = isset($img_data['image_id']) ? intval($img_data['image_id']) : 0;
+            $keywords = isset($img_data['keywords']) ? sanitize_text_field($img_data['keywords']) : '';
+            
+            if ($img_id > 0) {
+                $article_images[] = array(
+                    'image_id' => $img_id,
+                    'keywords' => $keywords,
+                );
+            }
+        }
+    }
+    update_option('osmose_articles_images', $article_images);
+    
     // Sauvegarder le planning
     $articles_per_day = isset($_POST['articles_per_day']) ? intval($_POST['articles_per_day']) : 1;
     update_option('osmose_articles_per_day', $articles_per_day);
@@ -129,6 +146,62 @@ require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
             </div>
         </div>
         
+        <!-- Section Images pour Articles -->
+        <div class="card" style="max-width: 1200px; margin-top: 20px;">
+            <h2 style="margin-top: 0;"><?php _e('Images pour les Articles', 'osmose-ads'); ?></h2>
+            <p><?php _e('Sélectionnez des images qui seront insérées automatiquement dans les articles générés. Les images seront associées à des mots-clés pour être insérées dans les articles correspondants.', 'osmose-ads'); ?></p>
+            
+            <?php
+            $article_images = get_option('osmose_articles_images', array());
+            if (empty($article_images) || !is_array($article_images)) {
+                $article_images = array();
+            }
+            ?>
+            
+            <div id="article-images-container">
+                <?php foreach ($article_images as $index => $img_data): 
+                    $img_id = isset($img_data['image_id']) ? intval($img_data['image_id']) : 0;
+                    $keywords = isset($img_data['keywords']) ? esc_attr($img_data['keywords']) : '';
+                    $img_url = $img_id ? wp_get_attachment_image_url($img_id, 'thumbnail') : '';
+                ?>
+                    <div class="article-image-item" style="margin-bottom: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
+                        <div style="display: flex; gap: 15px; align-items: flex-start;">
+                            <div style="flex-shrink: 0;">
+                                <?php if ($img_url): ?>
+                                    <img src="<?php echo esc_url($img_url); ?>" alt="" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
+                                <?php else: ?>
+                                    <div style="width: 100px; height: 100px; background: #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                                        <span style="color: #999;"><?php _e('Aucune image', 'osmose-ads'); ?></span>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <button type="button" class="button select-article-image" data-index="<?php echo $index; ?>">
+                                    <?php _e('Sélectionner une image', 'osmose-ads'); ?>
+                                </button>
+                                <input type="hidden" name="article_images[<?php echo $index; ?>][image_id]" value="<?php echo $img_id; ?>" class="article-image-id">
+                                <div style="margin-top: 10px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                                        <?php _e('Mots-clés associés (séparés par des virgules)', 'osmose-ads'); ?>
+                                    </label>
+                                    <input type="text" name="article_images[<?php echo $index; ?>][keywords]" value="<?php echo $keywords; ?>" class="regular-text" style="width: 100%;" placeholder="<?php _e('Ex: couvreur, toiture, isolation, hydrofuger...', 'osmose-ads'); ?>">
+                                    <p class="description"><?php _e('Ces mots-clés seront utilisés pour insérer cette image dans les articles dont le titre contient ces mots.', 'osmose-ads'); ?></p>
+                                </div>
+                            </div>
+                            <div>
+                                <button type="button" class="button remove-article-image"><?php _e('Supprimer', 'osmose-ads'); ?></button>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <button type="button" id="add-article-image" class="button" style="margin-top: 10px;">
+                <?php _e('Ajouter une image', 'osmose-ads'); ?>
+            </button>
+            <p class="description"><?php _e('Au moins une image doit être configurée. Elle sera insérée automatiquement dans les articles générés.', 'osmose-ads'); ?></p>
+        </div>
+        
         <!-- Section Planning -->
         <div class="card" style="max-width: 1200px; margin-top: 20px;">
             <h2 style="margin-top: 0;"><?php _e('Planning de Publication', 'osmose-ads'); ?></h2>
@@ -190,6 +263,9 @@ require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/header.php';
 
 <script>
 jQuery(document).ready(function($) {
+    var articleImageFrames = {};
+    var articleImageIndex = <?php echo count($article_images); ?>;
+    
     // Ajouter une heure de publication
     $('#add-publish-hour').on('click', function() {
         var html = '<div class="publish-hour-item" style="margin-bottom: 5px;">' +
@@ -206,6 +282,63 @@ jQuery(document).ready(function($) {
         } else {
             alert('<?php echo esc_js(__('Vous devez avoir au moins une heure de publication.', 'osmose-ads')); ?>');
         }
+    });
+    
+    // Ajouter une image pour articles
+    $('#add-article-image').on('click', function() {
+        var index = articleImageIndex++;
+        var html = '<div class="article-image-item" style="margin-bottom: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">' +
+                   '<div style="display: flex; gap: 15px; align-items: flex-start;">' +
+                   '<div style="flex-shrink: 0;">' +
+                   '<div style="width: 100px; height: 100px; background: #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center;">' +
+                   '<span style="color: #999;"><?php echo esc_js(__('Aucune image', 'osmose-ads')); ?></span>' +
+                   '</div></div>' +
+                   '<div style="flex-grow: 1;">' +
+                   '<button type="button" class="button select-article-image" data-index="' + index + '"><?php echo esc_js(__('Sélectionner une image', 'osmose-ads')); ?></button>' +
+                   '<input type="hidden" name="article_images[' + index + '][image_id]" value="0" class="article-image-id">' +
+                   '<div style="margin-top: 10px;">' +
+                   '<label style="display: block; margin-bottom: 5px; font-weight: 600;"><?php echo esc_js(__('Mots-clés associés (séparés par des virgules)', 'osmose-ads')); ?></label>' +
+                   '<input type="text" name="article_images[' + index + '][keywords]" value="" class="regular-text" style="width: 100%;" placeholder="<?php echo esc_js(__('Ex: couvreur, toiture, isolation, hydrofuger...', 'osmose-ads')); ?>">' +
+                   '<p class="description"><?php echo esc_js(__('Ces mots-clés seront utilisés pour insérer cette image dans les articles dont le titre contient ces mots.', 'osmose-ads')); ?></p>' +
+                   '</div></div>' +
+                   '<div><button type="button" class="button remove-article-image"><?php echo esc_js(__('Supprimer', 'osmose-ads')); ?></button></div>' +
+                   '</div></div>';
+        $('#article-images-container').append(html);
+    });
+    
+    // Sélectionner une image pour articles
+    $(document).on('click', '.select-article-image', function() {
+        var index = $(this).data('index');
+        var $item = $(this).closest('.article-image-item');
+        var $imgContainer = $item.find('div:first-child');
+        var $input = $item.find('.article-image-id');
+        
+        if (articleImageFrames[index]) {
+            articleImageFrames[index].open();
+            return;
+        }
+        
+        var frame = wp.media({
+            title: '<?php echo esc_js(__('Sélectionner une image pour les articles', 'osmose-ads')); ?>',
+            button: {
+                text: '<?php echo esc_js(__('Utiliser cette image', 'osmose-ads')); ?>'
+            },
+            multiple: false
+        });
+        
+        frame.on('select', function() {
+            var attachment = frame.state().get('selection').first().toJSON();
+            $input.val(attachment.id);
+            $imgContainer.html('<img src="' + attachment.url + '" alt="" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">');
+        });
+        
+        frame.open();
+        articleImageFrames[index] = frame;
+    });
+    
+    // Supprimer une image pour articles
+    $(document).on('click', '.remove-article-image', function() {
+        $(this).closest('.article-image-item').remove();
     });
 });
 </script>

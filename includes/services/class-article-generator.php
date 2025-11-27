@@ -82,8 +82,14 @@ class Osmose_Article_Generator {
                 return new WP_Error('empty_content', __('Le titre ou le contenu généré est vide.', 'osmose-ads'));
             }
             
-            // Générer l'extrait (excerpt) pour SEO
+            // Générer l'extrait (excerpt) pour SEO (max 160 caractères)
             $excerpt = $this->generate_excerpt($keyword, $department, $city);
+            
+            // Ajouter des liens internes vers le CTA/devis dans le contenu
+            $content = $this->add_internal_links($content, $keyword);
+            
+            // Insérer les images configurées dans le contenu
+            $content = $this->insert_article_images($content, $keyword, $title);
             
             // Créer l'article comme un post WordPress standard
             $post_data = array(
@@ -100,6 +106,12 @@ class Osmose_Article_Generator {
             
             if (is_wp_error($post_id)) {
                 return $post_id;
+            }
+            
+            // Générer et assigner les tags WordPress
+            $tags = $this->generate_tags($keyword, $department, $city);
+            if (!empty($tags)) {
+                wp_set_post_tags($post_id, $tags, false);
             }
             
             // S'assurer que la catégorie "Uncategorized" est assignée
@@ -277,7 +289,8 @@ class Osmose_Article_Generator {
         
         if ($department) {
             $dept_name = $this->get_department_name($department);
-            $context .= "Département: {$dept_name} ({$department})\n";
+            $context .= "Département: {$dept_name}\n";
+            $context .= "⚠️ IMPORTANT: Dans le contenu généré, utilise UNIQUEMENT le nom complet \"{$dept_name}\", JAMAIS le code \"{$department}\"\n";
         }
         
         if ($city && is_array($city)) {
@@ -374,7 +387,8 @@ class Osmose_Article_Generator {
         
         if ($department) {
             $dept_name = $this->get_department_name($department);
-            $context .= "Département (TU DOIS TOUJOURS utiliser le nom complet): {$dept_name} (code: {$department})\n";
+            $context .= "Département: {$dept_name}\n";
+            $context .= "⚠️ CRITIQUE: Dans TOUT le contenu généré, utilise UNIQUEMENT le nom complet \"{$dept_name}\", JAMAIS le code \"{$department}\". Le code est uniquement pour référence interne.\n";
         }
         
         if ($city && is_array($city)) {
@@ -524,7 +538,7 @@ class Osmose_Article_Generator {
     }
     
     /**
-     * Générer l'extrait (excerpt) pour l'article
+     * Générer l'extrait (excerpt) pour l'article (max 160 caractères)
      */
     private function generate_excerpt($keyword, $department, $city) {
         $company_name = get_bloginfo('name');
@@ -539,13 +553,19 @@ class Osmose_Article_Generator {
             $city_name = $city['name'];
         }
         
-        $excerpt = "Découvrez tout ce qu'il faut savoir sur {$keyword}";
+        // Construire un extrait optimisé (max 160 caractères)
+        $excerpt = "Découvrez tout sur {$keyword}";
         if ($city_name && $dept_name) {
-            $excerpt .= " à {$city_name} dans le département {$dept_name}";
+            $excerpt .= " à {$city_name} ({$dept_name})";
         } elseif ($dept_name) {
-            $excerpt .= " dans le département {$dept_name}";
+            $excerpt .= " en {$dept_name}";
         }
-        $excerpt .= ". {$company_name} vous propose des solutions professionnelles et adaptées à vos besoins.";
+        $excerpt .= ". {$company_name} vous accompagne.";
+        
+        // Limiter strictement à 160 caractères
+        if (mb_strlen($excerpt) > 160) {
+            $excerpt = mb_substr($excerpt, 0, 157) . '...';
+        }
         
         return $excerpt;
     }
