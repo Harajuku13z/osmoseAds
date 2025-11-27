@@ -8,6 +8,7 @@ class Osmose_Ads_Rewrite {
         add_action('init', array($this, 'add_rewrite_tags'));
         add_filter('template_include', array($this, 'template_loader'), 999); // Priorité très élevée
         add_filter('single_template', array($this, 'single_template_loader'), 999, 3); // Priorité très élevée
+        add_action('template_redirect', array($this, 'force_template_redirect'), 1); // Forcer le template très tôt
         add_action('template_redirect', array($this, 'intercept_ad_requests'));
         add_action('template_redirect', array($this, 'handle_call_tracking'));
     }
@@ -315,6 +316,65 @@ class Osmose_Ads_Rewrite {
         return $template;
     }
 
+    /**
+     * Forcer le chargement du template pour les articles générés (approche agressive)
+     */
+    public function force_template_redirect() {
+        global $post, $wp_query;
+        
+        // Ne rien faire en admin
+        if (is_admin()) {
+            return;
+        }
+        
+        // Vérifier si on est sur un single post
+        if (!is_single()) {
+            return;
+        }
+        
+        // S'assurer que le post est chargé
+        if (!$post && isset($wp_query->post)) {
+            $post = $wp_query->post;
+        }
+        
+        if (!$post || !isset($post->ID)) {
+            return;
+        }
+        
+        $should_use_ad_template = false;
+        
+        // Vérifier si c'est un post de type 'ad'
+        if ($post->post_type === 'ad') {
+            $should_use_ad_template = true;
+        }
+        
+        // Vérifier si c'est un article généré
+        if ($post->post_type === 'post' && $post->ID > 0) {
+            $is_generated_article = get_post_meta($post->ID, 'article_auto_generated', true);
+            if ($is_generated_article === '1' || $is_generated_article === 1) {
+                $should_use_ad_template = true;
+            }
+        }
+        
+        if ($should_use_ad_template) {
+            // Vérifier si un template single-ad.php existe dans le thème
+            $theme_template = locate_template(array('single-ad.php'));
+            if ($theme_template && file_exists($theme_template)) {
+                // Forcer le chargement du template
+                include($theme_template);
+                exit;
+            }
+            
+            // Utiliser le template du plugin
+            $plugin_template = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/single-ad.php';
+            if (file_exists($plugin_template)) {
+                // Forcer le chargement du template
+                include($plugin_template);
+                exit;
+            }
+        }
+    }
+    
     /**
      * Intercepter les requêtes d'annonces avant le chargement du template
      */
