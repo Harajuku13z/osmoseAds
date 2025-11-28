@@ -78,47 +78,62 @@ class Osmose_Ads_Rewrite {
         
         $user_agent_lower = strtolower($user_agent);
         
+        // Ne pas bloquer si pas de user agent (peut être un vrai utilisateur)
         if (empty($user_agent)) {
-            return true; // Pas de user agent = probablement un bot
+            return false;
         }
         
-        // Liste des bots connus (mots-clés à rechercher dans le user agent)
+        // Liste des bots connus (patterns spécifiques uniquement)
+        // On évite les patterns trop génériques comme "bot" seul
         $bot_patterns = array(
-            // Bots de recherche
-            'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
+            // Bots de recherche (patterns spécifiques)
+            'googlebot/', 'bingbot/', 'slurp', 'duckduckbot', 'baiduspider',
             'yandexbot', 'sogou', 'exabot', 'facebot', 'ia_archiver',
             'facebookexternalhit', 'twitterbot', 'rogerbot', 'linkedinbot',
-            'applebot', 'qwantify',
-            // Bots sociaux
-            'embedly', 'quora', 'pinterest', 'slackbot', 'redditbot',
+            'applebot/', 'qwantify',
+            // Bots sociaux (patterns spécifiques)
+            'embedly', 'quora link preview', 'pinterestbot', 'slackbot', 'redditbot',
             'whatsapp', 'flipboard', 'tumblr', 'bitlybot', 'skypeuripreview',
-            'nuzzel', 'discordbot', 'pinterestbot',
-            // Bots génériques
-            'bot', 'crawler', 'spider', 'scraper', 'crawling',
-            // Outils de scraping
-            'python-requests', 'go-http-client', 'java', 'okhttp',
-            'http', 'libwww', 'lwp-trivial', 'perl', 'ruby', 'scrapy',
-            'mechanize', 'phantomjs', 'headless', 'selenium', 'webdriver',
-            'php', 'curl', 'wget',
-            // Outils de monitoring
-            'monitor', 'uptime', 'pingdom', 'gtmetrix', 'pagespeed',
-            'lighthouse', 'speedcurve', 'newrelic', 'datadog', 'sentry',
-            'uptimerobot', 'pingbot', 'site24x7', 'statuscake',
-            'monitis', 'alertra', 'siteuptime', 'hosttracker', 'websitepulse',
-            'dotcom-monitor', 'siteimprove',
-            // Outils SEO
-            'screaming', 'screaming frog', 'ahrefs', 'moz', 'semrush',
+            'nuzzel', 'discordbot',
+            // Outils de scraping (patterns spécifiques)
+            'python-requests/', 'go-http-client', 'okhttp/', 'scrapy/',
+            'mechanize', 'phantomjs', 'headlesschrome', 'selenium', 'webdriver',
+            // Outils de monitoring (patterns spécifiques)
+            'pingdom', 'gtmetrix', 'pagespeed insights', 'lighthouse',
+            'speedcurve', 'newrelicpinger', 'datadog', 'uptimerobot',
+            'pingbot', 'site24x7', 'statuscake', 'monitis', 'alertra',
+            'siteuptime', 'hosttracker', 'websitepulse', 'dotcom-monitor',
+            'siteimprove',
+            // Outils SEO (patterns spécifiques)
+            'screaming frog', 'ahrefsbot', 'moz.com', 'semrushbot',
             'majestic', 'sistrix', 'deepcrawl', 'sitebulb', 'oncrawl',
             'botify', 'lumar', 'brightedge', 'conductor', 'searchmetrics',
             'seomator', 'sitechecker', 'siteauditor', 'siteanalyzer',
-            // Autres
-            'bitrix', 'smtbot',
+            // Autres bots spécifiques
+            'bitrix link preview', 'smtbot',
         );
         
+        // Vérifier les patterns spécifiques
         foreach ($bot_patterns as $pattern) {
             if (strpos($user_agent_lower, $pattern) !== false) {
                 return true;
             }
+        }
+        
+        // Vérifier les patterns génériques mais seulement s'ils sont au début ou suivis d'un slash
+        $generic_bot_patterns = array(
+            '/bot', 'bot/', 'crawler/', 'spider/', 'scraper/',
+        );
+        
+        foreach ($generic_bot_patterns as $pattern) {
+            if (strpos($user_agent_lower, $pattern) !== false) {
+                return true;
+            }
+        }
+        
+        // Vérifier les outils de ligne de commande (curl, wget) mais seulement s'ils sont seuls
+        if (preg_match('/^(curl|wget|libwww|lwp-trivial|perl|ruby|php)\//i', $user_agent)) {
+            return true;
         }
         
         return false;

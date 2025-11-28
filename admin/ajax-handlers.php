@@ -1235,37 +1235,61 @@ function osmose_ads_handle_create_template() {
 function osmose_ads_is_bot_ajax() {
     $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '';
     
+    // Ne pas bloquer si pas de user agent (peut être un vrai utilisateur)
     if (empty($user_agent)) {
-        return true; // Pas de user agent = probablement un bot
+        return false;
     }
     
-    // Liste des bots connus
+    // Liste des bots connus (patterns spécifiques uniquement)
     $bot_patterns = array(
-        'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
+        // Bots de recherche (patterns spécifiques)
+        'googlebot/', 'bingbot/', 'slurp', 'duckduckbot', 'baiduspider',
         'yandexbot', 'sogou', 'exabot', 'facebot', 'ia_archiver',
         'facebookexternalhit', 'twitterbot', 'rogerbot', 'linkedinbot',
-        'applebot', 'qwantify', 'embedly', 'quora', 'pinterest',
-        'slackbot', 'redditbot', 'whatsapp', 'flipboard', 'tumblr',
-        'bitlybot', 'skypeuripreview', 'nuzzel', 'discordbot',
-        'pinterestbot', 'bot', 'crawler', 'spider', 'scraper',
-        'crawling', 'python-requests', 'go-http-client', 'java',
-        'okhttp', 'http', 'libwww', 'lwp-trivial', 'perl', 'ruby',
-        'scrapy', 'mechanize', 'phantomjs', 'headless', 'selenium',
-        'webdriver', 'php', 'curl', 'wget', 'monitor', 'uptime',
-        'pingdom', 'gtmetrix', 'pagespeed', 'lighthouse', 'speedcurve',
-        'newrelic', 'datadog', 'sentry', 'uptimerobot', 'pingbot',
-        'site24x7', 'statuscake', 'monitis', 'alertra', 'siteuptime',
-        'hosttracker', 'websitepulse', 'dotcom-monitor', 'siteimprove',
-        'screaming', 'ahrefs', 'moz', 'semrush', 'majestic', 'sistrix',
-        'deepcrawl', 'sitebulb', 'oncrawl', 'botify', 'lumar',
-        'brightedge', 'conductor', 'searchmetrics', 'seomator',
-        'sitechecker', 'siteauditor', 'siteanalyzer', 'bitrix', 'smtbot',
+        'applebot/', 'qwantify',
+        // Bots sociaux (patterns spécifiques)
+        'embedly', 'quora link preview', 'pinterestbot', 'slackbot', 'redditbot',
+        'whatsapp', 'flipboard', 'tumblr', 'bitlybot', 'skypeuripreview',
+        'nuzzel', 'discordbot',
+        // Outils de scraping (patterns spécifiques)
+        'python-requests/', 'go-http-client', 'okhttp/', 'scrapy/',
+        'mechanize', 'phantomjs', 'headlesschrome', 'selenium', 'webdriver',
+        // Outils de monitoring (patterns spécifiques)
+        'pingdom', 'gtmetrix', 'pagespeed insights', 'lighthouse',
+        'speedcurve', 'newrelicpinger', 'datadog', 'uptimerobot',
+        'pingbot', 'site24x7', 'statuscake', 'monitis', 'alertra',
+        'siteuptime', 'hosttracker', 'websitepulse', 'dotcom-monitor',
+        'siteimprove',
+        // Outils SEO (patterns spécifiques)
+        'screaming frog', 'ahrefsbot', 'moz.com', 'semrushbot',
+        'majestic', 'sistrix', 'deepcrawl', 'sitebulb', 'oncrawl',
+        'botify', 'lumar', 'brightedge', 'conductor', 'searchmetrics',
+        'seomator', 'sitechecker', 'siteauditor', 'siteanalyzer',
+        // Autres bots spécifiques
+        'bitrix link preview', 'smtbot',
     );
     
+    // Vérifier les patterns spécifiques
     foreach ($bot_patterns as $pattern) {
         if (strpos($user_agent, $pattern) !== false) {
             return true;
         }
+    }
+    
+    // Vérifier les patterns génériques mais seulement s'ils sont au début ou suivis d'un slash
+    $generic_bot_patterns = array(
+        '/bot', 'bot/', 'crawler/', 'spider/', 'scraper/',
+    );
+    
+    foreach ($generic_bot_patterns as $pattern) {
+        if (strpos($user_agent, $pattern) !== false) {
+            return true;
+        }
+    }
+    
+    // Vérifier les outils de ligne de commande (curl, wget) mais seulement s'ils sont seuls
+    if (preg_match('/^(curl|wget|libwww|lwp-trivial|perl|ruby|php)\//i', $user_agent)) {
+        return true;
     }
     
     return false;
