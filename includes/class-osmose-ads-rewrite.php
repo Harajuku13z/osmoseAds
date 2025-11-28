@@ -66,10 +66,89 @@ class Osmose_Ads_Rewrite {
     }
 
     /**
+     * Détecter si la requête provient d'un bot
+     * 
+     * @param string $user_agent User agent de la requête
+     * @return bool True si c'est un bot, false sinon
+     */
+    private function is_bot($user_agent = null) {
+        if ($user_agent === null) {
+            $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+        }
+        
+        $user_agent_lower = strtolower($user_agent);
+        
+        if (empty($user_agent)) {
+            return true; // Pas de user agent = probablement un bot
+        }
+        
+        // Liste des bots connus (mots-clés à rechercher dans le user agent)
+        $bot_patterns = array(
+            // Bots de recherche
+            'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
+            'yandexbot', 'sogou', 'exabot', 'facebot', 'ia_archiver',
+            'facebookexternalhit', 'twitterbot', 'rogerbot', 'linkedinbot',
+            'applebot', 'qwantify',
+            // Bots sociaux
+            'embedly', 'quora', 'pinterest', 'slackbot', 'redditbot',
+            'whatsapp', 'flipboard', 'tumblr', 'bitlybot', 'skypeuripreview',
+            'nuzzel', 'discordbot', 'pinterestbot',
+            // Bots génériques
+            'bot', 'crawler', 'spider', 'scraper', 'crawling',
+            // Outils de scraping
+            'python-requests', 'go-http-client', 'java', 'okhttp',
+            'http', 'libwww', 'lwp-trivial', 'perl', 'ruby', 'scrapy',
+            'mechanize', 'phantomjs', 'headless', 'selenium', 'webdriver',
+            'php', 'curl', 'wget',
+            // Outils de monitoring
+            'monitor', 'uptime', 'pingdom', 'gtmetrix', 'pagespeed',
+            'lighthouse', 'speedcurve', 'newrelic', 'datadog', 'sentry',
+            'uptimerobot', 'pingbot', 'site24x7', 'statuscake',
+            'monitis', 'alertra', 'siteuptime', 'hosttracker', 'websitepulse',
+            'dotcom-monitor', 'siteimprove',
+            // Outils SEO
+            'screaming', 'screaming frog', 'ahrefs', 'moz', 'semrush',
+            'majestic', 'sistrix', 'deepcrawl', 'sitebulb', 'oncrawl',
+            'botify', 'lumar', 'brightedge', 'conductor', 'searchmetrics',
+            'seomator', 'sitechecker', 'siteauditor', 'siteanalyzer',
+            // Autres
+            'bitrix', 'smtbot',
+        );
+        
+        foreach ($bot_patterns as $pattern) {
+            if (strpos($user_agent_lower, $pattern) !== false) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
      * Gérer le tracking des appels via URL
      */
     public function handle_call_tracking() {
         global $wp_query;
+        
+        // Vérifier si c'est un bot - ne pas tracker les appels des bots
+        if ($this->is_bot()) {
+            error_log('Osmose ADS: Bot detected, skipping call tracking');
+            // Rediriger quand même vers le numéro de téléphone si fourni
+            $phone = isset($_GET['phone']) ? sanitize_text_field($_GET['phone']) : '';
+            if (!empty($phone)) {
+                $phone_clean = preg_replace('/[^0-9+]/', '', $phone);
+                wp_redirect('tel:' . $phone_clean);
+                exit;
+            }
+            // Sinon, rediriger vers la page d'origine ou l'accueil
+            $page_url = isset($_GET['page_url']) ? urldecode($_GET['page_url']) : '';
+            if (!empty($page_url)) {
+                wp_redirect($page_url);
+            } else {
+                wp_redirect(home_url());
+            }
+            exit;
+        }
         
         // Log pour debug
         error_log('Osmose ADS: handle_call_tracking called');
@@ -102,9 +181,27 @@ class Osmose_Ads_Rewrite {
             error_log('Osmose ADS: ERROR - Table does not exist!');
         }
         
+        // Vérifier si c'est un bot - ne pas tracker les appels des bots
+        $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : '';
+        if ($this->is_bot($user_agent)) {
+            error_log('Osmose ADS: Bot detected, skipping call tracking. User-Agent: ' . $user_agent);
+            // Rediriger quand même vers le numéro de téléphone si fourni
+            if (!empty($phone)) {
+                $phone_clean = preg_replace('/[^0-9+]/', '', $phone);
+                wp_redirect('tel:' . $phone_clean);
+                exit;
+            }
+            // Sinon, rediriger vers la page d'origine ou l'accueil
+            if (!empty($page_url)) {
+                wp_redirect($page_url);
+            } else {
+                wp_redirect(home_url());
+            }
+            exit;
+        }
+        
         // Récupérer les informations de l'utilisateur
         $user_ip = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
-        $user_agent = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
         $referrer = esc_url_raw($_SERVER['HTTP_REFERER'] ?? $page_url);
         
         // Vérifier que la colonne 'source' existe avant d'insérer

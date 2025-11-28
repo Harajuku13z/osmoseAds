@@ -12,7 +12,7 @@ class Osmose_Ads_Public {
         
         // Vérifier si c'est une annonce
         if (is_singular('ad') || get_query_var('ad_slug') || 
-            (isset($wp_query->query_vars['ad_slug']) && !empty($wp_query->query_vars['ad_slug'])) ||
+                      (isset($wp_query->query_vars['ad_slug']) && !empty($wp_query->query_vars['ad_slug'])) ||
             (isset($post) && $post->post_type === 'ad')) {
             $is_ad_page = true;
         }
@@ -62,7 +62,7 @@ class Osmose_Ads_Public {
         
         // Vérifier si c'est une annonce
         if (is_singular('ad') || get_query_var('ad_slug') || 
-            (isset($wp_query->query_vars['ad_slug']) && !empty($wp_query->query_vars['ad_slug'])) ||
+                      (isset($wp_query->query_vars['ad_slug']) && !empty($wp_query->query_vars['ad_slug'])) ||
             (isset($post) && $post->post_type === 'ad')) {
             $is_ad_page = true;
         }
@@ -494,8 +494,59 @@ class Osmose_Ads_Public {
  * @param int|null $template_id ID du template
  * @param object|null $city Objet City
  */
+if (!function_exists('osmose_ads_is_bot')) {
+    /**
+     * Détecter si la requête provient d'un bot
+     * 
+     * @return bool True si c'est un bot, false sinon
+     */
+    function osmose_ads_is_bot() {
+        $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '';
+        
+        if (empty($user_agent)) {
+            return true; // Pas de user agent = probablement un bot
+        }
+        
+        // Liste des bots connus
+        $bot_patterns = array(
+            'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
+            'yandexbot', 'sogou', 'exabot', 'facebot', 'ia_archiver',
+            'facebookexternalhit', 'twitterbot', 'rogerbot', 'linkedinbot',
+            'applebot', 'qwantify', 'embedly', 'quora', 'pinterest',
+            'slackbot', 'redditbot', 'whatsapp', 'flipboard', 'tumblr',
+            'bitlybot', 'skypeuripreview', 'nuzzel', 'discordbot',
+            'pinterestbot', 'bot', 'crawler', 'spider', 'scraper',
+            'crawling', 'python-requests', 'go-http-client', 'java',
+            'okhttp', 'http', 'libwww', 'lwp-trivial', 'perl', 'ruby',
+            'scrapy', 'mechanize', 'phantomjs', 'headless', 'selenium',
+            'webdriver', 'php', 'curl', 'wget', 'monitor', 'uptime',
+            'pingdom', 'gtmetrix', 'pagespeed', 'lighthouse', 'speedcurve',
+            'newrelic', 'datadog', 'sentry', 'uptimerobot', 'pingbot',
+            'site24x7', 'statuscake', 'monitis', 'alertra', 'siteuptime',
+            'hosttracker', 'websitepulse', 'dotcom-monitor', 'siteimprove',
+            'screaming', 'ahrefs', 'moz', 'semrush', 'majestic', 'sistrix',
+            'deepcrawl', 'sitebulb', 'oncrawl', 'botify', 'lumar',
+            'brightedge', 'conductor', 'searchmetrics', 'seomator',
+            'sitechecker', 'siteauditor', 'siteanalyzer', 'bitrix', 'smtbot',
+        );
+        
+        foreach ($bot_patterns as $pattern) {
+            if (strpos($user_agent, $pattern) !== false) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+}
+
 if (!function_exists('osmose_ads_track_visit')) {
     function osmose_ads_track_visit($ad_id, $ad_slug, $page_url, $template_id = null, $city = null) {
+        // Ne pas tracker les visites des bots
+        if (osmose_ads_is_bot()) {
+            return;
+        }
+        
         global $wpdb;
         
         $table_name = $wpdb->prefix . 'osmose_ads_visits';
