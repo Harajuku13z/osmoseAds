@@ -1230,9 +1230,58 @@ function osmose_ads_handle_create_template() {
 }
 
 /**
+ * Détecter si la requête provient d'un bot
+ */
+function osmose_ads_is_bot_ajax() {
+    $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '';
+    
+    if (empty($user_agent)) {
+        return true; // Pas de user agent = probablement un bot
+    }
+    
+    // Liste des bots connus
+    $bot_patterns = array(
+        'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
+        'yandexbot', 'sogou', 'exabot', 'facebot', 'ia_archiver',
+        'facebookexternalhit', 'twitterbot', 'rogerbot', 'linkedinbot',
+        'applebot', 'qwantify', 'embedly', 'quora', 'pinterest',
+        'slackbot', 'redditbot', 'whatsapp', 'flipboard', 'tumblr',
+        'bitlybot', 'skypeuripreview', 'nuzzel', 'discordbot',
+        'pinterestbot', 'bot', 'crawler', 'spider', 'scraper',
+        'crawling', 'python-requests', 'go-http-client', 'java',
+        'okhttp', 'http', 'libwww', 'lwp-trivial', 'perl', 'ruby',
+        'scrapy', 'mechanize', 'phantomjs', 'headless', 'selenium',
+        'webdriver', 'php', 'curl', 'wget', 'monitor', 'uptime',
+        'pingdom', 'gtmetrix', 'pagespeed', 'lighthouse', 'speedcurve',
+        'newrelic', 'datadog', 'sentry', 'uptimerobot', 'pingbot',
+        'site24x7', 'statuscake', 'monitis', 'alertra', 'siteuptime',
+        'hosttracker', 'websitepulse', 'dotcom-monitor', 'siteimprove',
+        'screaming', 'ahrefs', 'moz', 'semrush', 'majestic', 'sistrix',
+        'deepcrawl', 'sitebulb', 'oncrawl', 'botify', 'lumar',
+        'brightedge', 'conductor', 'searchmetrics', 'seomator',
+        'sitechecker', 'siteauditor', 'siteanalyzer', 'bitrix', 'smtbot',
+    );
+    
+    foreach ($bot_patterns as $pattern) {
+        if (strpos($user_agent, $pattern) !== false) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+/**
  * Handler AJAX pour tracker les appels téléphoniques (accessible publiquement)
  */
 function osmose_ads_track_call() {
+    // Vérifier si c'est un bot - ne pas tracker les appels des bots
+    if (osmose_ads_is_bot_ajax()) {
+        error_log('Osmose ADS: Bot detected in AJAX call tracking, skipping');
+        wp_send_json_success(array('message' => __('Appel ignoré (bot détecté)', 'osmose-ads'), 'bot' => true));
+        return;
+    }
+    
     // Logger pour debug
     error_log('Osmose ADS: Track call handler called');
     error_log('Osmose ADS: POST data: ' . print_r($_POST, true));
