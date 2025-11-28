@@ -476,21 +476,20 @@ class Osmose_Ads_Rewrite {
             }
         }
         
-        // Si on doit utiliser le template des annonces, forcer WordPress à le charger
+        // Si on doit utiliser le template des annonces, stocker l'info pour template_include
         if ($should_use_ad_template) {
+            // Stocker dans une variable globale pour que template_include le récupère
+            $GLOBALS['osmose_ads_force_template'] = true;
+            
             // Vérifier si un template single-ad.php existe dans le thème
             $theme_template = locate_template(array('single-ad.php'));
             if ($theme_template && file_exists($theme_template)) {
-                // Charger directement le template et arrêter l'exécution
-                load_template($theme_template);
-                exit;
+                $GLOBALS['osmose_ads_template_path'] = $theme_template;
             } else {
                 // Utiliser le template du plugin
                 $plugin_template = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/single-ad.php';
                 if (file_exists($plugin_template)) {
-                    // Charger directement le template et arrêter l'exécution
-                    load_template($plugin_template);
-                    exit;
+                    $GLOBALS['osmose_ads_template_path'] = $plugin_template;
                 }
             }
         }
