@@ -196,6 +196,45 @@ body.page .wp-block-post-title {
     transition: transform 0.3s;
 }
 
+.option-image {
+    width: 100%;
+    height: 120px;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.option-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.osmose-option-card:has(input:checked) .option-image img {
+    transform: scale(1.05);
+}
+
+.project-details-section {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    background: #f9fafb;
+    margin-bottom: 1.5rem;
+}
+
+.project-details-title {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #3b82f6;
+}
+
 .option-label {
     font-size: 1rem;
     font-weight: 500;

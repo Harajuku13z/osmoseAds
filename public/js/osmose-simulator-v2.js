@@ -41,19 +41,25 @@
                 validateStep2();
             });
 
-            // Étape 3: Sélection du type de projet
-            $simulator.find('input[name="project_type"]').on('change', function() {
-                var projectKey = $(this).data('project-key');
-                loadProjectDetails(projectKey);
+            // Étape 3: Sélection multiple du type de projet (2-3 max)
+            $simulator.on('change', 'input[name="project_type[]"]', function() {
+                var checkedCount = $simulator.find('input[name="project_type[]"]:checked').length;
                 var $nextBtn = $simulator.find('.osmose-step-content[data-step="3"] .osmose-btn-next');
-                $nextBtn.prop('disabled', false);
+                
+                // Limiter à 3 projets maximum
+                if (checkedCount > 3) {
+                    $(this).prop('checked', false);
+                    showError('Vous ne pouvez sélectionner que 3 projets maximum');
+                    checkedCount--;
+                }
+                
+                // Activer le bouton si au moins 1 projet est sélectionné
+                $nextBtn.prop('disabled', checkedCount === 0);
             });
 
-            // Étape 4: Checkboxes pour détails du projet
-            $simulator.on('change', 'input[name="project_details[]"]', function() {
-                var checkedCount = $simulator.find('input[name="project_details[]"]:checked').length;
-                var $submitBtn = $simulator.find('.osmose-btn-submit');
-                $submitBtn.prop('disabled', checkedCount === 0);
+            // Étape 4: Checkboxes pour détails du projet (dynamique)
+            $simulator.on('change', 'input[name^="project_details_"]', function() {
+                updateSubmitButton();
             });
 
             // Boutons Next
@@ -112,7 +118,7 @@
 
         function validateStep2() {
             var isValid = true;
-            var requiredFields = ['postal_code', 'address', 'surface'];
+            var requiredFields = ['postal_code', 'surface']; // Adresse n'est plus obligatoire
             
             requiredFields.forEach(function(field) {
                 var $field = $simulator.find('#' + field);
@@ -174,19 +180,22 @@
 
             // Validation étape 3
             if (currentStep === 3) {
-                var $projectType = $simulator.find('input[name="project_type"]:checked');
-                if (!$projectType.length) {
+                var $projectTypes = $simulator.find('input[name="project_type[]"]:checked');
+                if ($projectTypes.length === 0) {
                     isValid = false;
-                    showError('Veuillez sélectionner un type de projet');
+                    showError('Veuillez sélectionner au moins un type de projet');
+                } else if ($projectTypes.length > 3) {
+                    isValid = false;
+                    showError('Vous ne pouvez sélectionner que 3 projets maximum');
                 }
             }
 
             // Validation étape 4
             if (currentStep === 4) {
-                var $projectDetails = $simulator.find('input[name="project_details[]"]:checked');
+                var $projectDetails = $simulator.find('input[name^="project_details_"]:checked');
                 if ($projectDetails.length === 0) {
                     isValid = false;
-                    showError('Veuillez sélectionner au moins un détail de projet');
+                    showError('Veuillez sélectionner au moins un détail pour chaque projet');
                 }
             }
 
@@ -198,44 +207,78 @@
             return re.test(email);
         }
 
-        function loadProjectDetails(projectKey) {
-            var project = projectTypes[projectKey];
-            if (!project || !project.options) {
+        function loadProjectDetails() {
+            var selectedProjects = [];
+            $simulator.find('input[name="project_type[]"]:checked').each(function() {
+                selectedProjects.push($(this).val());
+            });
+            
+            if (selectedProjects.length === 0) {
                 return;
             }
-
+            
             var $container = $simulator.find('#project-details-container');
-            var $description = $simulator.find('#project-details-description');
-            
-            $description.text('Sélectionnez les détails concernant votre projet de ' + project.label.toLowerCase() + ':');
-            
             $container.empty();
             
-            project.options.forEach(function(option) {
-                var optionLabel = option.label || option;
-                var optionValue = option.value || option;
+            selectedProjects.forEach(function(projectKey) {
+                var project = projectTypes[projectKey];
+                if (!project || !project.options) {
+                    return;
+                }
                 
-                var $label = $('<label>', {
-                    class: 'osmose-option-card osmose-option-checkbox'
+                // Créer une section pour chaque projet
+                var $section = $('<div>', {
+                    class: 'project-details-section mb-4'
                 });
                 
-                var $input = $('<input>', {
-                    type: 'checkbox',
-                    name: 'project_details[]',
-                    value: optionValue
+                var $sectionTitle = $('<h4>', {
+                    class: 'project-details-title',
+                    style: 'margin-bottom: 1rem; font-size: 1.2rem; color: #1f2937;'
+                }).text('Détails pour : ' + project.label);
+                
+                var $optionsGrid = $('<div>', {
+                    class: 'osmose-option-grid osmose-option-grid-multiple'
                 });
                 
-                var $icon = $('<div>', {
-                    class: 'option-icon'
-                }).text('✓');
+                project.options.forEach(function(option) {
+                    var optionLabel = option.label || option;
+                    var optionValue = option.value || option;
+                    
+                    var $label = $('<label>', {
+                        class: 'osmose-option-card osmose-option-checkbox'
+                    });
+                    
+                    var $input = $('<input>', {
+                        type: 'checkbox',
+                        name: 'project_details_' + projectKey + '[]',
+                        value: optionValue,
+                        'data-project-key': projectKey
+                    });
+                    
+                    var $icon = $('<div>', {
+                        class: 'option-icon'
+                    }).text('✓');
+                    
+                    var $optionLabel = $('<div>', {
+                        class: 'option-label'
+                    }).text(optionLabel);
+                    
+                    $label.append($input, $icon, $optionLabel);
+                    $optionsGrid.append($label);
+                });
                 
-                var $optionLabel = $('<div>', {
-                    class: 'option-label'
-                }).text(optionLabel);
-                
-                $label.append($input, $icon, $optionLabel);
-                $container.append($label);
+                $section.append($sectionTitle, $optionsGrid);
+                $container.append($section);
             });
+            
+            // Vérifier si au moins un détail est sélectionné
+            updateSubmitButton();
+        }
+        
+        function updateSubmitButton() {
+            var $projectDetails = $simulator.find('input[name^="project_details_"]:checked');
+            var $submitBtn = $simulator.find('.osmose-btn-submit');
+            $submitBtn.prop('disabled', $projectDetails.length === 0);
         }
 
         function saveStepData() {
@@ -254,11 +297,18 @@
                 formData.city = $currentStep.find('#city').val();
                 formData.surface = $currentStep.find('#surface').val();
             } else if (currentStep === 3) {
-                formData.project_type = $currentStep.find('input[name="project_type"]:checked').val();
+                formData.project_type = [];
+                $currentStep.find('input[name="project_type[]"]:checked').each(function() {
+                    formData.project_type.push($(this).val());
+                });
             } else if (currentStep === 4) {
-                formData.project_details = [];
-                $currentStep.find('input[name="project_details[]"]:checked').each(function() {
-                    formData.project_details.push($(this).val());
+                formData.project_details = {};
+                $currentStep.find('input[name^="project_details_"]:checked').each(function() {
+                    var projectKey = $(this).data('project-key');
+                    if (!formData.project_details[projectKey]) {
+                        formData.project_details[projectKey] = [];
+                    }
+                    formData.project_details[projectKey].push($(this).val());
                 });
                 formData.message = $currentStep.find('#message').val();
             }
@@ -269,6 +319,11 @@
                 currentStep++;
                 updateStepDisplay();
                 updateProgress();
+                
+                // Si on passe à l'étape 4, charger les détails des projets sélectionnés
+                if (currentStep === 4) {
+                    loadProjectDetails();
+                }
             }
         }
 
@@ -287,9 +342,27 @@
             // Restaurer les données sauvegardées
             restoreStepData();
             
-            // Si on revient à l'étape 3, recharger les détails du projet
-            if (currentStep === 4 && formData.project_type) {
-                loadProjectDetails(formData.project_type);
+            // Si on arrive à l'étape 4, charger les détails des projets sélectionnés
+            if (currentStep === 4) {
+                loadProjectDetails();
+                // Restaurer les sélections de détails
+                if (formData.project_details) {
+                    Object.keys(formData.project_details).forEach(function(projectKey) {
+                        formData.project_details[projectKey].forEach(function(detail) {
+                            $simulator.find('input[name="project_details_' + projectKey + '[]"][value="' + detail + '"]').prop('checked', true);
+                        });
+                    });
+                    updateSubmitButton();
+                }
+            }
+            
+            // Si on revient à l'étape 3, restaurer les sélections
+            if (currentStep === 3 && formData.project_type) {
+                formData.project_type.forEach(function(projectKey) {
+                    $simulator.find('input[name="project_type[]"][value="' + projectKey + '"]').prop('checked', true);
+                });
+                var checkedCount = $simulator.find('input[name="project_type[]"]:checked').length;
+                $simulator.find('.osmose-step-content[data-step="3"] .osmose-btn-next').prop('disabled', checkedCount === 0);
             }
         }
 

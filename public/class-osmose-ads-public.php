@@ -653,6 +653,32 @@ class Osmose_Ads_Public {
         }
         
         // Préparer les données d'insertion
+        // Gérer les projets multiples
+        $project_type_value = '';
+        $project_details_value = '';
+        
+        if (isset($data['project_type']) && is_array($data['project_type'])) {
+            // Plusieurs projets sélectionnés
+            $project_type_value = implode(', ', array_map('sanitize_text_field', $data['project_type']));
+            
+            // Gérer les détails pour chaque projet
+            if (isset($data['project_details']) && is_array($data['project_details'])) {
+                $details_array = array();
+                foreach ($data['project_details'] as $project_key => $details) {
+                    if (is_array($details) && !empty($details)) {
+                        $details_array[] = sanitize_text_field($project_key) . ': ' . implode(', ', array_map('sanitize_text_field', $details));
+                    }
+                }
+                $project_details_value = implode(' | ', $details_array);
+            }
+        } elseif (isset($data['project_type'])) {
+            // Un seul projet (ancien format)
+            $project_type_value = sanitize_text_field($data['project_type']);
+            $project_details_value = isset($data['project_details']) && is_array($data['project_details']) 
+                ? implode(', ', array_map('sanitize_text_field', $data['project_details'])) 
+                : (isset($data['project_details']) ? sanitize_text_field($data['project_details']) : '');
+        }
+        
         $insert_data = array(
             'property_type' => sanitize_text_field($data['property_type'] ?? ''),
             'work_type' => isset($data['work_type']) && is_array($data['work_type']) ? implode(', ', array_map('sanitize_text_field', $data['work_type'])) : '',
@@ -664,8 +690,8 @@ class Osmose_Ads_Public {
             'city' => isset($data['city']) ? sanitize_text_field($data['city']) : '',
             'postal_code' => isset($data['postal_code']) ? sanitize_text_field($data['postal_code']) : '',
             'surface' => isset($data['surface']) ? sanitize_text_field($data['surface']) : '',
-            'project_type' => isset($data['project_type']) ? sanitize_text_field($data['project_type']) : '',
-            'project_details' => isset($data['project_details']) && is_array($data['project_details']) ? implode(', ', array_map('sanitize_text_field', $data['project_details'])) : (isset($data['project_details']) ? sanitize_text_field($data['project_details']) : ''),
+            'project_type' => $project_type_value,
+            'project_details' => $project_details_value,
             'message' => isset($data['message']) ? sanitize_text_field($data['message']) : '',
             'status' => 'pending',
             'user_ip' => sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? ''),

@@ -50,7 +50,7 @@ class Osmose_Ads_Admin {
         );
         
         // Charger WordPress Media Library sur les pages de templates, création et articles
-        if (strpos($hook, 'osmose-ads-templates') !== false || strpos($hook, 'osmose-ads-template-create') !== false || strpos($hook, 'osmose-ads-articles') !== false || strpos($hook, 'osmose-ads-articles-config') !== false) {
+        if (strpos($hook, 'osmose-ads-templates') !== false || strpos($hook, 'osmose-ads-template-create') !== false || strpos($hook, 'osmose-ads-articles') !== false || strpos($hook, 'osmose-ads-articles-config') !== false || strpos($hook, 'osmose-ads-simulator-config') !== false) {
             wp_enqueue_media();
         }
         

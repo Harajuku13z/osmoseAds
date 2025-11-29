@@ -81,7 +81,7 @@ $project_types = get_option('osmose_ads_simulator_project_types', array(
 
             <!-- Step 1: Type de logement -->
             <div class="osmose-step-content" data-step="1">
-                <h3 class="step-title"><?php _e('Vos travaux concernent-ils une maison ou un appartement ?', 'osmose-ads'); ?></h3>
+                <h3 class="step-title"><?php _e('Vos travaux concernent-ils une maison, un appartement, un local commercial ou autre ?', 'osmose-ads'); ?></h3>
                 <div class="osmose-option-grid">
                     <label class="osmose-option-card">
                         <input type="radio" name="property_type" value="maison" required>
@@ -92,6 +92,16 @@ $project_types = get_option('osmose_ads_simulator_project_types', array(
                         <input type="radio" name="property_type" value="appartement" required>
                         <div class="option-icon">🏢</div>
                         <div class="option-label"><?php _e('Appartement', 'osmose-ads'); ?></div>
+                    </label>
+                    <label class="osmose-option-card">
+                        <input type="radio" name="property_type" value="local_commercial" required>
+                        <div class="option-icon">🏪</div>
+                        <div class="option-label"><?php _e('Local commercial', 'osmose-ads'); ?></div>
+                    </label>
+                    <label class="osmose-option-card">
+                        <input type="radio" name="property_type" value="autre" required>
+                        <div class="option-icon">🏗️</div>
+                        <div class="option-label"><?php _e('Autre', 'osmose-ads'); ?></div>
                     </label>
                 </div>
                 <div class="osmose-step-actions">
@@ -113,8 +123,8 @@ $project_types = get_option('osmose_ads_simulator_project_types', array(
                         <input type="text" id="postal_code" name="postal_code" pattern="[0-9]{5}" maxlength="5" required>
                     </div>
                     <div class="osmose-form-group">
-                        <label for="address"><?php _e('Adresse', 'osmose-ads'); ?> <span class="required">*</span></label>
-                        <input type="text" id="address" name="address" required>
+                        <label for="address"><?php _e('Adresse', 'osmose-ads'); ?></label>
+                        <input type="text" id="address" name="address">
                     </div>
                     <div class="osmose-form-group">
                         <label for="city"><?php _e('Ville', 'osmose-ads'); ?></label>
@@ -135,14 +145,23 @@ $project_types = get_option('osmose_ads_simulator_project_types', array(
                 </div>
             </div>
 
-            <!-- Step 3: Type de projet -->
+            <!-- Step 3: Type de projet (sélection multiple) -->
             <div class="osmose-step-content" data-step="3">
-                <h3 class="step-title"><?php _e('Quel type de projet souhaitez-vous réaliser ?', 'osmose-ads'); ?></h3>
-                <div class="osmose-option-grid osmose-project-types" id="project-types-container">
-                    <?php foreach ($project_types as $key => $project): ?>
-                        <label class="osmose-option-card">
-                            <input type="radio" name="project_type" value="<?php echo esc_attr($key); ?>" data-project-key="<?php echo esc_attr($key); ?>" required>
-                            <div class="option-icon">🔧</div>
+                <h3 class="step-title"><?php _e('Quels types de projets souhaitez-vous réaliser ?', 'osmose-ads'); ?></h3>
+                <p class="step-description"><?php _e('Vous pouvez sélectionner plusieurs projets (2 à 3 maximum)', 'osmose-ads'); ?></p>
+                <div class="osmose-option-grid osmose-option-grid-multiple osmose-project-types" id="project-types-container">
+                    <?php foreach ($project_types as $key => $project): 
+                        $image_url = !empty($project['image']) ? esc_url($project['image']) : '';
+                    ?>
+                        <label class="osmose-option-card osmose-option-checkbox">
+                            <input type="checkbox" name="project_type[]" value="<?php echo esc_attr($key); ?>" data-project-key="<?php echo esc_attr($key); ?>">
+                            <?php if ($image_url): ?>
+                                <div class="option-image">
+                                    <img src="<?php echo $image_url; ?>" alt="<?php echo esc_attr($project['label']); ?>">
+                                </div>
+                            <?php else: ?>
+                                <div class="option-icon">🔧</div>
+                            <?php endif; ?>
                             <div class="option-label"><?php echo esc_html($project['label']); ?></div>
                         </label>
                     <?php endforeach; ?>
@@ -157,12 +176,12 @@ $project_types = get_option('osmose_ads_simulator_project_types', array(
                 </div>
             </div>
 
-            <!-- Step 4: Détails du projet (dynamique selon le type) -->
+            <!-- Step 4: Détails du projet (dynamique selon les types sélectionnés) -->
             <div class="osmose-step-content" data-step="4">
-                <h3 class="step-title"><?php _e('Quels détails concernent votre projet ?', 'osmose-ads'); ?></h3>
-                <p class="step-description" id="project-details-description"></p>
-                <div class="osmose-option-grid osmose-option-grid-multiple" id="project-details-container">
-                    <!-- Les options seront chargées dynamiquement via JavaScript -->
+                <h3 class="step-title"><?php _e('Quels détails concernent vos projets ?', 'osmose-ads'); ?></h3>
+                <p class="step-description"><?php _e('Sélectionnez les détails pour chaque projet choisi', 'osmose-ads'); ?></p>
+                <div id="project-details-container">
+                    <!-- Les sections de détails seront chargées dynamiquement via JavaScript -->
                 </div>
                 <div class="osmose-form-group" style="margin-top: 20px;">
                     <label for="message"><?php _e('Message complémentaire (optionnel)', 'osmose-ads'); ?></label>

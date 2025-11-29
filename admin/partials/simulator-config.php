@@ -29,6 +29,7 @@ if (isset($_POST['osmose_simulator_config_submit']) && current_user_can('manage_
             if (!empty($project['label'])) {
                 $project_types[sanitize_key($key)] = array(
                     'label' => sanitize_text_field($project['label']),
+                    'image' => isset($project['image']) ? esc_url_raw($project['image']) : '',
                     'options' => isset($project['options']) && is_array($project['options']) 
                         ? array_map('sanitize_text_field', array_filter($project['options'])) 
                         : array()
@@ -240,6 +241,31 @@ if ($page_id) {
                                                value="<?php echo esc_attr($project['label']); ?>" 
                                                placeholder="Ex: Toiture" required>
                                     </div>
+                                    <div class="mb-2">
+                                        <label class="form-label"><?php _e('Image illustrative (optionnel)', 'osmose-ads'); ?></label>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <input type="url" 
+                                                   class="form-control project-image-url" 
+                                                   name="project_types[<?php echo esc_attr($key); ?>][image]" 
+                                                   value="<?php echo esc_attr($project['image'] ?? ''); ?>" 
+                                                   placeholder="URL de l'image">
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-secondary upload-project-image" 
+                                                    data-project-key="<?php echo esc_attr($key); ?>">
+                                                <i class="bi bi-upload"></i> <?php _e('Uploader', 'osmose-ads'); ?>
+                                            </button>
+                                        </div>
+                                        <?php if (!empty($project['image'])): ?>
+                                            <div class="mt-2">
+                                                <img src="<?php echo esc_url($project['image']); ?>" 
+                                                     alt="<?php echo esc_attr($project['label']); ?>" 
+                                                     style="max-width: 150px; max-height: 100px; object-fit: cover; border-radius: 4px;">
+                                            </div>
+                                        <?php endif; ?>
+                                        <small class="form-text text-muted">
+                                            <?php _e('Si une image est fournie, elle remplacera l\'icône dans le simulateur', 'osmose-ads'); ?>
+                                        </small>
+                                    </div>
                                     <div>
                                         <label class="form-label"><?php _e('Options disponibles', 'osmose-ads'); ?></label>
                                         <div class="project-options-list">
@@ -358,6 +384,39 @@ if ($page_id) {
 <script>
 jQuery(document).ready(function($) {
     var projectTypeIndex = <?php echo count($project_types) + 1; ?>;
+    var mediaUploader;
+    
+    // Upload d'image pour un projet
+    $(document).on('click', '.upload-project-image', function(e) {
+        e.preventDefault();
+        var projectKey = $(this).data('project-key');
+        var $input = $('input[name="project_types[' + projectKey + '][image]"]');
+        var $container = $input.closest('.mb-2');
+        
+        // Créer une nouvelle instance pour chaque projet
+        var customUploader = wp.media({
+            title: 'Choisir une image',
+            button: {
+                text: 'Utiliser cette image'
+            },
+            multiple: false
+        });
+        
+        customUploader.on('select', function() {
+            var attachment = customUploader.state().get('selection').first().toJSON();
+            $input.val(attachment.url);
+            
+            // Afficher ou mettre à jour l'aperçu
+            var $preview = $container.find('.image-preview');
+            if ($preview.length === 0) {
+                $preview = $('<div class="mt-2 image-preview"></div>');
+                $container.append($preview);
+            }
+            $preview.html('<img src="' + attachment.url + '" style="max-width: 150px; max-height: 100px; object-fit: cover; border-radius: 4px;">');
+        });
+        
+        customUploader.open();
+    });
     
     // Ajouter un type de projet
     $('#add-project-type').on('click', function() {
@@ -372,6 +431,16 @@ jQuery(document).ready(function($) {
             '<div class="mb-2">' +
             '<label class="form-label">Nom du projet</label>' +
             '<input type="text" class="form-control project-label" name="project_types[' + newKey + '][label]" placeholder="Ex: Toiture" required>' +
+            '</div>' +
+            '<div class="mb-2">' +
+            '<label class="form-label">Image illustrative (optionnel)</label>' +
+            '<div class="d-flex align-items-center gap-2">' +
+            '<input type="url" class="form-control project-image-url" name="project_types[' + newKey + '][image]" placeholder="URL de l\'image">' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary upload-project-image" data-project-key="' + newKey + '">' +
+            '<i class="bi bi-upload"></i> Uploader' +
+            '</button>' +
+            '</div>' +
+            '<small class="form-text text-muted">Si une image est fournie, elle remplacera l\'icône dans le simulateur</small>' +
             '</div>' +
             '<div>' +
             '<label class="form-label">Options disponibles</label>' +
