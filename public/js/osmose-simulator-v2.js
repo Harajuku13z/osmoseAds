@@ -44,7 +44,8 @@
             // Étape 3: Sélection multiple du type de projet (2-3 max)
             $simulator.on('change', 'input[name="project_type[]"]', function() {
                 var checkedCount = $simulator.find('input[name="project_type[]"]:checked').length;
-                var $nextBtn = $simulator.find('.osmose-step-content[data-step="3"] .osmose-btn-next');
+                var $currentStep = $simulator.find('.osmose-step-content[data-step="3"]');
+                var $nextBtn = $currentStep.find('.osmose-btn-next');
                 
                 // Limiter à 3 projets maximum
                 if (checkedCount > 3) {
@@ -54,7 +55,13 @@
                 }
                 
                 // Activer le bouton si au moins 1 projet est sélectionné
-                $nextBtn.prop('disabled', checkedCount === 0);
+                if (checkedCount > 0 && checkedCount <= 3) {
+                    $nextBtn.prop('disabled', false);
+                    // Masquer les erreurs si tout est OK
+                    $simulator.find('.osmose-simulator-error').hide();
+                } else {
+                    $nextBtn.prop('disabled', true);
+                }
             });
 
             // Étape 4: Checkboxes pour détails du projet (dynamique)
@@ -65,8 +72,16 @@
             // Boutons Next
             $simulator.on('click', '.osmose-btn-next', function(e) {
                 e.preventDefault();
+                
+                // Vérifier si le bouton est désactivé
+                if ($(this).prop('disabled')) {
+                    return false;
+                }
+                
+                // Sauvegarder les données avant validation
+                saveStepData();
+                
                 if (validateCurrentStep()) {
-                    saveStepData();
                     nextStep();
                 }
             });
@@ -180,13 +195,21 @@
 
             // Validation étape 3
             if (currentStep === 3) {
-                var $projectTypes = $simulator.find('input[name="project_type[]"]:checked');
+                var $currentStep = $simulator.find('.osmose-step-content[data-step="3"]');
+                var $projectTypes = $currentStep.find('input[name="project_type[]"]:checked');
+                var $nextBtn = $currentStep.find('.osmose-btn-next');
+                
                 if ($projectTypes.length === 0) {
                     isValid = false;
                     showError('Veuillez sélectionner au moins un type de projet');
+                    $nextBtn.prop('disabled', true);
                 } else if ($projectTypes.length > 3) {
                     isValid = false;
                     showError('Vous ne pouvez sélectionner que 3 projets maximum');
+                    $nextBtn.prop('disabled', true);
+                } else {
+                    // Validation OK, s'assurer que le bouton est activé
+                    $nextBtn.prop('disabled', false);
                 }
             }
 
