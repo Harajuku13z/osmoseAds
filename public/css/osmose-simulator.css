@@ -1,5 +1,14 @@
 /* Styles pour le simulateur de devis */
 
+/* Masquer le titre de la page WordPress sur la page du simulateur */
+.page .entry-title,
+.page h1.entry-title,
+.page-title,
+.single .entry-title,
+h1.page-title {
+    display: none !important;
+}
+
 .osmose-simulator-container {
     max-width: 900px;
     margin: 2rem auto;
