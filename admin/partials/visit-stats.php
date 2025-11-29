@@ -343,6 +343,9 @@ if ($table_exists) {
             <?php endif; ?>
         </div>
         <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" id="recalculate-bots-visits-btn" onclick="if(confirm('<?php echo esc_js(__('Recalculer le statut Bot/Humain pour toutes les visites et appels ? Cette opération peut prendre quelques secondes.', 'osmose-ads')); ?>')) { recalculateBotStatusVisits(); }">
+                <i class="bi bi-robot"></i> <?php _e('Recalculer Bots/Humains', 'osmose-ads'); ?>
+            </button>
             <?php if ($filter_ad_id > 0): ?>
                 <a href="<?php echo admin_url('admin.php?page=osmose-ads-visits'); ?>" class="btn btn-secondary">
                     <i class="bi bi-x-circle me-1"></i><?php _e('Retirer le filtre', 'osmose-ads'); ?>
@@ -350,6 +353,52 @@ if ($table_exists) {
             <?php endif; ?>
         </div>
     </div>
+
+<script>
+function recalculateBotStatusVisits() {
+    var $btn = jQuery('#recalculate-bots-visits-btn');
+    
+    jQuery.ajax({
+        url: osmoseAds.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'osmose_ads_recalculate_bot_status',
+            nonce: osmoseAds.nonce
+        },
+        beforeSend: function() {
+            $btn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> <?php echo esc_js(__('Recalcul en cours...', 'osmose-ads')); ?>');
+        },
+        success: function(response) {
+            if (response.success) {
+                var stats = response.data.stats || {};
+                var calls = stats.calls || {};
+                var visits = stats.visits || {};
+                
+                alert(
+                    '<?php echo esc_js(__('Recalibrage terminé.', 'osmose-ads')); ?>\n\n' +
+                    '<?php echo esc_js(__('Appels', 'osmose-ads')); ?>: ' +
+                    (calls.total || 0) + ' (<?php echo esc_js(__('Bots', 'osmose-ads')); ?>: ' + (calls.bots || 0) + ', <?php echo esc_js(__('Humains', 'osmose-ads')); ?>: ' + (calls.humans || 0) + ')\n' +
+                    '<?php echo esc_js(__('Visites', 'osmose-ads')); ?>: ' +
+                    (visits.total || 0) + ' (<?php echo esc_js(__('Bots', 'osmose-ads')); ?>: ' + (visits.bots || 0) + ', <?php echo esc_js(__('Humains', 'osmose-ads')); ?>: ' + (visits.humans || 0) + ')'
+                );
+                
+                // Recharger la page pour rafraîchir les stats
+                location.reload();
+            } else {
+                var msg = (response.data && response.data.message) ? response.data.message : '<?php echo esc_js(__('Erreur inconnue lors du recalcul.', 'osmose-ads')); ?>';
+                alert('<?php echo esc_js(__('Erreur lors du recalcul:', 'osmose-ads')); ?> ' + msg);
+            }
+        },
+        error: function() {
+            alert('<?php echo esc_js(__('Erreur lors de la communication avec le serveur.', 'osmose-ads')); ?>');
+        },
+        complete: function() {
+            $btn.prop('disabled', false).html('<i class="bi bi-robot"></i> <?php echo esc_js(__('Recalculer Bots/Humains', 'osmose-ads')); ?>');
+        }
+    });
+}
+</script>
+
     
     <?php if (!$table_exists): ?>
         <div class="alert alert-warning">
