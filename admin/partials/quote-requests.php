@@ -150,16 +150,16 @@ if ($table_exists) {
                                         </span>
                                     </td>
                                     <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#quoteModal<?php echo $quote['id']; ?>">
+                                        <div class="btn-group btn-group-sm" style="display: flex; gap: 5px;">
+                                            <button type="button" class="btn btn-sm btn-primary osmose-view-quote-btn" data-quote-id="<?php echo $quote['id']; ?>" onclick="osmoseShowQuoteModal(<?php echo $quote['id']; ?>)">
                                                 <i class="bi bi-eye"></i> <?php _e('Voir', 'osmose-ads'); ?>
                                             </button>
                                             <?php if ($quote['status'] === 'pending'): ?>
-                                                <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=osmose-ads-quotes&action=update_status&quote_id=' . $quote['id'] . '&status=contacted'), 'update_status_' . $quote['id']); ?>" class="btn btn-sm btn-success">
+                                                <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=osmose-ads-quotes&action=update_status&quote_id=' . $quote['id'] . '&status=contacted'), 'update_status_' . $quote['id']); ?>" class="btn btn-sm btn-success" title="<?php esc_attr_e('Marquer comme contacté', 'osmose-ads'); ?>">
                                                     <i class="bi bi-check"></i>
                                                 </a>
                                             <?php endif; ?>
-                                            <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=osmose-ads-quotes&action=delete&quote_id=' . $quote['id']), 'delete_quote_' . $quote['id']); ?>" class="btn btn-sm btn-danger" onclick="return confirm('<?php echo esc_js(__('Êtes-vous sûr de vouloir supprimer cette demande ?', 'osmose-ads')); ?>');">
+                                            <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=osmose-ads-quotes&action=delete&quote_id=' . $quote['id']), 'delete_quote_' . $quote['id']); ?>" class="btn btn-sm btn-danger" onclick="return confirm('<?php echo esc_js(__('Êtes-vous sûr de vouloir supprimer cette demande ?', 'osmose-ads')); ?>');" title="<?php esc_attr_e('Supprimer', 'osmose-ads'); ?>">
                                                 <i class="bi bi-trash"></i>
                                             </a>
                                         </div>
@@ -167,12 +167,12 @@ if ($table_exists) {
                                 </tr>
                                 
                                 <!-- Modal pour voir les détails -->
-                                <div class="modal fade" id="quoteModal<?php echo $quote['id']; ?>" tabindex="-1">
+                                <div class="modal fade osmose-quote-modal" id="quoteModal<?php echo $quote['id']; ?>" tabindex="-1" style="display: none;">
                                     <div class="modal-dialog modal-lg">
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title"><?php _e('Détails de la demande', 'osmose-ads'); ?></h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                <button type="button" class="btn-close osmose-close-modal" onclick="osmoseCloseQuoteModal(<?php echo $quote['id']; ?>)" aria-label="<?php esc_attr_e('Fermer', 'osmose-ads'); ?>"></button>
                                             </div>
                                             <div class="modal-body">
                                                 <div class="row mb-3">
@@ -236,7 +236,7 @@ if ($table_exists) {
                                                         <i class="bi bi-check"></i> <?php _e('Marquer comme contacté', 'osmose-ads'); ?>
                                                     </a>
                                                 <?php endif; ?>
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php _e('Fermer', 'osmose-ads'); ?></button>
+                                                <button type="button" class="btn btn-secondary" onclick="osmoseCloseQuoteModal(<?php echo $quote['id']; ?>)"><?php _e('Fermer', 'osmose-ads'); ?></button>
                                             </div>
                                         </div>
                                     </div>
@@ -249,6 +249,117 @@ if ($table_exists) {
         </div>
     <?php endif; ?>
 </div>
+
+<style>
+/* Styles pour les modals */
+.osmose-quote-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.osmose-quote-modal .modal-dialog {
+    max-width: 800px;
+    width: 90%;
+    margin: 0;
+}
+
+.osmose-quote-modal .modal-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.osmose-quote-modal .modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.osmose-quote-modal .modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.osmose-quote-modal .btn-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+}
+
+.osmose-quote-modal .btn-close:hover {
+    opacity: 1;
+}
+
+.osmose-quote-modal .modal-body {
+    padding: 20px;
+}
+
+.osmose-quote-modal .modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+</style>
+
+<script>
+function osmoseShowQuoteModal(quoteId) {
+    var modal = document.getElementById('quoteModal' + quoteId);
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function osmoseCloseQuoteModal(quoteId) {
+    var modal = document.getElementById('quoteModal' + quoteId);
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+// Fermer en cliquant sur l'overlay
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('osmose-quote-modal')) {
+        var quoteId = e.target.id.replace('quoteModal', '');
+        osmoseCloseQuoteModal(quoteId);
+    }
+});
+
+// Fermer avec Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        var modals = document.querySelectorAll('.osmose-quote-modal');
+        modals.forEach(function(modal) {
+            if (modal.style.display === 'flex') {
+                var quoteId = modal.id.replace('quoteModal', '');
+                osmoseCloseQuoteModal(quoteId);
+            }
+        });
+    }
+});
+</script>
 
 <?php
 // Inclure le footer global
