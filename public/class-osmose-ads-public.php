@@ -530,10 +530,18 @@ class Osmose_Ads_Public {
         }
         
         // Charger les styles et scripts
+        // Charger aussi le CSS public pour le hero (même style que la page annonce)
+        wp_enqueue_style(
+            'osmose-ads-public',
+            OSMOSE_ADS_PLUGIN_URL . 'public/css/osmose-ads-public.css',
+            array(),
+            OSMOSE_ADS_VERSION
+        );
+        
         wp_enqueue_style(
             'osmose-simulator',
             OSMOSE_ADS_PLUGIN_URL . 'public/css/osmose-simulator.css',
-            array(),
+            array('osmose-ads-public'),
             OSMOSE_ADS_VERSION
         );
         
