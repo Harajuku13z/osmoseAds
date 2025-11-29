@@ -1,11 +1,15 @@
 /* Styles pour le simulateur de devis */
 
 /* Masquer le titre de la page WordPress sur la page du simulateur */
-.page .entry-title,
-.page h1.entry-title,
-.page-title,
-.single .entry-title,
-h1.page-title {
+body.page .entry-title,
+body.page h1.entry-title,
+body.page .page-title,
+body.page h1.page-title,
+body.page .elementor-heading-title,
+body.page h1,
+body.page .entry-header h1,
+body.page .post-title,
+body.page .wp-block-post-title {
     display: none !important;
 }
 
