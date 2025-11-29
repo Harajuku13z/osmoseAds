@@ -224,8 +224,19 @@ class Osmose_Ads_Admin {
             array($this, 'display_visit_stats')
         );
         
+        // Menu Simulateur (parent)
         add_submenu_page(
             'osmose-ads',
+            __('Simulateur', 'osmose-ads'),
+            __('📊 Simulateur', 'osmose-ads'),
+            'manage_options',
+            'osmose-ads-simulator',
+            array($this, 'display_quote_requests') // Par défaut, affiche la liste des demandes
+        );
+        
+        // Sous-menu: Demandes de Devis
+        add_submenu_page(
+            'osmose-ads-simulator',
             __('Demandes de Devis', 'osmose-ads'),
             __('📋 Demandes de Devis', 'osmose-ads'),
             'manage_options',
@@ -233,10 +244,11 @@ class Osmose_Ads_Admin {
             array($this, 'display_quote_requests')
         );
         
+        // Sous-menu: Configuration Simulateur
         add_submenu_page(
-            'osmose-ads',
+            'osmose-ads-simulator',
             __('Configuration Simulateur', 'osmose-ads'),
-            __('⚙️ Config Simulateur', 'osmose-ads'),
+            __('⚙️ Configuration', 'osmose-ads'),
             'manage_options',
             'osmose-ads-simulator-config',
             array($this, 'display_simulator_config')
