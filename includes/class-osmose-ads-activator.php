@@ -107,13 +107,15 @@ class Osmose_Ads_Activator {
             user_agent text,
             referrer varchar(500),
             source varchar(50),
+            is_bot tinyint(1) DEFAULT 0,
             call_time datetime DEFAULT CURRENT_TIMESTAMP,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_ad_id (ad_id),
             KEY idx_created_at (created_at),
             KEY idx_call_time (call_time),
-            KEY idx_page_url (page_url(255))
+            KEY idx_page_url (page_url(255)),
+            KEY idx_is_bot (is_bot)
         ) $charset_collate;";
         
         // Table pour tracker les visites des annonces

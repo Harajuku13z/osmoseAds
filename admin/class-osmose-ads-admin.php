@@ -205,6 +205,16 @@ class Osmose_Ads_Admin {
             array($this, 'display_call_stats')
         );
         
+        // Page de détails d'un appel (cachée du menu)
+        add_submenu_page(
+            null, // null pour cacher du menu
+            __('Détails de l\'Appel', 'osmose-ads'),
+            __('Détails de l\'Appel', 'osmose-ads'),
+            'manage_options',
+            'osmose-ads-call-details',
+            array($this, 'display_call_details')
+        );
+        
         add_submenu_page(
             'osmose-ads',
             __('Statistiques de Visites', 'osmose-ads'),
@@ -286,6 +296,10 @@ class Osmose_Ads_Admin {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/call-stats.php';
     }
     
+    public function display_call_details() {
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/call-details.php';
+    }
+    
     public function display_visit_stats() {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/visit-stats.php';
     }
@@ -332,6 +346,7 @@ class Osmose_Ads_Admin {
         add_action('wp_ajax_osmose_ads_delete_template', array($this, 'ajax_delete_template'));
         add_action('wp_ajax_osmose_ads_delete_ad', array($this, 'ajax_delete_ad'));
         add_action('wp_ajax_osmose_ads_delete_all_ads', array($this, 'ajax_delete_all_ads'));
+        add_action('wp_ajax_osmose_ads_delete_all_calls', array($this, 'ajax_delete_all_calls'));
         add_action('wp_ajax_osmose_generate_article_ajax', array($this, 'ajax_generate_article'));
     }
 
@@ -397,6 +412,39 @@ class Osmose_Ads_Admin {
         
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/ajax-handlers.php';
         osmose_ads_handle_delete_all_ads();
+    }
+    
+    /**
+     * Handler AJAX pour supprimer tous les appels
+     */
+    public function ajax_delete_all_calls() {
+        check_ajax_referer('osmose_ads_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+        }
+        
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'osmose_ads_call_tracking';
+        
+        // Vérifier que la table existe
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+            wp_send_json_error(array('message' => __('La table de tracking n\'existe pas', 'osmose-ads')));
+            return;
+        }
+        
+        // Supprimer tous les appels
+        $deleted = $wpdb->query("DELETE FROM $table_name");
+        
+        if ($deleted === false) {
+            wp_send_json_error(array('message' => __('Erreur lors de la suppression:', 'osmose-ads') . ' ' . $wpdb->last_error));
+            return;
+        }
+        
+        wp_send_json_success(array(
+            'message' => sprintf(__('%d appel(s) supprimé(s) avec succès', 'osmose-ads'), $deleted),
+            'deleted' => $deleted
+        ));
     }
 
     /**

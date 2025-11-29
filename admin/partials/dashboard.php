@@ -24,17 +24,18 @@ $calls_this_week = 0;
 $calls_this_month = 0;
 
 if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
-    $total_calls = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+    // Exclure les bots des statistiques (is_bot != 1 OR is_bot IS NULL)
+    $total_calls = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE (is_bot != 1 OR is_bot IS NULL)");
     $calls_today = (int) $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_name WHERE DATE(created_at) = %s",
+        "SELECT COUNT(*) FROM $table_name WHERE DATE(created_at) = %s AND (is_bot != 1 OR is_bot IS NULL)",
         current_time('Y-m-d')
     ));
     $calls_this_week = (int) $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(created_at, 1) = YEARWEEK(%s, 1)",
+        "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(created_at, 1) = YEARWEEK(%s, 1) AND (is_bot != 1 OR is_bot IS NULL)",
         current_time('mysql')
     ));
     $calls_this_month = (int) $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_name WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d",
+        "SELECT COUNT(*) FROM $table_name WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d AND (is_bot != 1 OR is_bot IS NULL)",
         current_time('Y'),
         current_time('m')
     ));
@@ -185,11 +186,11 @@ $ads_with_tracking = get_posts(array(
                                     $tracking_number = get_post_meta($ad->ID, 'tracking_number', true);
                                     $view_count = intval(get_post_meta($ad->ID, 'view_count', true)) ?: 0;
                                     
-                                    // Compter les appels pour cette annonce
+                                    // Compter les appels pour cette annonce (exclure les bots)
                                     $ad_call_count = 0;
                                     if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
                                         $ad_call_count = (int) $wpdb->get_var($wpdb->prepare(
-                                            "SELECT COUNT(*) FROM $table_name WHERE ad_id = %d",
+                                            "SELECT COUNT(*) FROM $table_name WHERE ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
                                             $ad->ID
                                         ));
                                     }

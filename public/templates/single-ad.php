@@ -226,7 +226,7 @@ get_header();
                     <?php if ($devis_url): ?>
                         <a href="<?php echo esc_url($devis_url); ?>" class="osmose-btn-hero osmose-btn-accent">
                             <i class="fas fa-calculator"></i>
-                            <?php _e('Devis Gratuit', 'osmose-ads'); ?>
+                            <?php _e('Simulateur de Prix', 'osmose-ads'); ?>
                         </a>
                     <?php endif; ?>
                     <?php if ($phone_raw): ?>

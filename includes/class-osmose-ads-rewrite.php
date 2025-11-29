@@ -83,14 +83,21 @@ class Osmose_Ads_Rewrite {
             return false;
         }
         
+        // Vérifier les headers supplémentaires pour détecter les bots
+        // Certains bots n'ont pas de User-Agent mais ont d'autres headers caractéristiques
+        if (empty($user_agent) && isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            // Si pas de User-Agent mais X-Forwarded-For, probablement un proxy/bot
+            return true;
+        }
+        
         // Liste des bots connus (patterns spécifiques uniquement)
         // On évite les patterns trop génériques comme "bot" seul
         $bot_patterns = array(
             // Bots de recherche (patterns spécifiques)
-            'googlebot/', 'bingbot/', 'slurp', 'duckduckbot', 'baiduspider',
+            'googlebot/', 'googlebot', 'googleother', 'bingbot/', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
             'yandexbot', 'sogou', 'exabot', 'facebot', 'ia_archiver',
             'facebookexternalhit', 'twitterbot', 'rogerbot', 'linkedinbot',
-            'applebot/', 'qwantify',
+            'applebot/', 'applebot', 'qwantify',
             // Bots sociaux (patterns spécifiques)
             'embedly', 'quora link preview', 'pinterestbot', 'slackbot', 'redditbot',
             'whatsapp', 'flipboard', 'tumblr', 'bitlybot', 'skypeuripreview',
@@ -98,6 +105,7 @@ class Osmose_Ads_Rewrite {
             // Outils de scraping (patterns spécifiques)
             'python-requests/', 'go-http-client', 'okhttp/', 'scrapy/',
             'mechanize', 'phantomjs', 'headlesschrome', 'selenium', 'webdriver',
+            'headless', 'chrome-lighthouse', 'puppeteer',
             // Outils de monitoring (patterns spécifiques)
             'pingdom', 'gtmetrix', 'pagespeed insights', 'lighthouse',
             'speedcurve', 'newrelicpinger', 'datadog', 'uptimerobot',
@@ -110,7 +118,8 @@ class Osmose_Ads_Rewrite {
             'botify', 'lumar', 'brightedge', 'conductor', 'searchmetrics',
             'seomator', 'sitechecker', 'siteauditor', 'siteanalyzer',
             // Autres bots spécifiques
-            'bitrix link preview', 'smtbot',
+            'bitrix link preview', 'smtbot', 'petalbot', 'dotbot',
+            'mj12bot', 'megaindex', 'blexbot', 'crawler', 'spider',
         );
         
         // Vérifier les patterns spécifiques
@@ -131,8 +140,30 @@ class Osmose_Ads_Rewrite {
             }
         }
         
+        // Heuristique supplémentaire : User-Agent de type "(compatible; XXX)"
+        // Exemple : "Mozilla/... (compatible; GoogleOther)"
+        if (preg_match('/\(compatible;\s*([^)]+)\)/i', $user_agent, $matches)) {
+            $compat = strtolower($matches[1]);
+            $compat_providers = array('google', 'googleother', 'googlebot', 'adsbot', 'apis-google', 'bing', 'duckduck', 'ahrefs', 'semrush', 'mj12', 'yandex', 'baidu');
+            foreach ($compat_providers as $provider) {
+                if (strpos($compat, $provider) !== false) {
+                    return true;
+                }
+            }
+        }
+        
         // Vérifier les outils de ligne de commande (curl, wget) mais seulement s'ils sont seuls
         if (preg_match('/^(curl|wget|libwww|lwp-trivial|perl|ruby|php)\//i', $user_agent)) {
+            return true;
+        }
+        
+        // Vérifier si le User-Agent est très court (souvent un signe de bot)
+        if (strlen($user_agent) < 10) {
+            return true;
+        }
+        
+        // Vérifier les patterns de bots génériques à la fin
+        if (preg_match('/bot|crawler|spider|scraper$/i', $user_agent)) {
             return true;
         }
         
@@ -144,26 +175,6 @@ class Osmose_Ads_Rewrite {
      */
     public function handle_call_tracking() {
         global $wp_query;
-        
-        // Vérifier si c'est un bot - ne pas tracker les appels des bots
-        if ($this->is_bot()) {
-            error_log('Osmose ADS: Bot detected, skipping call tracking');
-            // Rediriger quand même vers le numéro de téléphone si fourni
-            $phone = isset($_GET['phone']) ? sanitize_text_field($_GET['phone']) : '';
-            if (!empty($phone)) {
-                $phone_clean = preg_replace('/[^0-9+]/', '', $phone);
-                wp_redirect('tel:' . $phone_clean);
-                exit;
-            }
-            // Sinon, rediriger vers la page d'origine ou l'accueil
-            $page_url = isset($_GET['page_url']) ? urldecode($_GET['page_url']) : '';
-            if (!empty($page_url)) {
-                wp_redirect($page_url);
-            } else {
-                wp_redirect(home_url());
-            }
-            exit;
-        }
         
         // Log pour debug
         error_log('Osmose ADS: handle_call_tracking called');
@@ -196,37 +207,43 @@ class Osmose_Ads_Rewrite {
             error_log('Osmose ADS: ERROR - Table does not exist!');
         }
         
-        // Vérifier si c'est un bot - ne pas tracker les appels des bots
+        // Vérifier si c'est un bot
         $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : '';
-        if ($this->is_bot($user_agent)) {
-            error_log('Osmose ADS: Bot detected, skipping call tracking. User-Agent: ' . $user_agent);
-            // Rediriger quand même vers le numéro de téléphone si fourni
-            if (!empty($phone)) {
-                $phone_clean = preg_replace('/[^0-9+]/', '', $phone);
-                wp_redirect('tel:' . $phone_clean);
-                exit;
-            }
-            // Sinon, rediriger vers la page d'origine ou l'accueil
-            if (!empty($page_url)) {
-                wp_redirect($page_url);
-            } else {
-                wp_redirect(home_url());
-            }
-            exit;
+        $is_bot = $this->is_bot($user_agent);
+        
+        if ($is_bot) {
+            error_log('Osmose ADS: Bot detected, will mark as bot in tracking. User-Agent: ' . $user_agent);
         }
         
         // Récupérer les informations de l'utilisateur
         $user_ip = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
         $referrer = esc_url_raw($_SERVER['HTTP_REFERER'] ?? $page_url);
         
-        // Vérifier que la colonne 'source' existe avant d'insérer
+        // Vérifier et ajouter les colonnes nécessaires
         $columns = $wpdb->get_results("SHOW COLUMNS FROM $table_name");
         $has_source_column = false;
+        $has_is_bot_column = false;
         foreach ($columns as $column) {
             if ($column->Field === 'source') {
                 $has_source_column = true;
-                break;
             }
+            if ($column->Field === 'is_bot') {
+                $has_is_bot_column = true;
+            }
+        }
+        
+        // Ajouter la colonne 'source' si elle n'existe pas
+        if (!$has_source_column) {
+            error_log('Osmose ADS: Adding column "source"');
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN source varchar(50) DEFAULT NULL");
+            $has_source_column = true;
+        }
+        
+        // Ajouter la colonne 'is_bot' si elle n'existe pas
+        if (!$has_is_bot_column) {
+            error_log('Osmose ADS: Adding column "is_bot"');
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN is_bot tinyint(1) DEFAULT 0");
+            $has_is_bot_column = true;
         }
         
         // Préparer les données à insérer
@@ -238,32 +255,20 @@ class Osmose_Ads_Rewrite {
             'user_ip' => $user_ip ?: '',
             'user_agent' => $user_agent ?: '',
             'referrer' => $referrer ?: '',
+            'is_bot' => $is_bot ? 1 : 0,
             'call_time' => current_time('mysql'),
             'created_at' => current_time('mysql')
         );
         
-        $insert_format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');
+        $insert_format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s');
         
-        // Ajouter 'source' seulement si la colonne existe
+        // Ajouter 'source' si la colonne existe
         if ($has_source_column) {
             $insert_data['source'] = $source;
             $insert_format[] = '%s';
-        } else {
-            // Si la colonne n'existe pas, essayer de l'ajouter
-            error_log('Osmose ADS: WARNING - Column "source" missing, attempting to add it');
-            $wpdb->query("ALTER TABLE $table_name ADD COLUMN source varchar(50) DEFAULT NULL");
-            // Re-vérifier
-            $columns = $wpdb->get_results("SHOW COLUMNS FROM $table_name");
-            foreach ($columns as $column) {
-                if ($column->Field === 'source') {
-                    $insert_data['source'] = $source;
-                    $insert_format[] = '%s';
-                    break;
-                }
-            }
         }
         
-        // Enregistrer l'appel
+        // Enregistrer l'appel (même si c'est un bot, pour avoir une trace)
         $result = $wpdb->insert(
             $table_name,
             $insert_data,
@@ -273,7 +278,11 @@ class Osmose_Ads_Rewrite {
         if ($result === false) {
             error_log('Osmose ADS: ERROR inserting call - ' . $wpdb->last_error);
         } else {
-            error_log('Osmose ADS: Call tracked successfully! ID: ' . $wpdb->insert_id);
+            if ($is_bot) {
+                error_log('Osmose ADS: Bot call tracked (marked as bot). ID: ' . $wpdb->insert_id);
+            } else {
+                error_log('Osmose ADS: Call tracked successfully! ID: ' . $wpdb->insert_id);
+            }
         }
         
         // Rediriger vers le numéro de téléphone

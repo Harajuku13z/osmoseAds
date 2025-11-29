@@ -22,59 +22,64 @@ $calls_this_week = 0;
 $calls_this_month = 0;
 
 if ($table_exists) {
-    // Total des appels
-    $total_calls = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+    // Total des appels (exclure les bots)
+    $total_calls = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE (is_bot != 1 OR is_bot IS NULL)");
     
-    // Appels aujourd'hui
+    // Total des bots
+    $total_bots = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE is_bot = 1");
+    
+    // Appels aujourd'hui (exclure les bots)
     $calls_today = (int) $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_name WHERE DATE(created_at) = %s",
+        "SELECT COUNT(*) FROM $table_name WHERE DATE(created_at) = %s AND (is_bot != 1 OR is_bot IS NULL)",
         current_time('Y-m-d')
     ));
     
-    // Appels cette semaine
+    // Appels cette semaine (exclure les bots)
     $calls_this_week = (int) $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(created_at, 1) = YEARWEEK(%s, 1)",
+        "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(created_at, 1) = YEARWEEK(%s, 1) AND (is_bot != 1 OR is_bot IS NULL)",
         current_time('mysql')
     ));
     
-    // Appels ce mois
+    // Appels ce mois (exclure les bots)
     $calls_this_month = (int) $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_name WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d",
+        "SELECT COUNT(*) FROM $table_name WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d AND (is_bot != 1 OR is_bot IS NULL)",
         current_time('Y'),
         current_time('m')
     ));
     
-    // Appels par page
+    // Appels par page (exclure les bots)
     $calls_by_page = $wpdb->get_results(
         "SELECT page_url, COUNT(*) as count 
          FROM $table_name 
+         WHERE (is_bot != 1 OR is_bot IS NULL)
          GROUP BY page_url 
          ORDER BY count DESC 
          LIMIT 20",
         ARRAY_A
     );
     
-    // Appels par ville (basé sur l'annonce associée)
+    // Appels par ville (basé sur l'annonce associée, exclure les bots)
     $calls_by_city = $wpdb->get_results(
         "SELECT pm.meta_value as city_id, COUNT(*) as count
          FROM $table_name ct
          INNER JOIN {$wpdb->postmeta} pm ON ct.ad_id = pm.post_id AND pm.meta_key = 'city_id'
-         WHERE pm.meta_value IS NOT NULL AND pm.meta_value != ''
+         WHERE pm.meta_value IS NOT NULL AND pm.meta_value != '' AND (ct.is_bot != 1 OR ct.is_bot IS NULL)
          GROUP BY pm.meta_value
          ORDER BY count DESC
          LIMIT 15",
         ARRAY_A
     );
     
-    // Derniers appels
+    // Derniers appels (tous, y compris les bots pour voir ce qui se passe)
     $recent_calls = $wpdb->get_results(
         "SELECT * FROM $table_name 
          ORDER BY created_at DESC 
-         LIMIT 50",
+         LIMIT 100",
         ARRAY_A
     );
 } else {
     $recent_calls = array();
+    $total_bots = 0;
 }
 
 ?>
@@ -85,6 +90,17 @@ if ($table_exists) {
         <div>
             <h1 class="h3 mb-1"><?php _e('Statistiques d\'Appels', 'osmose-ads'); ?></h1>
             <p class="text-muted mb-0"><?php _e('Suivez les appels générés depuis votre site', 'osmose-ads'); ?></p>
+            <?php if ($total_bots > 0): ?>
+                <p class="text-warning mb-0" style="font-size: 0.9em;">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    <?php printf(__('%d clic(s) de bot détecté(s) et exclu(s) des statistiques', 'osmose-ads'), number_format_i18n($total_bots)); ?>
+                </p>
+            <?php endif; ?>
+        </div>
+        <div>
+            <button type="button" class="btn btn-danger" id="delete-all-calls-btn" onclick="if(confirm('<?php echo esc_js(__('Êtes-vous sûr de vouloir supprimer TOUS les appels ? Cette action est irréversible.', 'osmose-ads')); ?>')) { deleteAllCalls(); }">
+                <i class="bi bi-trash"></i> <?php _e('Supprimer Tout', 'osmose-ads'); ?>
+            </button>
         </div>
     </div>
     
@@ -242,27 +258,48 @@ if ($table_exists) {
                         <thead class="sticky-top bg-white">
                             <tr>
                                 <th><?php _e('Date/Heure', 'osmose-ads'); ?></th>
+                                <th><?php _e('Bot?', 'osmose-ads'); ?></th>
                                 <th><?php _e('Page', 'osmose-ads'); ?></th>
+                                <th><?php _e('Source', 'osmose-ads'); ?></th>
                                 <th><?php _e('Téléphone', 'osmose-ads'); ?></th>
                                 <th><?php _e('Ad ID', 'osmose-ads'); ?></th>
                                 <th><?php _e('IP', 'osmose-ads'); ?></th>
+                                <th><?php _e('User Agent', 'osmose-ads'); ?></th>
                                 <th><?php _e('Referrer', 'osmose-ads'); ?></th>
+                                <th><?php _e('Actions', 'osmose-ads'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($recent_calls as $call): 
                                 $ad = $call['ad_id'] ? get_post($call['ad_id']) : null;
-                                $page_url_short = strlen($call['page_url']) > 60 ? substr($call['page_url'], 0, 60) . '...' : $call['page_url'];
+                                $page_url_short = strlen($call['page_url']) > 50 ? substr($call['page_url'], 0, 50) . '...' : $call['page_url'];
                                 $referrer_short = $call['referrer'] ? (strlen($call['referrer']) > 40 ? substr($call['referrer'], 0, 40) . '...' : $call['referrer']) : '—';
+                                $user_agent_short = $call['user_agent'] ? (strlen($call['user_agent']) > 50 ? substr($call['user_agent'], 0, 50) . '...' : $call['user_agent']) : '—';
+                                $is_bot = isset($call['is_bot']) && intval($call['is_bot']) === 1;
+                                $source = isset($call['source']) ? $call['source'] : '—';
                             ?>
-                                <tr>
+                                <tr class="<?php echo $is_bot ? 'table-warning' : ''; ?>">
                                     <td>
                                         <small><?php echo date_i18n('d/m/Y H:i', strtotime($call['created_at'])); ?></small>
+                                    </td>
+                                    <td class="text-center">
+                                        <?php if ($is_bot): ?>
+                                            <span class="badge bg-warning text-dark" title="<?php echo esc_attr($call['user_agent'] ?: ''); ?>">
+                                                <i class="bi bi-robot"></i> Bot
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-person"></i> Humain
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <a href="<?php echo esc_url($call['page_url']); ?>" target="_blank" title="<?php echo esc_attr($call['page_url']); ?>">
                                             <?php echo esc_html($page_url_short); ?>
                                         </a>
+                                    </td>
+                                    <td>
+                                        <small><?php echo esc_html($source); ?></small>
                                     </td>
                                     <td>
                                         <strong><?php echo esc_html($call['phone_number'] ?: '—'); ?></strong>
@@ -276,7 +313,14 @@ if ($table_exists) {
                                             <?php echo esc_html($call['ad_id'] ?: '—'); ?>
                                         <?php endif; ?>
                                     </td>
-                                    <td><small><?php echo esc_html($call['user_ip'] ?: '—'); ?></small></td>
+                                    <td>
+                                        <small><?php echo esc_html($call['user_ip'] ?: '—'); ?></small>
+                                    </td>
+                                    <td>
+                                        <small title="<?php echo esc_attr($call['user_agent'] ?: ''); ?>">
+                                            <?php echo esc_html($user_agent_short); ?>
+                                        </small>
+                                    </td>
                                     <td>
                                         <?php if ($call['referrer']): ?>
                                             <a href="<?php echo esc_url($call['referrer']); ?>" target="_blank" title="<?php echo esc_attr($call['referrer']); ?>">
@@ -285,6 +329,11 @@ if ($table_exists) {
                                         <?php else: ?>
                                             —
                                         <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <a href="<?php echo admin_url('admin.php?page=osmose-ads-call-details&call_id=' . intval($call['id'])); ?>" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-eye"></i> <?php _e('Voir', 'osmose-ads'); ?>
+                                        </a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -300,6 +349,39 @@ if ($table_exists) {
         </div>
     </div>
 </div>
+
+<script>
+function deleteAllCalls() {
+    if (!confirm('<?php echo esc_js(__('Êtes-vous sûr de vouloir supprimer TOUS les appels ? Cette action est irréversible.', 'osmose-ads')); ?>')) {
+        return;
+    }
+    
+    jQuery.ajax({
+        url: osmoseAds.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'osmose_ads_delete_all_calls',
+            nonce: osmoseAds.nonce
+        },
+        beforeSend: function() {
+            jQuery('#delete-all-calls-btn').prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> <?php echo esc_js(__('Suppression...', 'osmose-ads')); ?>');
+        },
+        success: function(response) {
+            if (response.success) {
+                alert('<?php echo esc_js(__('Tous les appels ont été supprimés avec succès.', 'osmose-ads')); ?>');
+                location.reload();
+            } else {
+                alert('<?php echo esc_js(__('Erreur lors de la suppression:', 'osmose-ads')); ?> ' + (response.data?.message || '<?php echo esc_js(__('Erreur inconnue', 'osmose-ads')); ?>'));
+                jQuery('#delete-all-calls-btn').prop('disabled', false).html('<i class="bi bi-trash"></i> <?php echo esc_js(__('Supprimer Tout', 'osmose-ads')); ?>');
+            }
+        },
+        error: function() {
+            alert('<?php echo esc_js(__('Erreur lors de la communication avec le serveur.', 'osmose-ads')); ?>');
+            jQuery('#delete-all-calls-btn').prop('disabled', false).html('<i class="bi bi-trash"></i> <?php echo esc_js(__('Supprimer Tout', 'osmose-ads')); ?>');
+        }
+    });
+}
+</script>
 
 <?php
 // Inclure le footer global
