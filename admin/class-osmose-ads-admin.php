@@ -235,6 +235,15 @@ class Osmose_Ads_Admin {
         
         add_submenu_page(
             'osmose-ads',
+            __('Configuration Simulateur', 'osmose-ads'),
+            __('⚙️ Config Simulateur', 'osmose-ads'),
+            'manage_options',
+            'osmose-ads-simulator-config',
+            array($this, 'display_simulator_config')
+        );
+        
+        add_submenu_page(
+            'osmose-ads',
             __('Réglages', 'osmose-ads'),
             __('Réglages', 'osmose-ads'),
             'manage_options',
@@ -274,6 +283,13 @@ class Osmose_Ads_Admin {
         register_setting('osmose_ads_settings', 'osmose_ads_openai_api_key');
         register_setting('osmose_ads_settings', 'osmose_ads_ai_provider');
         register_setting('osmose_ads_settings', 'osmose_ads_services');
+        
+        // Settings pour le simulateur
+        register_setting('osmose_ads_simulator_settings', 'osmose_ads_simulator_page_id');
+        register_setting('osmose_ads_simulator_settings', 'osmose_ads_simulator_page_slug');
+        register_setting('osmose_ads_simulator_settings', 'osmose_ads_simulator_title');
+        register_setting('osmose_ads_simulator_settings', 'osmose_ads_simulator_email_notification');
+        register_setting('osmose_ads_simulator_settings', 'osmose_ads_simulator_email_recipient');
     }
 
     public function display_dashboard() {
@@ -315,6 +331,10 @@ class Osmose_Ads_Admin {
     
     public function display_quote_requests() {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/quote-requests.php';
+    }
+    
+    public function display_simulator_config() {
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/simulator-config.php';
     }
     
     public function display_articles() {

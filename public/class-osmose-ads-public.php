@@ -631,21 +631,26 @@ class Osmose_Ads_Public {
             return;
         }
         
-        // Optionnel : Envoyer un email de notification
-        $admin_email = get_option('admin_email');
-        $subject = sprintf(__('Nouvelle demande de devis - %s', 'osmose-ads'), $insert_data['first_name'] . ' ' . $insert_data['last_name']);
-        $message = sprintf(
-            __("Nouvelle demande de devis reçue :\n\nNom: %s %s\nEmail: %s\nTéléphone: %s\nType de logement: %s\nTravaux: %s\n\nVoir dans l'admin: %s", 'osmose-ads'),
-            $insert_data['first_name'],
-            $insert_data['last_name'],
-            $insert_data['email'],
-            $insert_data['phone'],
-            $insert_data['property_type'],
-            $insert_data['work_type'],
-            admin_url('admin.php?page=osmose-ads-quotes')
-        );
-        
-        wp_mail($admin_email, $subject, $message);
+        // Envoyer un email de notification si activé
+        $email_notification = get_option('osmose_ads_simulator_email_notification', 1);
+        if ($email_notification) {
+            $email_recipient = get_option('osmose_ads_simulator_email_recipient', get_option('admin_email'));
+            if (is_email($email_recipient)) {
+                $subject = sprintf(__('Nouvelle demande de devis - %s', 'osmose-ads'), $insert_data['first_name'] . ' ' . $insert_data['last_name']);
+                $message = sprintf(
+                    __("Nouvelle demande de devis reçue :\n\nNom: %s %s\nEmail: %s\nTéléphone: %s\nType de logement: %s\nTravaux: %s\n\nVoir dans l'admin: %s", 'osmose-ads'),
+                    $insert_data['first_name'],
+                    $insert_data['last_name'],
+                    $insert_data['email'],
+                    $insert_data['phone'],
+                    $insert_data['property_type'],
+                    $insert_data['work_type'],
+                    admin_url('admin.php?page=osmose-ads-quotes')
+                );
+                
+                wp_mail($email_recipient, $subject, $message);
+            }
+        }
         
         wp_send_json_success(array('message' => __('Demande envoyée avec succès !', 'osmose-ads')));
     }
@@ -918,30 +923,42 @@ class Osmose_Ads_Public {
      * Créer automatiquement la page simulateur si elle n'existe pas
      */
     public function create_simulator_page() {
-        // Vérifier si la page existe déjà
-        $page_slug = 'simulateur-devis';
-        $page = get_page_by_path($page_slug);
+        // Récupérer le slug depuis les options ou utiliser la valeur par défaut
+        $page_slug = get_option('osmose_ads_simulator_page_slug', 'simulateur-devis');
+        $page_title = get_option('osmose_ads_simulator_title', __('Simulateur de Devis', 'osmose-ads'));
+        $page_id = get_option('osmose_ads_simulator_page_id');
         
-        if (!$page) {
-            // Créer la page
-            $page_data = array(
-                'post_title'    => __('Simulateur de Devis', 'osmose-ads'),
-                'post_content'  => '[osmose_simulator]',
-                'post_status'   => 'publish',
-                'post_type'     => 'page',
-                'post_name'     => $page_slug,
-                'post_author'   => 1,
-            );
+        // Vérifier si la page existe déjà
+        $page = null;
+        if ($page_id) {
+            $page = get_post($page_id);
+        }
+        
+        if (!$page || $page->post_status !== 'publish') {
+            // Chercher par slug
+            $page = get_page_by_path($page_slug);
             
-            $page_id = wp_insert_post($page_data);
-            
-            if ($page_id) {
-                // Sauvegarder l'ID de la page dans les options
-                update_option('osmose_ads_simulator_page_id', $page_id);
+            if (!$page) {
+                // Créer la page
+                $page_data = array(
+                    'post_title'    => $page_title,
+                    'post_content'  => '[osmose_simulator]',
+                    'post_status'   => 'publish',
+                    'post_type'     => 'page',
+                    'post_name'     => $page_slug,
+                    'post_author'   => get_current_user_id() ?: 1,
+                );
+                
+                $page_id = wp_insert_post($page_data);
+                
+                if ($page_id && !is_wp_error($page_id)) {
+                    // Sauvegarder l'ID de la page dans les options
+                    update_option('osmose_ads_simulator_page_id', $page_id);
+                }
+            } else {
+                // Mettre à jour l'ID si la page existe déjà
+                update_option('osmose_ads_simulator_page_id', $page->ID);
             }
-        } else {
-            // Mettre à jour l'ID si la page existe déjà
-            update_option('osmose_ads_simulator_page_id', $page->ID);
         }
     }
 }
