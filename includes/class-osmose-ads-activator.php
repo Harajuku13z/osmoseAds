@@ -152,10 +152,38 @@ class Osmose_Ads_Activator {
             KEY idx_visit_is_bot (is_bot)
         ) $charset_collate;";
         
+        // Table pour les demandes de devis du simulateur
+        $table_quotes = $wpdb->prefix . 'osmose_ads_quote_requests';
+        
+        $sql_quotes = "CREATE TABLE IF NOT EXISTS $table_quotes (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            property_type varchar(50),
+            work_type text,
+            first_name varchar(100),
+            last_name varchar(100),
+            email varchar(255),
+            phone varchar(50),
+            address varchar(500),
+            city varchar(255),
+            postal_code varchar(20),
+            message text,
+            status varchar(50) DEFAULT 'pending',
+            user_ip varchar(45),
+            user_agent text,
+            page_url varchar(500),
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_status (status),
+            KEY idx_created_at (created_at),
+            KEY idx_email (email)
+        ) $charset_collate;";
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql_templates);
         dbDelta($sql_calls);
         dbDelta($sql_visits);
+        dbDelta($sql_quotes);
         
         // Vérifier que les tables ont bien été créées
         if ($wpdb->get_var("SHOW TABLES LIKE '$table_calls'") == $table_calls) {
@@ -168,6 +196,12 @@ class Osmose_Ads_Activator {
             error_log('Osmose ADS: Visits tracking table created successfully during activation');
         } else {
             error_log('Osmose ADS: WARNING - Failed to create visits tracking table during activation');
+        }
+        
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_quotes'") == $table_quotes) {
+            error_log('Osmose ADS: Quote requests table created successfully during activation');
+        } else {
+            error_log('Osmose ADS: WARNING - Failed to create quote requests table during activation');
         }
     }
 

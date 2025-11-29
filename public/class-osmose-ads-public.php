@@ -745,6 +745,162 @@ if (!function_exists('osmose_ads_track_visit')) {
             return 'Other';
         }
     }
+    
+    /**
+     * Enregistrer le shortcode pour le simulateur
+     */
+    public function register_simulator_shortcode() {
+        add_shortcode('osmose_simulator', array($this, 'render_simulator'));
+    }
+    
+    /**
+     * Rendre le simulateur
+     */
+    public function render_simulator($atts) {
+        // Charger les styles et scripts
+        wp_enqueue_style(
+            'osmose-simulator',
+            OSMOSE_ADS_PLUGIN_URL . 'public/css/osmose-simulator.css',
+            array(),
+            OSMOSE_ADS_VERSION
+        );
+        
+        wp_enqueue_script(
+            'osmose-simulator',
+            OSMOSE_ADS_PLUGIN_URL . 'public/js/osmose-simulator.js',
+            array('jquery'),
+            OSMOSE_ADS_VERSION,
+            true
+        );
+        
+        // Localiser le script
+        wp_localize_script('osmose-simulator', 'osmoseAdsSimulator', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('osmose_ads_quote_request'),
+        ));
+        
+        // Charger le template
+        ob_start();
+        include OSMOSE_ADS_PLUGIN_DIR . 'public/templates/simulator.php';
+        return ob_get_clean();
+    }
+    
+    /**
+     * Handler AJAX pour les demandes de devis
+     */
+    public function handle_quote_request() {
+        // Vérifier le nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'osmose_ads_quote_request')) {
+            wp_send_json_error(array('message' => __('Erreur de sécurité', 'osmose-ads')));
+            return;
+        }
+        
+        // Récupérer les données
+        $data = isset($_POST['data']) ? $_POST['data'] : array();
+        
+        if (empty($data)) {
+            wp_send_json_error(array('message' => __('Données manquantes', 'osmose-ads')));
+            return;
+        }
+        
+        // Valider les champs requis
+        $required_fields = array('first_name', 'last_name', 'email', 'phone', 'property_type');
+        foreach ($required_fields as $field) {
+            if (empty($data[$field])) {
+                wp_send_json_error(array('message' => sprintf(__('Le champ %s est requis', 'osmose-ads'), $field)));
+                return;
+            }
+        }
+        
+        // Valider l'email
+        if (!is_email($data['email'])) {
+            wp_send_json_error(array('message' => __('Adresse email invalide', 'osmose-ads')));
+            return;
+        }
+        
+        // Préparer les données pour la base
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'osmose_ads_quote_requests';
+        
+        // Vérifier que la table existe
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+            // Créer la table si elle n'existe pas
+            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+            $charset_collate = $wpdb->get_charset_collate();
+            $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+                id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+                property_type varchar(50),
+                work_type text,
+                first_name varchar(100),
+                last_name varchar(100),
+                email varchar(255),
+                phone varchar(50),
+                address varchar(500),
+                city varchar(255),
+                postal_code varchar(20),
+                message text,
+                status varchar(50) DEFAULT 'pending',
+                user_ip varchar(45),
+                user_agent text,
+                page_url varchar(500),
+                created_at datetime DEFAULT CURRENT_TIMESTAMP,
+                updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_status (status),
+                KEY idx_created_at (created_at),
+                KEY idx_email (email)
+            ) $charset_collate;";
+            dbDelta($sql);
+        }
+        
+        // Préparer les données d'insertion
+        $insert_data = array(
+            'property_type' => sanitize_text_field($data['property_type']),
+            'work_type' => isset($data['work_type']) && is_array($data['work_type']) ? implode(', ', array_map('sanitize_text_field', $data['work_type'])) : '',
+            'first_name' => sanitize_text_field($data['first_name']),
+            'last_name' => sanitize_text_field($data['last_name']),
+            'email' => sanitize_email($data['email']),
+            'phone' => sanitize_text_field($data['phone']),
+            'address' => isset($data['address']) ? sanitize_text_field($data['address']) : '',
+            'city' => isset($data['city']) ? sanitize_text_field($data['city']) : '',
+            'postal_code' => isset($data['postal_code']) ? sanitize_text_field($data['postal_code']) : '',
+            'message' => isset($data['message']) ? sanitize_textarea_field($data['message']) : '',
+            'status' => 'pending',
+            'user_ip' => sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? ''),
+            'user_agent' => sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? ''),
+            'page_url' => esc_url_raw($_SERVER['HTTP_REFERER'] ?? ''),
+        );
+        
+        // Insérer dans la base de données
+        $result = $wpdb->insert(
+            $table_name,
+            $insert_data,
+            array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+        );
+        
+        if ($result === false) {
+            wp_send_json_error(array('message' => __('Erreur lors de l\'enregistrement', 'osmose-ads')));
+            return;
+        }
+        
+        // Optionnel : Envoyer un email de notification
+        $admin_email = get_option('admin_email');
+        $subject = sprintf(__('Nouvelle demande de devis - %s', 'osmose-ads'), $insert_data['first_name'] . ' ' . $insert_data['last_name']);
+        $message = sprintf(
+            __("Nouvelle demande de devis reçue :\n\nNom: %s %s\nEmail: %s\nTéléphone: %s\nType de logement: %s\nTravaux: %s\n\nVoir dans l'admin: %s", 'osmose-ads'),
+            $insert_data['first_name'],
+            $insert_data['last_name'],
+            $insert_data['email'],
+            $insert_data['phone'],
+            $insert_data['property_type'],
+            $insert_data['work_type'],
+            admin_url('admin.php?page=osmose-ads-quotes')
+        );
+        
+        wp_mail($admin_email, $subject, $message);
+        
+        wp_send_json_success(array('message' => __('Demande envoyée avec succès !', 'osmose-ads')));
+    }
 }
 
 

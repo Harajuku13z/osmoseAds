@@ -226,6 +226,15 @@ class Osmose_Ads_Admin {
         
         add_submenu_page(
             'osmose-ads',
+            __('Demandes de Devis', 'osmose-ads'),
+            __('📋 Demandes de Devis', 'osmose-ads'),
+            'manage_options',
+            'osmose-ads-quotes',
+            array($this, 'display_quote_requests')
+        );
+        
+        add_submenu_page(
+            'osmose-ads',
             __('Réglages', 'osmose-ads'),
             __('Réglages', 'osmose-ads'),
             'manage_options',
@@ -302,6 +311,10 @@ class Osmose_Ads_Admin {
     
     public function display_visit_stats() {
         require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/visit-stats.php';
+    }
+    
+    public function display_quote_requests() {
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/partials/quote-requests.php';
     }
     
     public function display_articles() {

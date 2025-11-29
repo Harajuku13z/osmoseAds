@@ -88,6 +88,11 @@ class Osmose_Ads {
         
         // S'assurer que le contenu des annonces s'affiche dans single.php
         $this->loader->add_filter('the_content', $this, 'display_ad_content_in_single', 10, 1);
+        
+        // Shortcode et handlers pour le simulateur
+        $this->loader->add_action('init', $plugin_public, 'register_simulator_shortcode');
+        $this->loader->add_action('wp_ajax_osmose_ads_submit_quote_request', $plugin_public, 'handle_quote_request');
+        $this->loader->add_action('wp_ajax_nopriv_osmose_ads_submit_quote_request', $plugin_public, 'handle_quote_request');
     }
     
     /**
