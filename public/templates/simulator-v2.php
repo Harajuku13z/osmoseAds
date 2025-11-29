@@ -20,9 +20,6 @@ $hero_enabled = get_option('osmose_ads_simulator_hero_enabled', 0);
 $hero_title = get_option('osmose_ads_simulator_hero_title', '');
 $hero_description = get_option('osmose_ads_simulator_hero_description', '');
 $hero_image = get_option('osmose_ads_simulator_hero_image', '');
-
-// Charger le header WordPress (menu du site)
-get_header();
 ?>
 
 <div class="osmose-ad-page-modern">
@@ -261,9 +258,4 @@ get_header();
 // Passer les types de projets au JavaScript
 window.osmoseSimulatorProjects = <?php echo json_encode($project_types); ?>;
 </script>
-
-<?php
-// Charger le footer WordPress
-get_footer();
-?>
 
