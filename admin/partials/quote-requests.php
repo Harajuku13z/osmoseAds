@@ -94,7 +94,7 @@ if ($table_exists) {
                                 <th><?php _e('Nom', 'osmose-ads'); ?></th>
                                 <th><?php _e('Contact', 'osmose-ads'); ?></th>
                                 <th><?php _e('Type', 'osmose-ads'); ?></th>
-                                <th><?php _e('Travaux', 'osmose-ads'); ?></th>
+                                <th><?php _e('Projet', 'osmose-ads'); ?></th>
                                 <th><?php _e('Statut', 'osmose-ads'); ?></th>
                                 <th><?php _e('Actions', 'osmose-ads'); ?></th>
                             </tr>
@@ -126,7 +126,17 @@ if ($table_exists) {
                                         </span>
                                     </td>
                                     <td>
-                                        <small><?php echo esc_html($quote['work_type'] ?: '—'); ?></small>
+                                        <?php if (!empty($quote['project_type'])): ?>
+                                            <strong><?php echo esc_html($quote['project_type']); ?></strong>
+                                            <?php if (!empty($quote['project_details'])): ?>
+                                                <br><small><?php echo esc_html($quote['project_details']); ?></small>
+                                            <?php endif; ?>
+                                            <?php if (!empty($quote['surface'])): ?>
+                                                <br><small class="text-muted"><?php echo esc_html($quote['surface']); ?> m²</small>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <small><?php echo esc_html($quote['work_type'] ?: '—'); ?></small>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php
@@ -203,12 +213,38 @@ if ($table_exists) {
                                                         </div>
                                                     </div>
                                                 <?php endif; ?>
-                                                <div class="row mb-3">
-                                                    <div class="col-12">
-                                                        <strong><?php _e('Travaux demandés:', 'osmose-ads'); ?></strong><br>
-                                                        <?php echo esc_html($quote['work_type'] ?: '—'); ?>
+                                                <?php if (!empty($quote['surface'])): ?>
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-6">
+                                                            <strong><?php _e('Surface:', 'osmose-ads'); ?></strong><br>
+                                                            <?php echo esc_html($quote['surface']); ?> m²
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php endif; ?>
+                                                <?php if (!empty($quote['project_type'])): ?>
+                                                    <div class="row mb-3">
+                                                        <div class="col-12">
+                                                            <strong><?php _e('Type de projet:', 'osmose-ads'); ?></strong><br>
+                                                            <?php echo esc_html($quote['project_type']); ?>
+                                                        </div>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <?php if (!empty($quote['project_details'])): ?>
+                                                    <div class="row mb-3">
+                                                        <div class="col-12">
+                                                            <strong><?php _e('Détails du projet:', 'osmose-ads'); ?></strong><br>
+                                                            <?php echo esc_html($quote['project_details']); ?>
+                                                        </div>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <?php if (!empty($quote['work_type'])): ?>
+                                                    <div class="row mb-3">
+                                                        <div class="col-12">
+                                                            <strong><?php _e('Travaux demandés:', 'osmose-ads'); ?></strong><br>
+                                                            <?php echo esc_html($quote['work_type']); ?>
+                                                        </div>
+                                                    </div>
+                                                <?php endif; ?>
                                                 <?php if ($quote['message']): ?>
                                                     <div class="row mb-3">
                                                         <div class="col-12">

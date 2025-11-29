@@ -29,6 +29,7 @@ class Osmose_Ads {
         // Core classes
         require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/class-osmose-ads-post-types.php';
         require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/class-osmose-ads-rewrite.php';
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/class-osmose-ads-email.php';
         
         // Models
         require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/models/class-ad-template.php';

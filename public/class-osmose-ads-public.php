@@ -508,9 +508,13 @@ class Osmose_Ads_Public {
             OSMOSE_ADS_VERSION
         );
         
+        // Utiliser la version 2 du simulateur si le template v2 existe
+        $template_path = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/simulator-v2.php';
+        $script_file = file_exists($template_path) ? 'osmose-simulator-v2.js' : 'osmose-simulator.js';
+        
         wp_enqueue_script(
             'osmose-simulator',
-            OSMOSE_ADS_PLUGIN_URL . 'public/js/osmose-simulator.js',
+            OSMOSE_ADS_PLUGIN_URL . 'public/js/' . $script_file,
             array('jquery'),
             OSMOSE_ADS_VERSION,
             true
@@ -522,8 +526,11 @@ class Osmose_Ads_Public {
             'nonce' => wp_create_nonce('osmose_ads_quote_request'),
         ));
         
-        // Charger le template
-        $template_path = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/simulator.php';
+        // Charger le template (utiliser v2 si disponible)
+        $template_path = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/simulator-v2.php';
+        if (!file_exists($template_path)) {
+            $template_path = OSMOSE_ADS_PLUGIN_DIR . 'public/templates/simulator.php';
+        }
         if (!file_exists($template_path)) {
             return '<p>' . __('Erreur : Le template du simulateur est introuvable.', 'osmose-ads') . '</p>';
         }
@@ -586,6 +593,9 @@ class Osmose_Ads_Public {
                 address varchar(500),
                 city varchar(255),
                 postal_code varchar(20),
+                surface varchar(50),
+                project_type varchar(100),
+                project_details text,
                 message text,
                 status varchar(50) DEFAULT 'pending',
                 user_ip varchar(45),
@@ -598,12 +608,24 @@ class Osmose_Ads_Public {
                 KEY idx_created_at (created_at),
                 KEY idx_email (email)
             ) $charset_collate;";
+            
+            // Vérifier si les nouvelles colonnes existent, sinon les ajouter
+            $columns = $wpdb->get_col("DESC $table_name");
+            if (!in_array('surface', $columns)) {
+                $wpdb->query("ALTER TABLE $table_name ADD COLUMN surface varchar(50) AFTER postal_code");
+            }
+            if (!in_array('project_type', $columns)) {
+                $wpdb->query("ALTER TABLE $table_name ADD COLUMN project_type varchar(100) AFTER surface");
+            }
+            if (!in_array('project_details', $columns)) {
+                $wpdb->query("ALTER TABLE $table_name ADD COLUMN project_details text AFTER project_type");
+            }
             dbDelta($sql);
         }
         
         // Préparer les données d'insertion
         $insert_data = array(
-            'property_type' => sanitize_text_field($data['property_type']),
+            'property_type' => sanitize_text_field($data['property_type'] ?? ''),
             'work_type' => isset($data['work_type']) && is_array($data['work_type']) ? implode(', ', array_map('sanitize_text_field', $data['work_type'])) : '',
             'first_name' => sanitize_text_field($data['first_name']),
             'last_name' => sanitize_text_field($data['last_name']),
@@ -612,6 +634,9 @@ class Osmose_Ads_Public {
             'address' => isset($data['address']) ? sanitize_text_field($data['address']) : '',
             'city' => isset($data['city']) ? sanitize_text_field($data['city']) : '',
             'postal_code' => isset($data['postal_code']) ? sanitize_text_field($data['postal_code']) : '',
+            'surface' => isset($data['surface']) ? sanitize_text_field($data['surface']) : '',
+            'project_type' => isset($data['project_type']) ? sanitize_text_field($data['project_type']) : '',
+            'project_details' => isset($data['project_details']) && is_array($data['project_details']) ? implode(', ', array_map('sanitize_text_field', $data['project_details'])) : (isset($data['project_details']) ? sanitize_text_field($data['project_details']) : ''),
             'message' => isset($data['message']) ? sanitize_text_field($data['message']) : '',
             'status' => 'pending',
             'user_ip' => sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? ''),
@@ -623,7 +648,7 @@ class Osmose_Ads_Public {
         $result = $wpdb->insert(
             $table_name,
             $insert_data,
-            array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+            array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
         );
         
         if ($result === false) {
@@ -631,26 +656,33 @@ class Osmose_Ads_Public {
             return;
         }
         
-        // Envoyer un email de notification si activé
+        // Envoyer les emails HTML
         $email_notification = get_option('osmose_ads_simulator_email_notification', 1);
         if ($email_notification) {
+            // Email à l'admin
             $email_recipient = get_option('osmose_ads_simulator_email_recipient', get_option('admin_email'));
             if (is_email($email_recipient)) {
                 $subject = sprintf(__('Nouvelle demande de devis - %s', 'osmose-ads'), $insert_data['first_name'] . ' ' . $insert_data['last_name']);
-                $message = sprintf(
-                    __("Nouvelle demande de devis reçue :\n\nNom: %s %s\nEmail: %s\nTéléphone: %s\nType de logement: %s\nTravaux: %s\n\nVoir dans l'admin: %s", 'osmose-ads'),
-                    $insert_data['first_name'],
-                    $insert_data['last_name'],
-                    $insert_data['email'],
-                    $insert_data['phone'],
-                    $insert_data['property_type'],
-                    $insert_data['work_type'],
-                    admin_url('admin.php?page=osmose-ads-quotes')
+                $html_message = Osmose_Ads_Email::generate_admin_notification_email($insert_data);
+                
+                // Headers pour email HTML
+                $headers = array(
+                    'Content-Type: text/html; charset=UTF-8',
+                    'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
                 );
                 
-                wp_mail($email_recipient, $subject, $message);
+                wp_mail($email_recipient, $subject, $html_message, $headers);
             }
         }
+        
+        // Email de confirmation à l'utilisateur
+        $html_confirmation = Osmose_Ads_Email::generate_user_confirmation_email($insert_data);
+        $confirmation_subject = __('Confirmation de votre demande de devis', 'osmose-ads');
+        $confirmation_headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+        );
+        wp_mail($insert_data['email'], $confirmation_subject, $html_confirmation, $confirmation_headers);
         
         wp_send_json_success(array('message' => __('Demande envoyée avec succès !', 'osmose-ads')));
     }

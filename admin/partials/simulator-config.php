@@ -22,6 +22,22 @@ if (isset($_POST['osmose_simulator_config_submit']) && current_user_can('manage_
     update_option('osmose_ads_simulator_email_notification', $email_notification);
     update_option('osmose_ads_simulator_email_recipient', $email_recipient);
     
+    // Gérer les types de projets
+    if (isset($_POST['project_types']) && is_array($_POST['project_types'])) {
+        $project_types = array();
+        foreach ($_POST['project_types'] as $key => $project) {
+            if (!empty($project['label'])) {
+                $project_types[sanitize_key($key)] = array(
+                    'label' => sanitize_text_field($project['label']),
+                    'options' => isset($project['options']) && is_array($project['options']) 
+                        ? array_map('sanitize_text_field', array_filter($project['options'])) 
+                        : array()
+                );
+            }
+        }
+        update_option('osmose_ads_simulator_project_types', $project_types);
+    }
+    
     // Créer ou mettre à jour la page
     $page_id = get_option('osmose_ads_simulator_page_id');
     $page = null;
@@ -73,6 +89,12 @@ $page_slug = get_option('osmose_ads_simulator_page_slug', 'simulateur-devis');
 $page_title = get_option('osmose_ads_simulator_title', 'Simulateur de Devis');
 $email_notification = get_option('osmose_ads_simulator_email_notification', 1);
 $email_recipient = get_option('osmose_ads_simulator_email_recipient', get_option('admin_email'));
+$project_types = get_option('osmose_ads_simulator_project_types', array(
+    'toiture' => array(
+        'label' => 'Toiture',
+        'options' => array('hydrofuge', 'démoussage', 'réparation', 'remplacement', 'isolation')
+    )
+));
 
 $page = null;
 $page_url = '';
@@ -192,6 +214,76 @@ if ($page_id) {
                             </small>
                         </div>
                         
+                        <hr class="my-4">
+                        
+                        <h5 class="mb-3"><?php _e('Types de Projets', 'osmose-ads'); ?></h5>
+                        <p class="text-muted"><?php _e('Configurez les types de projets disponibles dans le simulateur et leurs options', 'osmose-ads'); ?></p>
+                        
+                        <div id="project-types-list">
+                            <?php 
+                            $index = 0;
+                            foreach ($project_types as $key => $project): 
+                                $index++;
+                            ?>
+                                <div class="project-type-item mb-4 p-3 border rounded" data-index="<?php echo $index; ?>">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0"><?php _e('Type de projet', 'osmose-ads'); ?> #<?php echo $index; ?></h6>
+                                        <button type="button" class="btn btn-sm btn-danger remove-project-type" data-index="<?php echo $index; ?>">
+                                            <i class="bi bi-trash"></i> <?php _e('Supprimer', 'osmose-ads'); ?>
+                                        </button>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label"><?php _e('Nom du projet', 'osmose-ads'); ?></label>
+                                        <input type="text" 
+                                               class="form-control project-label" 
+                                               name="project_types[<?php echo esc_attr($key); ?>][label]" 
+                                               value="<?php echo esc_attr($project['label']); ?>" 
+                                               placeholder="Ex: Toiture" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label"><?php _e('Options disponibles', 'osmose-ads'); ?></label>
+                                        <div class="project-options-list">
+                                            <?php 
+                                            if (!empty($project['options'])) {
+                                                foreach ($project['options'] as $option): 
+                                            ?>
+                                                <div class="input-group mb-2 project-option-item">
+                                                    <input type="text" 
+                                                           class="form-control" 
+                                                           name="project_types[<?php echo esc_attr($key); ?>][options][]" 
+                                                           value="<?php echo esc_attr($option); ?>" 
+                                                           placeholder="Ex: Hydrofuge">
+                                                    <button type="button" class="btn btn-outline-danger remove-option">
+                                                        <i class="bi bi-x"></i>
+                                                    </button>
+                                                </div>
+                                            <?php 
+                                                endforeach;
+                                            } else {
+                                            ?>
+                                                <div class="input-group mb-2 project-option-item">
+                                                    <input type="text" 
+                                                           class="form-control" 
+                                                           name="project_types[<?php echo esc_attr($key); ?>][options][]" 
+                                                           placeholder="Ex: Hydrofuge">
+                                                    <button type="button" class="btn btn-outline-danger remove-option">
+                                                        <i class="bi bi-x"></i>
+                                                    </button>
+                                                </div>
+                                            <?php } ?>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary add-option" data-project-key="<?php echo esc_attr($key); ?>">
+                                            <i class="bi bi-plus"></i> <?php _e('Ajouter une option', 'osmose-ads'); ?>
+                                        </button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        
+                        <button type="button" class="btn btn-outline-success mb-3" id="add-project-type">
+                            <i class="bi bi-plus-circle"></i> <?php _e('Ajouter un type de projet', 'osmose-ads'); ?>
+                        </button>
+                        
                         <div class="mt-4">
                             <button type="submit" 
                                     name="osmose_simulator_config_submit" 
@@ -262,6 +354,66 @@ if ($page_id) {
         </div>
     </div>
 </div>
+
+<script>
+jQuery(document).ready(function($) {
+    var projectTypeIndex = <?php echo count($project_types) + 1; ?>;
+    
+    // Ajouter un type de projet
+    $('#add-project-type').on('click', function() {
+        var newKey = 'project_' + Date.now();
+        var html = '<div class="project-type-item mb-4 p-3 border rounded" data-index="' + projectTypeIndex + '">' +
+            '<div class="d-flex justify-content-between align-items-center mb-2">' +
+            '<h6 class="mb-0">Type de projet #' + projectTypeIndex + '</h6>' +
+            '<button type="button" class="btn btn-sm btn-danger remove-project-type" data-index="' + projectTypeIndex + '">' +
+            '<i class="bi bi-trash"></i> Supprimer' +
+            '</button>' +
+            '</div>' +
+            '<div class="mb-2">' +
+            '<label class="form-label">Nom du projet</label>' +
+            '<input type="text" class="form-control project-label" name="project_types[' + newKey + '][label]" placeholder="Ex: Toiture" required>' +
+            '</div>' +
+            '<div>' +
+            '<label class="form-label">Options disponibles</label>' +
+            '<div class="project-options-list">' +
+            '<div class="input-group mb-2 project-option-item">' +
+            '<input type="text" class="form-control" name="project_types[' + newKey + '][options][]" placeholder="Ex: Hydrofuge">' +
+            '<button type="button" class="btn btn-outline-danger remove-option"><i class="bi bi-x"></i></button>' +
+            '</div>' +
+            '</div>' +
+            '<button type="button" class="btn btn-sm btn-outline-primary add-option" data-project-key="' + newKey + '">' +
+            '<i class="bi bi-plus"></i> Ajouter une option' +
+            '</button>' +
+            '</div>' +
+            '</div>';
+        
+        $('#project-types-list').append(html);
+        projectTypeIndex++;
+    });
+    
+    // Supprimer un type de projet
+    $(document).on('click', '.remove-project-type', function() {
+        if (confirm('Êtes-vous sûr de vouloir supprimer ce type de projet ?')) {
+            $(this).closest('.project-type-item').remove();
+        }
+    });
+    
+    // Ajouter une option
+    $(document).on('click', '.add-option', function() {
+        var projectKey = $(this).data('project-key');
+        var html = '<div class="input-group mb-2 project-option-item">' +
+            '<input type="text" class="form-control" name="project_types[' + projectKey + '][options][]" placeholder="Ex: Hydrofuge">' +
+            '<button type="button" class="btn btn-outline-danger remove-option"><i class="bi bi-x"></i></button>' +
+            '</div>';
+        $(this).siblings('.project-options-list').append(html);
+    });
+    
+    // Supprimer une option
+    $(document).on('click', '.remove-option', function() {
+        $(this).closest('.project-option-item').remove();
+    });
+});
+</script>
 
 <?php
 // Inclure le footer global
