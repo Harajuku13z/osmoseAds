@@ -93,6 +93,15 @@ class Osmose_Ads {
         $this->loader->add_action('init', $plugin_public, 'register_simulator_shortcode');
         $this->loader->add_action('wp_ajax_osmose_ads_submit_quote_request', $plugin_public, 'handle_quote_request');
         $this->loader->add_action('wp_ajax_nopriv_osmose_ads_submit_quote_request', $plugin_public, 'handle_quote_request');
+        
+        // Ajouter le lien simulateur dans le menu header
+        $this->loader->add_filter('wp_nav_menu_items', $plugin_public, 'add_simulator_menu_item', 10, 2);
+        
+        // Ajouter le bouton flottant du simulateur
+        $this->loader->add_action('wp_footer', $plugin_public, 'add_simulator_floating_button');
+        
+        // Créer la page simulateur si elle n'existe pas
+        $this->loader->add_action('admin_init', $plugin_public, 'create_simulator_page');
     }
     
     /**

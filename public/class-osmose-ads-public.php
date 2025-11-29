@@ -649,6 +649,301 @@ class Osmose_Ads_Public {
         
         wp_send_json_success(array('message' => __('Demande envoyée avec succès !', 'osmose-ads')));
     }
+    
+    /**
+     * Ajouter un lien "Devis" dans le menu header
+     */
+    public function add_simulator_menu_item($items, $args) {
+        // Récupérer l'URL de la page simulateur
+        $simulator_page_id = get_option('osmose_ads_simulator_page_id');
+        if ($simulator_page_id) {
+            $simulator_url = get_permalink($simulator_page_id);
+        } else {
+            $simulator_url = home_url('/simulateur-devis/');
+        }
+        
+        // Vérifier que c'est le menu principal (généralement 'primary' ou 'main')
+        // Tu peux ajuster selon le nom de ton menu
+        if ($args->theme_location === 'primary' || $args->theme_location === 'main' || $args->theme_location === 'header' || empty($args->theme_location)) {
+            // Créer le lien vers le simulateur
+            $simulator_link = '<li class="menu-item menu-item-type-custom menu-item-object-custom osmose-simulator-menu-item">';
+            $simulator_link .= '<a href="' . esc_url($simulator_url) . '" class="osmose-open-simulator">';
+            $simulator_link .= '<span style="vertical-align: middle; margin-right: 5px;">📋</span>';
+            $simulator_link .= __('Devis Gratuit', 'osmose-ads');
+            $simulator_link .= '</a>';
+            $simulator_link .= '</li>';
+            
+            // Ajouter à la fin du menu
+            $items .= $simulator_link;
+        }
+        
+        return $items;
+    }
+    
+    /**
+     * Ajouter un bouton flottant pour ouvrir le simulateur
+     */
+    public function add_simulator_floating_button() {
+        // Récupérer l'URL de la page simulateur
+        $simulator_page_id = get_option('osmose_ads_simulator_page_id');
+        if ($simulator_page_id) {
+            $simulator_url = get_permalink($simulator_page_id);
+            $is_simulator_page = is_page($simulator_page_id);
+        } else {
+            $simulator_url = home_url('/simulateur-devis/');
+            $is_simulator_page = is_page('simulateur-devis');
+        }
+        
+        // Ne pas afficher sur la page du simulateur elle-même
+        if ($is_simulator_page || get_query_var('osmose_simulator')) {
+            return;
+        }
+        
+        ?>
+        <!-- Bouton flottant simulateur -->
+        <div id="osmose-simulator-floating-btn" class="osmose-simulator-floating-btn">
+            <a href="<?php echo esc_url($simulator_url); ?>" class="osmose-open-simulator-btn">
+                <span class="simulator-icon">📋</span>
+                <span class="simulator-text"><?php _e('Devis Gratuit', 'osmose-ads'); ?></span>
+            </a>
+        </div>
+        
+        <!-- Modal du simulateur -->
+        <div id="osmose-simulator-modal" class="osmose-simulator-modal" style="display: none;">
+            <div class="osmose-simulator-modal-overlay"></div>
+            <div class="osmose-simulator-modal-content">
+                <button class="osmose-simulator-modal-close" aria-label="<?php esc_attr_e('Fermer', 'osmose-ads'); ?>">
+                    <span>&times;</span>
+                </button>
+                <div class="osmose-simulator-modal-body">
+                    <?php echo do_shortcode('[osmose_simulator]'); ?>
+                </div>
+            </div>
+        </div>
+        
+        <style>
+        /* Bouton flottant */
+        .osmose-simulator-floating-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 9998;
+            animation: pulse 2s infinite;
+        }
+        
+        .osmose-simulator-floating-btn a {
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .osmose-simulator-floating-btn a:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .simulator-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        
+        .simulator-text {
+            white-space: nowrap;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+        
+        /* Modal */
+        .osmose-simulator-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .osmose-simulator-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+        }
+        
+        .osmose-simulator-modal-content {
+            position: relative;
+            background: white;
+            border-radius: 15px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .osmose-simulator-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f0f0f0;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #333;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+        
+        .osmose-simulator-modal-close:hover {
+            background: #e0e0e0;
+            transform: rotate(90deg);
+        }
+        
+        .osmose-simulator-modal-body {
+            padding: 40px;
+        }
+        
+        /* Style pour le lien dans le menu */
+        .osmose-simulator-menu-item a {
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .osmose-simulator-menu-item a:hover {
+            opacity: 0.8;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .osmose-simulator-floating-btn {
+                bottom: 20px;
+                right: 20px;
+            }
+            
+            .osmose-simulator-floating-btn a {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+            
+            .simulator-text {
+                display: none;
+            }
+            
+            .simulator-icon {
+                margin-right: 0;
+                font-size: 28px;
+            }
+            
+            .osmose-simulator-modal-content {
+                width: 95%;
+                max-height: 95vh;
+            }
+            
+            .osmose-simulator-modal-body {
+                padding: 20px;
+            }
+        }
+        </style>
+        
+        <script>
+        jQuery(document).ready(function($) {
+            // Le bouton flottant et le lien du menu redirigent directement vers la page
+            // La modal est disponible si nécessaire pour une ouverture en popup
+            $('.osmose-open-simulator-btn').on('click', function(e) {
+                // Laisser le lien normal fonctionner (redirection vers la page)
+                // Si tu veux ouvrir en modal, décommente les lignes suivantes :
+                // e.preventDefault();
+                // $('#osmose-simulator-modal').fadeIn(300);
+                // $('body').css('overflow', 'hidden');
+            });
+            
+            // Fermer la modal (si utilisée)
+            $('.osmose-simulator-modal-close, .osmose-simulator-modal-overlay').on('click', function() {
+                $('#osmose-simulator-modal').fadeOut(300);
+                $('body').css('overflow', '');
+            });
+            
+            // Fermer avec Escape
+            $(document).on('keydown', function(e) {
+                if (e.key === 'Escape' && $('#osmose-simulator-modal').is(':visible')) {
+                    $('#osmose-simulator-modal').fadeOut(300);
+                    $('body').css('overflow', '');
+                }
+            });
+        });
+        </script>
+        <?php
+    }
+    
+    /**
+     * Créer automatiquement la page simulateur si elle n'existe pas
+     */
+    public function create_simulator_page() {
+        // Vérifier si la page existe déjà
+        $page_slug = 'simulateur-devis';
+        $page = get_page_by_path($page_slug);
+        
+        if (!$page) {
+            // Créer la page
+            $page_data = array(
+                'post_title'    => __('Simulateur de Devis', 'osmose-ads'),
+                'post_content'  => '[osmose_simulator]',
+                'post_status'   => 'publish',
+                'post_type'     => 'page',
+                'post_name'     => $page_slug,
+                'post_author'   => 1,
+            );
+            
+            $page_id = wp_insert_post($page_data);
+            
+            if ($page_id) {
+                // Sauvegarder l'ID de la page dans les options
+                update_option('osmose_ads_simulator_page_id', $page_id);
+            }
+        } else {
+            // Mettre à jour l'ID si la page existe déjà
+            update_option('osmose_ads_simulator_page_id', $page->ID);
+        }
+    }
 }
 
 /**
