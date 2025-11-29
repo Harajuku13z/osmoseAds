@@ -1230,10 +1230,10 @@ function osmose_ads_handle_create_template() {
 }
 
 /**
- * Détecter si la requête provient d'un bot
+ * Détecter si un User-Agent donné correspond à un bot
  */
-function osmose_ads_is_bot_ajax() {
-    $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '';
+function osmose_ads_is_bot_user_agent($user_agent_raw) {
+    $user_agent = strtolower($user_agent_raw ?? '');
     
     // Ne pas bloquer si pas de user agent (peut être un vrai utilisateur)
     if (empty($user_agent)) {
@@ -1294,6 +1294,15 @@ function osmose_ads_is_bot_ajax() {
     
     return false;
 }
+
+/**
+ * Détecter si la requête AJAX courante provient d'un bot
+ */
+function osmose_ads_is_bot_ajax() {
+    $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+    return osmose_ads_is_bot_user_agent($user_agent);
+}
+
 
 /**
  * Handler AJAX pour tracker les appels téléphoniques (accessible publiquement)
@@ -1405,6 +1414,117 @@ function osmose_ads_track_call() {
         error_log('Osmose ADS: Call tracked successfully. Insert ID: ' . $wpdb->insert_id);
         wp_send_json_success(array('message' => __('Appel enregistré', 'osmose-ads'), 'insert_id' => $wpdb->insert_id));
     }
+}
+
+/**
+ * Recalculer les statuts bot/humain pour les appels et les visites existants
+ */
+function osmose_ads_handle_recalculate_bot_status() {
+    global $wpdb;
+
+    $results = array(
+        'calls' => array(
+            'total'  => 0,
+            'bots'   => 0,
+            'humans' => 0,
+        ),
+        'visits' => array(
+            'total'  => 0,
+            'bots'   => 0,
+            'humans' => 0,
+        ),
+    );
+
+    // --- Table des appels ---
+    $table_calls = $wpdb->prefix . 'osmose_ads_call_tracking';
+    if ($wpdb->get_var("SHOW TABLES LIKE '$table_calls'") == $table_calls) {
+        // S'assurer que la colonne is_bot existe
+        $has_is_bot = false;
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM $table_calls");
+        if ($columns) {
+            foreach ($columns as $column) {
+                if ($column->Field === 'is_bot') {
+                    $has_is_bot = true;
+                    break;
+                }
+            }
+        }
+        if (!$has_is_bot) {
+            $wpdb->query("ALTER TABLE $table_calls ADD COLUMN is_bot tinyint(1) DEFAULT 0");
+        }
+
+        // Recalculer pour tous les enregistrements
+        $rows = $wpdb->get_results("SELECT id, user_agent FROM $table_calls", ARRAY_A);
+        if ($rows) {
+            foreach ($rows as $row) {
+                $ua = $row['user_agent'] ?? '';
+                $is_bot = osmose_ads_is_bot_user_agent($ua) ? 1 : 0;
+
+                $results['calls']['total']++;
+                if ($is_bot) {
+                    $results['calls']['bots']++;
+                } else {
+                    $results['calls']['humans']++;
+                }
+
+                $wpdb->update(
+                    $table_calls,
+                    array('is_bot' => $is_bot),
+                    array('id' => intval($row['id'])),
+                    array('%d'),
+                    array('%d')
+                );
+            }
+        }
+    }
+
+    // --- Table des visites ---
+    $table_visits = $wpdb->prefix . 'osmose_ads_visits';
+    if ($wpdb->get_var("SHOW TABLES LIKE '$table_visits'") == $table_visits) {
+        // S'assurer que la colonne is_bot existe
+        $has_is_bot_visits = false;
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM $table_visits");
+        if ($columns) {
+            foreach ($columns as $column) {
+                if ($column->Field === 'is_bot') {
+                    $has_is_bot_visits = true;
+                    break;
+                }
+            }
+        }
+        if (!$has_is_bot_visits) {
+            $wpdb->query("ALTER TABLE $table_visits ADD COLUMN is_bot tinyint(1) DEFAULT 0");
+        }
+
+        // Recalculer pour toutes les visites existantes
+        $rows = $wpdb->get_results("SELECT id, user_agent FROM $table_visits", ARRAY_A);
+        if ($rows) {
+            foreach ($rows as $row) {
+                $ua = $row['user_agent'] ?? '';
+                $is_bot = osmose_ads_is_bot_user_agent($ua) ? 1 : 0;
+
+                $results['visits']['total']++;
+                if ($is_bot) {
+                    $results['visits']['bots']++;
+                } else {
+                    $results['visits']['humans']++;
+                }
+
+                $wpdb->update(
+                    $table_visits,
+                    array('is_bot' => $is_bot),
+                    array('id' => intval($row['id'])),
+                    array('%d'),
+                    array('%d')
+                );
+            }
+        }
+    }
+
+    wp_send_json_success(array(
+        'message' => __('Statuts bot/humain recalculés avec succès.', 'osmose-ads'),
+        'stats'   => $results,
+    ));
 }
 
 // Enregistrer les handlers AJAX pour le tracking

@@ -347,6 +347,7 @@ class Osmose_Ads_Admin {
         add_action('wp_ajax_osmose_ads_delete_ad', array($this, 'ajax_delete_ad'));
         add_action('wp_ajax_osmose_ads_delete_all_ads', array($this, 'ajax_delete_all_ads'));
         add_action('wp_ajax_osmose_ads_delete_all_calls', array($this, 'ajax_delete_all_calls'));
+        add_action('wp_ajax_osmose_ads_recalculate_bot_status', array($this, 'ajax_recalculate_bot_status'));
         add_action('wp_ajax_osmose_generate_article_ajax', array($this, 'ajax_generate_article'));
     }
 
@@ -445,6 +446,20 @@ class Osmose_Ads_Admin {
             'message' => sprintf(__('%d appel(s) supprimé(s) avec succès', 'osmose-ads'), $deleted),
             'deleted' => $deleted
         ));
+    }
+
+    /**
+     * Handler AJAX pour recalculer les statuts bot/humain
+     */
+    public function ajax_recalculate_bot_status() {
+        check_ajax_referer('osmose_ads_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+        }
+        
+        require_once OSMOSE_ADS_PLUGIN_DIR . 'admin/ajax-handlers.php';
+        osmose_ads_handle_recalculate_bot_status();
     }
 
     /**

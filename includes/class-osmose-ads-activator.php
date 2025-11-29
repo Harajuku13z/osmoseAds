@@ -138,6 +138,7 @@ class Osmose_Ads_Activator {
             country varchar(100),
             city_name varchar(255),
             template_id bigint(20) UNSIGNED,
+            is_bot tinyint(1) DEFAULT 0,
             visit_date date,
             visit_time datetime DEFAULT CURRENT_TIMESTAMP,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
@@ -147,7 +148,8 @@ class Osmose_Ads_Activator {
             KEY idx_visit_time (visit_time),
             KEY idx_referrer_domain (referrer_domain),
             KEY idx_template_id (template_id),
-            KEY idx_ad_visit_date (ad_id, visit_date)
+            KEY idx_ad_visit_date (ad_id, visit_date),
+            KEY idx_visit_is_bot (is_bot)
         ) $charset_collate;";
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');

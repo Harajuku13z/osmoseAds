@@ -70,9 +70,10 @@ if ($table_exists) {
         ARRAY_A
     );
     
-    // Derniers appels (tous, y compris les bots pour voir ce qui se passe)
+    // Derniers appels (uniquement les humains, les bots sont exclus des stats)
     $recent_calls = $wpdb->get_results(
         "SELECT * FROM $table_name 
+         WHERE (is_bot != 1 OR is_bot IS NULL)
          ORDER BY created_at DESC 
          LIMIT 100",
         ARRAY_A
@@ -97,7 +98,10 @@ if ($table_exists) {
                 </p>
             <?php endif; ?>
         </div>
-        <div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" id="recalculate-bots-btn" onclick="if(confirm('<?php echo esc_js(__('Recalculer le statut Bot/Humain pour tous les appels et visites ? Cette opération peut prendre quelques secondes.', 'osmose-ads')); ?>')) { recalculateBotStatus(); }">
+                <i class="bi bi-robot"></i> <?php _e('Recalculer Bots/Humains', 'osmose-ads'); ?>
+            </button>
             <button type="button" class="btn btn-danger" id="delete-all-calls-btn" onclick="if(confirm('<?php echo esc_js(__('Êtes-vous sûr de vouloir supprimer TOUS les appels ? Cette action est irréversible.', 'osmose-ads')); ?>')) { deleteAllCalls(); }">
                 <i class="bi bi-trash"></i> <?php _e('Supprimer Tout', 'osmose-ads'); ?>
             </button>
@@ -378,6 +382,49 @@ function deleteAllCalls() {
         error: function() {
             alert('<?php echo esc_js(__('Erreur lors de la communication avec le serveur.', 'osmose-ads')); ?>');
             jQuery('#delete-all-calls-btn').prop('disabled', false).html('<i class="bi bi-trash"></i> <?php echo esc_js(__('Supprimer Tout', 'osmose-ads')); ?>');
+        }
+    });
+}
+
+function recalculateBotStatus() {
+    var $btn = jQuery('#recalculate-bots-btn');
+    
+    jQuery.ajax({
+        url: osmoseAds.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'osmose_ads_recalculate_bot_status',
+            nonce: osmoseAds.nonce
+        },
+        beforeSend: function() {
+            $btn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> <?php echo esc_js(__('Recalcul en cours...', 'osmose-ads')); ?>');
+        },
+        success: function(response) {
+            if (response.success) {
+                var stats = response.data.stats || {};
+                var calls = stats.calls || {};
+                var visits = stats.visits || {};
+                
+                alert(
+                    '<?php echo esc_js(__('Recalibrage terminé.', 'osmose-ads')); ?>\n\n' +
+                    '<?php echo esc_js(__('Appels', 'osmose-ads')); ?>: ' +
+                    (calls.total || 0) + ' (<?php echo esc_js(__('Bots', 'osmose-ads')); ?>: ' + (calls.bots || 0) + ', <?php echo esc_js(__('Humains', 'osmose-ads')); ?>: ' + (calls.humans || 0) + ')\n' +
+                    '<?php echo esc_js(__('Visites', 'osmose-ads')); ?>: ' +
+                    (visits.total || 0) + ' (<?php echo esc_js(__('Bots', 'osmose-ads')); ?>: ' + (visits.bots || 0) + ', <?php echo esc_js(__('Humains', 'osmose-ads')); ?>: ' + (visits.humans || 0) + ')'
+                );
+                
+                // Recharger la page pour rafraîchir les stats
+                location.reload();
+            } else {
+                var msg = (response.data && response.data.message) ? response.data.message : '<?php echo esc_js(__('Erreur inconnue lors du recalcul.', 'osmose-ads')); ?>';
+                alert('<?php echo esc_js(__('Erreur lors du recalcul:', 'osmose-ads')); ?> ' + msg);
+            }
+        },
+        error: function() {
+            alert('<?php echo esc_js(__('Erreur lors de la communication avec le serveur.', 'osmose-ads')); ?>');
+        },
+        complete: function() {
+            $btn.prop('disabled', false).html('<i class="bi bi-robot"></i> <?php echo esc_js(__('Recalculer Bots/Humains', 'osmose-ads')); ?>');
         }
     });
 }

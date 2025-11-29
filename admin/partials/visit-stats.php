@@ -13,7 +13,7 @@ $table_name = $wpdb->prefix . 'osmose_ads_visits';
 $table_exists = ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name);
 
 // Récupérer les statistiques
-$total_visits = 0;
+ $total_visits = 0;
 $visits_today = 0;
 $visits_this_week = 0;
 $visits_this_month = 0;
@@ -24,63 +24,134 @@ $visits_by_browser = array();
 $recent_visits = array();
 $visits_last7_labels = array();
 $visits_last7_counts = array();
+$total_bots_visits = 0;
 
 // Filtrer par annonce si demandé
 $filter_ad_id = isset($_GET['ad_id']) ? intval($_GET['ad_id']) : 0;
 
 if ($table_exists) {
-    // Total des visites
+    // Vérifier si la colonne is_bot existe pour pouvoir exclure les bots
+    $has_is_bot_column = false;
+    $columns = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'is_bot'");
+    if (!empty($columns)) {
+        $has_is_bot_column = true;
+    }
+
+    // Total des visites (en excluant les bots si possible)
     if ($filter_ad_id > 0) {
-        $total_visits = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE ad_id = %d",
-            $filter_ad_id
-        ));
+        if ($has_is_bot_column) {
+            $total_visits = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
+                $filter_ad_id
+            ));
+            $total_bots_visits = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE ad_id = %d AND is_bot = 1",
+                $filter_ad_id
+            ));
+        } else {
+            $total_visits = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE ad_id = %d",
+                $filter_ad_id
+            ));
+        }
     } else {
-        $total_visits = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+        if ($has_is_bot_column) {
+            $total_visits = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE (is_bot != 1 OR is_bot IS NULL)");
+            $total_bots_visits = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE is_bot = 1");
+        } else {
+            $total_visits = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+        }
     }
     
-    // Visites aujourd'hui
+    // Visites aujourd'hui (en excluant les bots si possible)
     if ($filter_ad_id > 0) {
-        $visits_today = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_date) = %s AND ad_id = %d",
-            current_time('Y-m-d'),
-            $filter_ad_id
-        ));
+        if ($has_is_bot_column) {
+            $visits_today = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_date) = %s AND ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
+                current_time('Y-m-d'),
+                $filter_ad_id
+            ));
+        } else {
+            $visits_today = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_date) = %s AND ad_id = %d",
+                current_time('Y-m-d'),
+                $filter_ad_id
+            ));
+        }
     } else {
-        $visits_today = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_date) = %s",
-            current_time('Y-m-d')
-        ));
+        if ($has_is_bot_column) {
+            $visits_today = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_date) = %s AND (is_bot != 1 OR is_bot IS NULL)",
+                current_time('Y-m-d')
+            ));
+        } else {
+            $visits_today = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_date) = %s",
+                current_time('Y-m-d')
+            ));
+        }
     }
     
-    // Visites cette semaine
+    // Visites cette semaine (en excluant les bots si possible)
     if ($filter_ad_id > 0) {
-        $visits_this_week = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_date, 1) = YEARWEEK(%s, 1) AND ad_id = %d",
-            current_time('Y-m-d'),
-            $filter_ad_id
-        ));
+        if ($has_is_bot_column) {
+            $visits_this_week = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_date, 1) = YEARWEEK(%s, 1) AND ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
+                current_time('Y-m-d'),
+                $filter_ad_id
+            ));
+        } else {
+            $visits_this_week = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_date, 1) = YEARWEEK(%s, 1) AND ad_id = %d",
+                current_time('Y-m-d'),
+                $filter_ad_id
+            ));
+        }
     } else {
-        $visits_this_week = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_date, 1) = YEARWEEK(%s, 1)",
-            current_time('Y-m-d')
-        ));
+        if ($has_is_bot_column) {
+            $visits_this_week = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_date, 1) = YEARWEEK(%s, 1) AND (is_bot != 1 OR is_bot IS NULL)",
+                current_time('Y-m-d')
+            ));
+        } else {
+            $visits_this_week = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_date, 1) = YEARWEEK(%s, 1)",
+                current_time('Y-m-d')
+            ));
+        }
     }
     
-    // Visites ce mois
+    // Visites ce mois (en excluant les bots si possible)
     if ($filter_ad_id > 0) {
-        $visits_this_month = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_date) = %d AND MONTH(visit_date) = %d AND ad_id = %d",
-            current_time('Y'),
-            current_time('m'),
-            $filter_ad_id
-        ));
+        if ($has_is_bot_column) {
+            $visits_this_month = (int) $wpdb->get_var($wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_date) = %d AND MONTH(visit_date) = %d AND ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
+                current_time('Y'),
+                current_time('m'),
+                $filter_ad_id
+            )));
+        } else {
+            $visits_this_month = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_date) = %d AND MONTH(visit_date) = %d AND ad_id = %d",
+                current_time('Y'),
+                current_time('m'),
+                $filter_ad_id
+            ));
+        }
     } else {
-        $visits_this_month = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_date) = %d AND MONTH(visit_date) = %d",
-            current_time('Y'),
-            current_time('m')
-        ));
+        if ($has_is_bot_column) {
+            $visits_this_month = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_date) = %d AND MONTH(visit_date) = %d AND (is_bot != 1 OR is_bot IS NULL)",
+                current_time('Y'),
+                current_time('m')
+            ));
+        } else {
+            $visits_this_month = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_date) = %d AND MONTH(visit_date) = %d",
+                current_time('Y'),
+                current_time('m')
+            ));
+        }
     }
 
     // Visites des 7 derniers jours (y compris aujourd'hui)
@@ -90,24 +161,47 @@ if ($table_exists) {
     $start_date = date('Y-m-d', $start_timestamp);
 
     if ($filter_ad_id > 0) {
-        $rows_7days = $wpdb->get_results($wpdb->prepare(
-            "SELECT DATE(visit_time) as visit_date, COUNT(*) as count
-             FROM $table_name
-             WHERE visit_time >= %s AND ad_id = %d
-             GROUP BY DATE(visit_time)
-             ORDER BY visit_date ASC",
-            $start_date . ' 00:00:00',
-            $filter_ad_id
-        ), ARRAY_A);
+        if ($has_is_bot_column) {
+            $rows_7days = $wpdb->get_results($wpdb->prepare(
+                "SELECT DATE(visit_time) as visit_date, COUNT(*) as count
+                 FROM $table_name
+                 WHERE visit_time >= %s AND ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)
+                 GROUP BY DATE(visit_time)
+                 ORDER BY visit_date ASC",
+                $start_date . ' 00:00:00',
+                $filter_ad_id
+            ), ARRAY_A);
+        } else {
+            $rows_7days = $wpdb->get_results($wpdb->prepare(
+                "SELECT DATE(visit_time) as visit_date, COUNT(*) as count
+                 FROM $table_name
+                 WHERE visit_time >= %s AND ad_id = %d
+                 GROUP BY DATE(visit_time)
+                 ORDER BY visit_date ASC",
+                $start_date . ' 00:00:00',
+                $filter_ad_id
+            ), ARRAY_A);
+        }
     } else {
-        $rows_7days = $wpdb->get_results($wpdb->prepare(
-            "SELECT DATE(visit_time) as visit_date, COUNT(*) as count
-             FROM $table_name
-             WHERE visit_time >= %s
-             GROUP BY DATE(visit_time)
-             ORDER BY visit_date ASC",
-            $start_date . ' 00:00:00'
-        ), ARRAY_A);
+        if ($has_is_bot_column) {
+            $rows_7days = $wpdb->get_results($wpdb->prepare(
+                "SELECT DATE(visit_time) as visit_date, COUNT(*) as count
+                 FROM $table_name
+                 WHERE visit_time >= %s AND (is_bot != 1 OR is_bot IS NULL)
+                 GROUP BY DATE(visit_time)
+                 ORDER BY visit_date ASC",
+                $start_date . ' 00:00:00'
+            ), ARRAY_A);
+        } else {
+            $rows_7days = $wpdb->get_results($wpdb->prepare(
+                "SELECT DATE(visit_time) as visit_date, COUNT(*) as count
+                 FROM $table_name
+                 WHERE visit_time >= %s
+                 GROUP BY DATE(visit_time)
+                 ORDER BY visit_date ASC",
+                $start_date . ' 00:00:00'
+            ), ARRAY_A);
+        }
     }
 
     $map_7days = array();
@@ -127,54 +221,110 @@ if ($table_exists) {
     $visits_last7_labels = $labels_tmp;
     $visits_last7_counts = $counts_tmp;
     
-    // Visites par annonce
-    $visits_by_ad = $wpdb->get_results(
-        "SELECT ad_id, ad_slug, city_name, COUNT(*) as count 
-         FROM $table_name 
-         GROUP BY ad_id, ad_slug, city_name 
-         ORDER BY count DESC 
-         LIMIT 20",
-        ARRAY_A
-    );
+    // Visites par annonce (en excluant les bots si possible)
+    if ($has_is_bot_column) {
+        $visits_by_ad = $wpdb->get_results(
+            "SELECT ad_id, ad_slug, city_name, COUNT(*) as count 
+             FROM $table_name 
+             WHERE (is_bot != 1 OR is_bot IS NULL)
+             GROUP BY ad_id, ad_slug, city_name 
+             ORDER BY count DESC 
+             LIMIT 20",
+            ARRAY_A
+        );
+    } else {
+        $visits_by_ad = $wpdb->get_results(
+            "SELECT ad_id, ad_slug, city_name, COUNT(*) as count 
+             FROM $table_name 
+             GROUP BY ad_id, ad_slug, city_name 
+             ORDER BY count DESC 
+             LIMIT 20",
+            ARRAY_A
+        );
+    }
     
     // Visites par referrer (domaine)
-    $visits_by_referrer = $wpdb->get_results(
-        "SELECT referrer_domain, COUNT(*) as count 
-         FROM $table_name 
-         WHERE referrer_domain IS NOT NULL AND referrer_domain != ''
-         GROUP BY referrer_domain 
-         ORDER BY count DESC 
-         LIMIT 20",
-        ARRAY_A
-    );
+    if ($has_is_bot_column) {
+        $visits_by_referrer = $wpdb->get_results(
+            "SELECT referrer_domain, COUNT(*) as count 
+             FROM $table_name 
+             WHERE referrer_domain IS NOT NULL AND referrer_domain != '' AND (is_bot != 1 OR is_bot IS NULL)
+             GROUP BY referrer_domain 
+             ORDER BY count DESC 
+             LIMIT 20",
+            ARRAY_A
+        );
+    } else {
+        $visits_by_referrer = $wpdb->get_results(
+            "SELECT referrer_domain, COUNT(*) as count 
+             FROM $table_name 
+             WHERE referrer_domain IS NOT NULL AND referrer_domain != ''
+             GROUP BY referrer_domain 
+             ORDER BY count DESC 
+             LIMIT 20",
+            ARRAY_A
+        );
+    }
     
     // Visites par type d'appareil
-    $visits_by_device = $wpdb->get_results(
-        "SELECT device_type, COUNT(*) as count 
-         FROM $table_name 
-         WHERE device_type IS NOT NULL
-         GROUP BY device_type 
-         ORDER BY count DESC",
-        ARRAY_A
-    );
+    if ($has_is_bot_column) {
+        $visits_by_device = $wpdb->get_results(
+            "SELECT device_type, COUNT(*) as count 
+             FROM $table_name 
+             WHERE device_type IS NOT NULL AND (is_bot != 1 OR is_bot IS NULL)
+             GROUP BY device_type 
+             ORDER BY count DESC",
+            ARRAY_A
+        );
+    } else {
+        $visits_by_device = $wpdb->get_results(
+            "SELECT device_type, COUNT(*) as count 
+             FROM $table_name 
+             WHERE device_type IS NOT NULL
+             GROUP BY device_type 
+             ORDER BY count DESC",
+            ARRAY_A
+        );
+    }
     
     // Visites par navigateur
-    $visits_by_browser = $wpdb->get_results(
-        "SELECT browser, COUNT(*) as count 
-         FROM $table_name 
-         WHERE browser IS NOT NULL
-         GROUP BY browser 
-         ORDER BY count DESC",
-        ARRAY_A
-    );
+    if ($has_is_bot_column) {
+        $visits_by_browser = $wpdb->get_results(
+            "SELECT browser, COUNT(*) as count 
+             FROM $table_name 
+             WHERE browser IS NOT NULL AND (is_bot != 1 OR is_bot IS NULL)
+             GROUP BY browser 
+             ORDER BY count DESC",
+            ARRAY_A
+        );
+    } else {
+        $visits_by_browser = $wpdb->get_results(
+            "SELECT browser, COUNT(*) as count 
+             FROM $table_name 
+             WHERE browser IS NOT NULL
+             GROUP BY browser 
+             ORDER BY count DESC",
+            ARRAY_A
+        );
+    }
     
     // Dernières visites
-    $recent_visits = $wpdb->get_results(
-        "SELECT * FROM $table_name 
-         ORDER BY visit_time DESC 
-         LIMIT 100",
-        ARRAY_A
-    );
+    if ($has_is_bot_column) {
+        $recent_visits = $wpdb->get_results(
+            "SELECT * FROM $table_name 
+             WHERE (is_bot != 1 OR is_bot IS NULL)
+             ORDER BY visit_time DESC 
+             LIMIT 100",
+            ARRAY_A
+        );
+    } else {
+        $recent_visits = $wpdb->get_results(
+            "SELECT * FROM $table_name 
+             ORDER BY visit_time DESC 
+             LIMIT 100",
+            ARRAY_A
+        );
+    }
 }
 
 ?>
@@ -184,13 +334,21 @@ if ($table_exists) {
     <div class="d-flex justify-content-between align-items-center mb-4" style="margin-top: 20px;">
         <div>
             <h1 class="h3 mb-1"><?php _e('Statistiques de Visites', 'osmose-ads'); ?></h1>
-            <p class="text-muted mb-0"><?php _e('Analysez les visites de vos annonces et leur provenance', 'osmose-ads'); ?></p>
+            <p class="text-muted mb-0"><?php _e('Analysez les visites de vos annonces et leur provenance (les bots sont exclus des statistiques si détectés).', 'osmose-ads'); ?></p>
+            <?php if (!empty($total_bots_visits)): ?>
+                <p class="text-warning mb-0" style="font-size: 0.9em;">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <?php printf(__('%d visite(s) de bot détectée(s) et exclue(s) des statistiques', 'osmose-ads'), number_format_i18n($total_bots_visits)); ?>
+                </p>
+            <?php endif; ?>
         </div>
-        <?php if ($filter_ad_id > 0): ?>
-            <a href="<?php echo admin_url('admin.php?page=osmose-ads-visits'); ?>" class="btn btn-secondary">
-                <i class="bi bi-x-circle me-1"></i><?php _e('Retirer le filtre', 'osmose-ads'); ?>
-            </a>
-        <?php endif; ?>
+        <div class="d-flex gap-2">
+            <?php if ($filter_ad_id > 0): ?>
+                <a href="<?php echo admin_url('admin.php?page=osmose-ads-visits'); ?>" class="btn btn-secondary">
+                    <i class="bi bi-x-circle me-1"></i><?php _e('Retirer le filtre', 'osmose-ads'); ?>
+                </a>
+            <?php endif; ?>
+        </div>
     </div>
     
     <?php if (!$table_exists): ?>
