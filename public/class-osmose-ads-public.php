@@ -492,6 +492,35 @@ class Osmose_Ads_Public {
     }
     
     /**
+     * Masquer le titre de la page du simulateur
+     */
+    public function hide_simulator_page_title($title, $post_id = null) {
+        // Vérifier si on est sur la page du simulateur
+        $simulator_page_id = get_option('osmose_ads_simulator_page_id');
+        if (!$simulator_page_id) {
+            return $title;
+        }
+        
+        // Si on a un post_id, vérifier directement
+        if ($post_id && $post_id == $simulator_page_id) {
+            return '';
+        }
+        
+        // Sinon, vérifier si on est sur la page du simulateur
+        if (is_page($simulator_page_id)) {
+            return '';
+        }
+        
+        // Vérifier aussi par slug
+        $simulator_slug = get_option('osmose_ads_simulator_page_slug', 'simulateur-devis');
+        if (is_page($simulator_slug)) {
+            return '';
+        }
+        
+        return $title;
+    }
+    
+    /**
      * Rendre le simulateur
      */
     public function render_simulator($atts) {

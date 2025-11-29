@@ -95,6 +95,10 @@ class Osmose_Ads {
         $this->loader->add_action('wp_ajax_osmose_ads_submit_quote_request', $plugin_public, 'handle_quote_request');
         $this->loader->add_action('wp_ajax_nopriv_osmose_ads_submit_quote_request', $plugin_public, 'handle_quote_request');
         
+        // Masquer le titre de la page sur la page du simulateur
+        $this->loader->add_filter('the_title', $plugin_public, 'hide_simulator_page_title', 10, 2);
+        $this->loader->add_filter('single_post_title', $plugin_public, 'hide_simulator_page_title', 10, 2);
+        
         // Ajouter le bouton flottant du simulateur
         $this->loader->add_action('wp_footer', $plugin_public, 'add_simulator_floating_button');
         
