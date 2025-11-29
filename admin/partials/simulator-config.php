@@ -545,33 +545,88 @@ jQuery(document).ready(function($) {
         heroMediaUploader.open();
     });
     
-    // Upload d'image pour un projet
+    // Upload d'image pour un projet avec crop carré
     $(document).on('click', '.upload-project-image', function(e) {
         e.preventDefault();
         var projectKey = $(this).data('project-key');
         var $input = $('input[name="project_types[' + projectKey + '][image]"]');
         var $container = $input.closest('.mb-2');
+        var $button = $(this);
         
         // Créer une nouvelle instance pour chaque projet
         var customUploader = wp.media({
-            title: 'Choisir une image',
+            title: 'Choisir une image (sera recadrée en carré)',
             button: {
                 text: 'Utiliser cette image'
+            },
+            library: {
+                type: 'image'
             },
             multiple: false
         });
         
         customUploader.on('select', function() {
             var attachment = customUploader.state().get('selection').first().toJSON();
-            $input.val(attachment.url);
             
-            // Afficher ou mettre à jour l'aperçu
-            var $preview = $container.find('.image-preview');
-            if ($preview.length === 0) {
-                $preview = $('<div class="mt-2 image-preview"></div>');
-                $container.append($preview);
+            // Vérifier si le cropper est disponible
+            if (wp.media && wp.media.controller && wp.media.controller.Cropper) {
+                // Créer un état cropper avec ratio 1:1 (carré)
+                var CropperController = wp.media.controller.Cropper.extend({
+                    defaults: {
+                        imgSelectOptions: {
+                            aspectRatio: '1:1',
+                            handles: true,
+                            keys: true,
+                            instance: true,
+                            persistent: true
+                        }
+                    }
+                });
+                
+                // Passer à l'état cropper
+                customUploader.setState('cropper', new CropperController({
+                    imgSelectOptions: {
+                        aspectRatio: '1:1',
+                        handles: true,
+                        keys: true,
+                        instance: true,
+                        persistent: true
+                    }
+                }));
+                
+                // Écouter l'événement cropped
+                customUploader.on('cropped', function(croppedImage) {
+                    $input.val(croppedImage.url);
+                    
+                    // Afficher ou mettre à jour l'aperçu
+                    var $preview = $container.find('.image-preview');
+                    if ($preview.length === 0) {
+                        $preview = $('<div class="mt-2 image-preview"></div>');
+                        $container.append($preview);
+                    }
+                    $preview.html('<img src="' + croppedImage.url + '" style="max-width: 150px; max-height: 150px; width: 150px; height: 150px; object-fit: cover; border-radius: 4px;">');
+                });
+                
+                // Si l'utilisateur saute le crop
+                customUploader.on('skippedcrop', function() {
+                    $input.val(attachment.url);
+                    var $preview = $container.find('.image-preview');
+                    if ($preview.length === 0) {
+                        $preview = $('<div class="mt-2 image-preview"></div>');
+                        $container.append($preview);
+                    }
+                    $preview.html('<img src="' + attachment.url + '" style="max-width: 150px; max-height: 150px; width: 150px; height: 150px; object-fit: cover; border-radius: 4px;">');
+                });
+            } else {
+                // Fallback: utiliser l'image originale si le cropper n'est pas disponible
+                $input.val(attachment.url);
+                var $preview = $container.find('.image-preview');
+                if ($preview.length === 0) {
+                    $preview = $('<div class="mt-2 image-preview"></div>');
+                    $container.append($preview);
+                }
+                $preview.html('<img src="' + attachment.url + '" style="max-width: 150px; max-height: 150px; width: 150px; height: 150px; object-fit: cover; border-radius: 4px;">');
             }
-            $preview.html('<img src="' + attachment.url + '" style="max-width: 150px; max-height: 100px; object-fit: cover; border-radius: 4px;">');
         });
         
         customUploader.open();
