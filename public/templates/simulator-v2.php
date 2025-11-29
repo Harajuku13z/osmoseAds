@@ -14,15 +14,45 @@ $project_types = get_option('osmose_ads_simulator_project_types', array(
         'options' => array('hydrofuge', 'démoussage', 'réparation', 'remplacement', 'isolation')
     )
 ));
+
+// Récupérer la configuration du hero
+$hero_enabled = get_option('osmose_ads_simulator_hero_enabled', 0);
+$hero_title = get_option('osmose_ads_simulator_hero_title', '');
+$hero_description = get_option('osmose_ads_simulator_hero_description', '');
+$hero_image = get_option('osmose_ads_simulator_hero_image', '');
 ?>
+
+<?php if ($hero_enabled && (!empty($hero_title) || !empty($hero_image))): ?>
+    <!-- Hero Section -->
+    <div class="osmose-simulator-hero">
+        <div class="osmose-hero-container">
+            <?php if (!empty($hero_image)): ?>
+                <div class="osmose-hero-image">
+                    <img src="<?php echo esc_url($hero_image); ?>" alt="<?php echo esc_attr($hero_title ?: 'Hero'); ?>">
+                    <div class="osmose-hero-overlay"></div>
+                </div>
+            <?php endif; ?>
+            <div class="osmose-hero-content">
+                <?php if (!empty($hero_title)): ?>
+                    <h1 class="osmose-hero-title"><?php echo esc_html($hero_title); ?></h1>
+                <?php endif; ?>
+                <?php if (!empty($hero_description)): ?>
+                    <p class="osmose-hero-description"><?php echo esc_html($hero_description); ?></p>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
 <div class="osmose-simulator-container" id="osmose-simulator">
     <div class="osmose-simulator-wrapper">
-        <!-- Header -->
-        <div class="osmose-simulator-header">
-            <h2 class="osmose-simulator-title"><?php _e('Demandez un devis pour vos travaux', 'osmose-ads'); ?></h2>
-            <p class="osmose-simulator-subtitle"><?php _e('Remplissez le formulaire en quelques étapes simples', 'osmose-ads'); ?></p>
-        </div>
+        <!-- Header (affiché seulement si le hero n'est pas activé) -->
+        <?php if (!$hero_enabled || empty($hero_title)): ?>
+            <div class="osmose-simulator-header">
+                <h2 class="osmose-simulator-title"><?php _e('Demandez un devis pour vos travaux', 'osmose-ads'); ?></h2>
+                <p class="osmose-simulator-subtitle"><?php _e('Remplissez le formulaire en quelques étapes simples', 'osmose-ads'); ?></p>
+            </div>
+        <?php endif; ?>
 
         <!-- Progress Steps -->
         <div class="osmose-simulator-progress">

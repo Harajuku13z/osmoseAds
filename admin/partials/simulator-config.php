@@ -16,11 +16,21 @@ if (isset($_POST['osmose_simulator_config_submit']) && current_user_can('manage_
     $email_notification = isset($_POST['simulator_email_notification']) ? 1 : 0;
     $email_recipient = sanitize_email($_POST['simulator_email_recipient'] ?? get_option('admin_email'));
     
+    // Hero section
+    $hero_title = sanitize_text_field($_POST['simulator_hero_title'] ?? '');
+    $hero_description = sanitize_textarea_field($_POST['simulator_hero_description'] ?? '');
+    $hero_image = isset($_POST['simulator_hero_image']) ? esc_url_raw($_POST['simulator_hero_image']) : '';
+    $hero_enabled = isset($_POST['simulator_hero_enabled']) ? 1 : 0;
+    
     // Mettre à jour les options
     update_option('osmose_ads_simulator_page_slug', $page_slug);
     update_option('osmose_ads_simulator_title', $page_title);
     update_option('osmose_ads_simulator_email_notification', $email_notification);
     update_option('osmose_ads_simulator_email_recipient', $email_recipient);
+    update_option('osmose_ads_simulator_hero_enabled', $hero_enabled);
+    update_option('osmose_ads_simulator_hero_title', $hero_title);
+    update_option('osmose_ads_simulator_hero_description', $hero_description);
+    update_option('osmose_ads_simulator_hero_image', $hero_image);
     
     // Gérer les types de projets
     if (isset($_POST['project_types']) && is_array($_POST['project_types'])) {
@@ -90,6 +100,10 @@ $page_slug = get_option('osmose_ads_simulator_page_slug', 'simulateur-devis');
 $page_title = get_option('osmose_ads_simulator_title', 'Simulateur de Devis');
 $email_notification = get_option('osmose_ads_simulator_email_notification', 1);
 $email_recipient = get_option('osmose_ads_simulator_email_recipient', get_option('admin_email'));
+$hero_enabled = get_option('osmose_ads_simulator_hero_enabled', 0);
+$hero_title = get_option('osmose_ads_simulator_hero_title', '');
+$hero_description = get_option('osmose_ads_simulator_hero_description', '');
+$hero_image = get_option('osmose_ads_simulator_hero_image', '');
 $project_types = get_option('osmose_ads_simulator_project_types', array(
     'toiture' => array(
         'label' => 'Toiture',
@@ -178,6 +192,85 @@ if ($page_id) {
                                 <?php _e('La page n\'existe pas encore. Elle sera créée lors de l\'enregistrement.', 'osmose-ads'); ?>
                             </div>
                         <?php endif; ?>
+                        
+                        <hr>
+                        
+                        <h5 class="mb-3"><?php _e('Section Hero', 'osmose-ads'); ?></h5>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="simulator_hero_enabled" 
+                                       name="simulator_hero_enabled" 
+                                       value="1" 
+                                       <?php checked($hero_enabled, 1); ?>>
+                                <label class="form-check-label" for="simulator_hero_enabled">
+                                    <?php _e('Activer la section hero', 'osmose-ads'); ?>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">
+                                <?php _e('Afficher une section hero en haut de la page du simulateur', 'osmose-ads'); ?>
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3" id="hero-fields" style="<?php echo $hero_enabled ? '' : 'display: none;'; ?>">
+                            <label for="simulator_hero_title" class="form-label">
+                                <?php _e('Titre du hero', 'osmose-ads'); ?>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="simulator_hero_title" 
+                                   name="simulator_hero_title" 
+                                   value="<?php echo esc_attr($hero_title); ?>" 
+                                   placeholder="<?php _e('Ex: Demandez un devis pour vos travaux', 'osmose-ads'); ?>">
+                            <small class="form-text text-muted">
+                                <?php _e('Titre principal affiché dans le hero', 'osmose-ads'); ?>
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3" id="hero-description-field" style="<?php echo $hero_enabled ? '' : 'display: none;'; ?>">
+                            <label for="simulator_hero_description" class="form-label">
+                                <?php _e('Description', 'osmose-ads'); ?>
+                            </label>
+                            <textarea class="form-control" 
+                                      id="simulator_hero_description" 
+                                      name="simulator_hero_description" 
+                                      rows="3"
+                                      placeholder="<?php _e('Ex: Remplissez le formulaire en quelques étapes simples', 'osmose-ads'); ?>"><?php echo esc_textarea($hero_description); ?></textarea>
+                            <small class="form-text text-muted">
+                                <?php _e('Description affichée sous le titre', 'osmose-ads'); ?>
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3" id="hero-image-field" style="<?php echo $hero_enabled ? '' : 'display: none;'; ?>">
+                            <label for="simulator_hero_image" class="form-label">
+                                <?php _e('Image mise en avant', 'osmose-ads'); ?>
+                            </label>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <input type="url" 
+                                       class="form-control" 
+                                       id="simulator_hero_image" 
+                                       name="simulator_hero_image" 
+                                       value="<?php echo esc_attr($hero_image); ?>" 
+                                       placeholder="<?php _e('URL de l\'image', 'osmose-ads'); ?>">
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-secondary" 
+                                        id="upload-hero-image">
+                                    <i class="bi bi-upload"></i> <?php _e('Uploader', 'osmose-ads'); ?>
+                                </button>
+                            </div>
+                            <?php if (!empty($hero_image)): ?>
+                                <div class="mt-2">
+                                    <img src="<?php echo esc_url($hero_image); ?>" 
+                                         alt="Hero image" 
+                                         style="max-width: 300px; max-height: 200px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb;">
+                                </div>
+                            <?php endif; ?>
+                            <small class="form-text text-muted">
+                                <?php _e('Image affichée dans le hero (recommandé: 1200x600px)', 'osmose-ads'); ?>
+                            </small>
+                        </div>
                         
                         <hr>
                         
@@ -394,6 +487,63 @@ if ($page_id) {
 jQuery(document).ready(function($) {
     var projectTypeIndex = <?php echo count($project_types) + 1; ?>;
     var mediaUploader;
+    var heroMediaUploader;
+    
+    // Afficher/masquer les champs hero
+    $('#simulator_hero_enabled').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#hero-fields, #hero-description-field, #hero-image-field').slideDown();
+        } else {
+            $('#hero-fields, #hero-description-field, #hero-image-field').slideUp();
+        }
+    });
+    
+    // Upload d'image pour le hero
+    $('#upload-hero-image').on('click', function(e) {
+        e.preventDefault();
+        var $input = $('#simulator_hero_image');
+        
+        if (heroMediaUploader) {
+            heroMediaUploader.open();
+            heroMediaUploader.off('select');
+            heroMediaUploader.on('select', function() {
+                var attachment = heroMediaUploader.state().get('selection').first().toJSON();
+                $input.val(attachment.url);
+                
+                // Afficher un aperçu
+                var $preview = $input.closest('.mb-3').find('.hero-image-preview');
+                if ($preview.length === 0) {
+                    $preview = $('<div class="mt-2 hero-image-preview"></div>');
+                    $input.closest('.mb-3').append($preview);
+                }
+                $preview.html('<img src="' + attachment.url + '" style="max-width: 300px; max-height: 200px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb;">');
+            });
+            return;
+        }
+        
+        heroMediaUploader = wp.media({
+            title: 'Choisir une image pour le hero',
+            button: {
+                text: 'Utiliser cette image'
+            },
+            multiple: false
+        });
+        
+        heroMediaUploader.on('select', function() {
+            var attachment = heroMediaUploader.state().get('selection').first().toJSON();
+            $input.val(attachment.url);
+            
+            // Afficher un aperçu
+            var $preview = $input.closest('.mb-3').find('.hero-image-preview');
+            if ($preview.length === 0) {
+                $preview = $('<div class="mt-2 hero-image-preview"></div>');
+                $input.closest('.mb-3').append($preview);
+            }
+            $preview.html('<img src="' + attachment.url + '" style="max-width: 300px; max-height: 200px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb;">');
+        });
+        
+        heroMediaUploader.open();
+    });
     
     // Upload d'image pour un projet
     $(document).on('click', '.upload-project-image', function(e) {
