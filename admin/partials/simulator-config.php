@@ -204,15 +204,24 @@ if ($page_id) {
                             <label for="simulator_email_recipient" class="form-label">
                                 <?php _e('Email de notification', 'osmose-ads'); ?>
                             </label>
-                            <input type="email" 
-                                   class="form-control" 
-                                   id="simulator_email_recipient" 
-                                   name="simulator_email_recipient" 
-                                   value="<?php echo esc_attr($email_recipient); ?>" 
-                                   required>
+                            <div class="input-group">
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="simulator_email_recipient" 
+                                       name="simulator_email_recipient" 
+                                       value="<?php echo esc_attr($email_recipient); ?>" 
+                                       required>
+                                <button type="button" 
+                                        class="btn btn-outline-primary" 
+                                        id="test-email-btn"
+                                        data-test-email="<?php echo esc_attr($email_recipient); ?>">
+                                    <i class="bi bi-envelope-check"></i> <?php _e('Tester', 'osmose-ads'); ?>
+                                </button>
+                            </div>
                             <small class="form-text text-muted">
                                 <?php _e('Adresse email qui recevra les notifications', 'osmose-ads'); ?>
                             </small>
+                            <div id="test-email-result" class="mt-2" style="display: none;"></div>
                         </div>
                         
                         <hr class="my-4">
@@ -480,6 +489,44 @@ jQuery(document).ready(function($) {
     // Supprimer une option
     $(document).on('click', '.remove-option', function() {
         $(this).closest('.project-option-item').remove();
+    });
+    
+    // Tester l'envoi d'email
+    $('#test-email-btn').on('click', function() {
+        var $btn = $(this);
+        var $result = $('#test-email-result');
+        var email = $('#simulator_email_recipient').val() || $btn.data('test-email');
+        
+        if (!email) {
+            $result.html('<div class="alert alert-warning">Veuillez d\'abord saisir une adresse email</div>').show();
+            return;
+        }
+        
+        $btn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Envoi...');
+        $result.hide();
+        
+        $.ajax({
+            url: typeof ajaxurl !== 'undefined' ? ajaxurl : (typeof osmoseAds !== 'undefined' ? osmoseAds.ajax_url : '/wp-admin/admin-ajax.php'),
+            type: 'POST',
+            data: {
+                action: 'osmose_ads_test_email',
+                nonce: '<?php echo wp_create_nonce('osmose_ads_nonce'); ?>',
+                email: email
+            },
+            success: function(response) {
+                if (response.success) {
+                    $result.html('<div class="alert alert-success"><i class="bi bi-check-circle"></i> ' + response.data.message + '</div>').show();
+                } else {
+                    $result.html('<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> ' + (response.data && response.data.message ? response.data.message : 'Erreur inconnue') + '</div>').show();
+                }
+            },
+            error: function() {
+                $result.html('<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Erreur de connexion</div>').show();
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html('<i class="bi bi-envelope-check"></i> Tester');
+            }
+        });
     });
 });
 </script>

@@ -379,6 +379,7 @@ class Osmose_Ads_Admin {
         add_action('wp_ajax_osmose_ads_delete_template', array($this, 'ajax_delete_template'));
         add_action('wp_ajax_osmose_ads_delete_ad', array($this, 'ajax_delete_ad'));
         add_action('wp_ajax_osmose_ads_delete_all_ads', array($this, 'ajax_delete_all_ads'));
+        add_action('wp_ajax_osmose_ads_test_email', array($this, 'ajax_test_email'));
         add_action('wp_ajax_osmose_ads_delete_all_calls', array($this, 'ajax_delete_all_calls'));
         add_action('wp_ajax_osmose_ads_recalculate_bot_status', array($this, 'ajax_recalculate_bot_status'));
         add_action('wp_ajax_osmose_generate_article_ajax', array($this, 'ajax_generate_article'));
@@ -979,6 +980,68 @@ class Osmose_Ads_Admin {
             'article_id' => $article_id,
             'edit_link' => get_edit_post_link($article_id, 'raw'),
         ));
+    }
+    
+    /**
+     * Handler AJAX pour tester l'envoi d'email
+     */
+    public function ajax_test_email() {
+        check_ajax_referer('osmose_ads_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permissions insuffisantes', 'osmose-ads')));
+            return;
+        }
+        
+        $test_email = isset($_POST['email']) ? sanitize_email($_POST['email']) : get_option('admin_email');
+        
+        if (!is_email($test_email)) {
+            wp_send_json_error(array('message' => __('Adresse email invalide', 'osmose-ads')));
+            return;
+        }
+        
+        // Créer des données de test
+        $test_data = array(
+            'first_name' => 'Test',
+            'last_name' => 'Email',
+            'email' => $test_email,
+            'phone' => '01 23 45 67 89',
+            'property_type' => 'maison',
+            'postal_code' => '75001',
+            'address' => '123 Rue de Test',
+            'city' => 'Paris',
+            'surface' => '100',
+            'project_type' => 'Toiture',
+            'project_details' => 'Hydrofuge, Démoussage',
+        );
+        
+        try {
+            // Générer l'email de test
+            $html_message = Osmose_Ads_Email::generate_admin_notification_email($test_data);
+            $subject = __('[TEST] Email de test - Osmose ADS', 'osmose-ads');
+            
+            // Headers pour email HTML
+            $headers = array(
+                'Content-Type: text/html; charset=UTF-8',
+                'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+            );
+            
+            $mail_sent = wp_mail($test_email, $subject, $html_message, $headers);
+            
+            if ($mail_sent) {
+                wp_send_json_success(array(
+                    'message' => __('Email de test envoyé avec succès à ', 'osmose-ads') . $test_email
+                ));
+            } else {
+                wp_send_json_error(array(
+                    'message' => __('Erreur lors de l\'envoi de l\'email. Vérifiez la configuration SMTP de WordPress.', 'osmose-ads')
+                ));
+            }
+        } catch (Exception $e) {
+            wp_send_json_error(array(
+                'message' => __('Erreur: ', 'osmose-ads') . $e->getMessage()
+            ));
+        }
     }
 }
 

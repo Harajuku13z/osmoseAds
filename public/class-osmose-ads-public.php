@@ -711,35 +711,59 @@ class Osmose_Ads_Public {
             return;
         }
         
-        // Envoyer les emails HTML
+        // Envoyer les emails HTML (avec gestion d'erreur)
+        $email_errors = array();
+        
         $email_notification = get_option('osmose_ads_simulator_email_notification', 1);
         if ($email_notification) {
             // Email à l'admin
             $email_recipient = get_option('osmose_ads_simulator_email_recipient', get_option('admin_email'));
             if (is_email($email_recipient)) {
-                $subject = sprintf(__('Nouvelle demande de devis - %s', 'osmose-ads'), $insert_data['first_name'] . ' ' . $insert_data['last_name']);
-                $html_message = Osmose_Ads_Email::generate_admin_notification_email($insert_data);
-                
-                // Headers pour email HTML
-                $headers = array(
-                    'Content-Type: text/html; charset=UTF-8',
-                    'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
-                );
-                
-                wp_mail($email_recipient, $subject, $html_message, $headers);
+                try {
+                    $subject = sprintf(__('Nouvelle demande de devis - %s', 'osmose-ads'), $insert_data['first_name'] . ' ' . $insert_data['last_name']);
+                    $html_message = Osmose_Ads_Email::generate_admin_notification_email($insert_data);
+                    
+                    // Headers pour email HTML
+                    $headers = array(
+                        'Content-Type: text/html; charset=UTF-8',
+                        'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+                    );
+                    
+                    $mail_sent = wp_mail($email_recipient, $subject, $html_message, $headers);
+                    if (!$mail_sent) {
+                        $email_errors[] = __('Erreur lors de l\'envoi de l\'email à l\'admin', 'osmose-ads');
+                    }
+                } catch (Exception $e) {
+                    $email_errors[] = __('Erreur lors de l\'envoi de l\'email à l\'admin: ', 'osmose-ads') . $e->getMessage();
+                }
             }
         }
         
         // Email de confirmation à l'utilisateur
-        $html_confirmation = Osmose_Ads_Email::generate_user_confirmation_email($insert_data);
-        $confirmation_subject = __('Confirmation de votre demande de devis', 'osmose-ads');
-        $confirmation_headers = array(
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
-        );
-        wp_mail($insert_data['email'], $confirmation_subject, $html_confirmation, $confirmation_headers);
+        try {
+            $html_confirmation = Osmose_Ads_Email::generate_user_confirmation_email($insert_data);
+            $confirmation_subject = __('Confirmation de votre demande de devis', 'osmose-ads');
+            $confirmation_headers = array(
+                'Content-Type: text/html; charset=UTF-8',
+                'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+            );
+            
+            $mail_sent = wp_mail($insert_data['email'], $confirmation_subject, $html_confirmation, $confirmation_headers);
+            if (!$mail_sent) {
+                $email_errors[] = __('Erreur lors de l\'envoi de l\'email de confirmation', 'osmose-ads');
+            }
+        } catch (Exception $e) {
+            $email_errors[] = __('Erreur lors de l\'envoi de l\'email de confirmation: ', 'osmose-ads') . $e->getMessage();
+        }
         
-        wp_send_json_success(array('message' => __('Demande envoyée avec succès !', 'osmose-ads')));
+        // La demande est enregistrée même si les emails échouent
+        $success_message = __('Demande envoyée avec succès !', 'osmose-ads');
+        if (!empty($email_errors)) {
+            // Logger les erreurs mais ne pas bloquer la réponse
+            error_log('Osmose ADS - Erreurs email: ' . implode(', ', $email_errors));
+        }
+        
+        wp_send_json_success(array('message' => $success_message));
     }
     
     /**

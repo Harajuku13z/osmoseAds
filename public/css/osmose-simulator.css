@@ -14,33 +14,42 @@ body.page .wp-block-post-title {
 }
 
 .osmose-simulator-container {
-    max-width: 900px;
+    max-width: 1000px;
     margin: 2rem auto;
     padding: 0 1rem;
 }
 
 .osmose-simulator-wrapper {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 2rem;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1), 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 3rem;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
 }
 
 .osmose-simulator-header {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid #e5e7eb;
 }
 
 .osmose-simulator-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin-bottom: 0.5rem;
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.75rem;
+    line-height: 1.2;
 }
 
 .osmose-simulator-subtitle {
     color: #6b7280;
-    font-size: 1rem;
+    font-size: 1.1rem;
+    font-weight: 400;
 }
 
 /* Progress Steps */
@@ -71,30 +80,34 @@ body.page .wp-block-post-title {
 }
 
 .osmose-step-indicator.active .step-number {
-    background: #3b82f6;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    border-color: #3b82f6;
+    border-color: #667eea;
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
 .osmose-step-indicator.completed .step-number {
-    background: #10b981;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
     border-color: #10b981;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
 }
 
 .step-number {
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     background: white;
-    border: 2px solid #e5e7eb;
+    border: 3px solid #e5e7eb;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 0.5rem;
-    font-weight: 600;
+    margin: 0 auto 0.75rem;
+    font-weight: 700;
+    font-size: 1.1rem;
     color: #9ca3af;
-    transition: all 0.3s;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .step-label {
@@ -151,19 +164,36 @@ body.page .wp-block-post-title {
 
 .osmose-option-card {
     position: relative;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 1.5rem;
+    border: 3px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     background: white;
+    overflow: hidden;
+}
+
+.osmose-option-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s;
 }
 
 .osmose-option-card:hover {
-    border-color: #3b82f6;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1);
+    border-color: #667eea;
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+}
+
+.osmose-option-card:hover::before {
+    opacity: 1;
 }
 
 .osmose-option-card input[type="radio"],
@@ -186,53 +216,97 @@ body.page .wp-block-post-title {
 
 .osmose-option-card:has(input[type="radio"]:checked),
 .osmose-option-card:has(input[type="checkbox"]:checked) {
-    border-color: #3b82f6;
-    background: #eff6ff;
+    border-color: #667eea;
+    background: linear-gradient(135deg, #eff6ff 0%, #f3e8ff 100%);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.25);
+    transform: scale(1.05);
+}
+
+.osmose-option-card:has(input[type="radio"]:checked)::before,
+.osmose-option-card:has(input[type="checkbox"]:checked)::before {
+    opacity: 1;
 }
 
 .option-icon {
-    font-size: 3rem;
-    margin-bottom: 0.5rem;
-    transition: transform 0.3s;
+    font-size: 3.5rem;
+    margin-bottom: 0.75rem;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.osmose-option-card:hover .option-icon {
+    transform: scale(1.15) rotate(5deg);
 }
 
 .option-image {
     width: 100%;
-    height: 120px;
-    margin-bottom: 0.5rem;
-    border-radius: 6px;
+    height: 140px;
+    margin-bottom: 0.75rem;
+    border-radius: 12px;
     overflow: hidden;
-    background: #f3f4f6;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+}
+
+.option-image::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s;
 }
 
 .option-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.osmose-option-card:hover .option-image img {
+    transform: scale(1.1);
+}
+
+.osmose-option-card:has(input:checked) .option-image::after {
+    opacity: 1;
 }
 
 .osmose-option-card:has(input:checked) .option-image img {
-    transform: scale(1.05);
+    transform: scale(1.08);
 }
 
 .project-details-section {
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 1.5rem;
-    background: #f9fafb;
-    margin-bottom: 1.5rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s;
+}
+
+.project-details-section:hover {
+    border-color: #667eea;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
 }
 
 .project-details-title {
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid #3b82f6;
+    font-weight: 700;
+    font-size: 1.3rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid #667eea;
 }
 
 .option-label {
@@ -271,17 +345,26 @@ body.page .wp-block-post-title {
 
 .osmose-form-group input,
 .osmose-form-group textarea {
-    padding: 0.75rem;
+    padding: 1rem;
     border: 2px solid #e5e7eb;
-    border-radius: 6px;
+    border-radius: 10px;
     font-size: 1rem;
-    transition: border-color 0.3s;
+    transition: all 0.3s;
+    background: white;
 }
 
 .osmose-form-group input:focus,
 .osmose-form-group textarea:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
+}
+
+.osmose-form-group input.error,
+.osmose-form-group textarea.error {
+    border-color: #ef4444;
+    background: #fef2f2;
 }
 
 /* Buttons */
@@ -303,12 +386,15 @@ body.page .wp-block-post-title {
 }
 
 .osmose-btn-primary {
-    background: #3b82f6;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
 .osmose-btn-primary:hover:not(:disabled) {
-    background: #2563eb;
+    background: linear-gradient(135deg, #5568d3 0%, #653a8f 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
 }
 
 .osmose-btn-secondary {
