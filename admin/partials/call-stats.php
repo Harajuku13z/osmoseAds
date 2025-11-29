@@ -12,6 +12,16 @@ $table_name = $wpdb->prefix . 'osmose_ads_call_tracking';
 // Vérifier que la table existe
 $table_exists = ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name);
 
+// Récupérer la période sélectionnée (7, 30, 90, 365 jours)
+$selected_period = isset($_GET['period']) ? intval($_GET['period']) : 30;
+if (!in_array($selected_period, array(7, 30, 90, 365))) {
+    $selected_period = 30;
+}
+
+// Calculer la date de début selon la période
+$period_start_date = date('Y-m-d H:i:s', strtotime('-' . $selected_period . ' days', current_time('timestamp')));
+$period_days = $selected_period;
+
 // Récupérer les statistiques
 $stats = array();
 $calls_by_page = array();
@@ -22,11 +32,17 @@ $calls_this_week = 0;
 $calls_this_month = 0;
 
 if ($table_exists) {
-    // Total des appels (exclure les bots)
-    $total_calls = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE (is_bot != 1 OR is_bot IS NULL)");
+    // Total des appels pour la période sélectionnée (exclure les bots)
+    $total_calls = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $table_name WHERE created_at >= %s AND (is_bot != 1 OR is_bot IS NULL)",
+        $period_start_date
+    ));
     
-    // Total des bots
-    $total_bots = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE is_bot = 1");
+    // Total des bots pour la période
+    $total_bots = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $table_name WHERE created_at >= %s AND is_bot = 1",
+        $period_start_date
+    ));
     
     // Appels aujourd'hui (exclure les bots)
     $calls_today = (int) $wpdb->get_var($wpdb->prepare(
@@ -47,37 +63,37 @@ if ($table_exists) {
         current_time('m')
     ));
     
-    // Appels par page (exclure les bots)
-    $calls_by_page = $wpdb->get_results(
+    // Appels par page pour la période (exclure les bots)
+    $calls_by_page = $wpdb->get_results($wpdb->prepare(
         "SELECT page_url, COUNT(*) as count 
          FROM $table_name 
-         WHERE (is_bot != 1 OR is_bot IS NULL)
+         WHERE created_at >= %s AND (is_bot != 1 OR is_bot IS NULL)
          GROUP BY page_url 
          ORDER BY count DESC 
          LIMIT 20",
-        ARRAY_A
-    );
+        $period_start_date
+    ), ARRAY_A);
     
-    // Appels par ville (basé sur l'annonce associée, exclure les bots)
-    $calls_by_city = $wpdb->get_results(
+    // Appels par ville pour la période (basé sur l'annonce associée, exclure les bots)
+    $calls_by_city = $wpdb->get_results($wpdb->prepare(
         "SELECT pm.meta_value as city_id, COUNT(*) as count
          FROM $table_name ct
          INNER JOIN {$wpdb->postmeta} pm ON ct.ad_id = pm.post_id AND pm.meta_key = 'city_id'
-         WHERE pm.meta_value IS NOT NULL AND pm.meta_value != '' AND (ct.is_bot != 1 OR ct.is_bot IS NULL)
+         WHERE ct.created_at >= %s AND pm.meta_value IS NOT NULL AND pm.meta_value != '' AND (ct.is_bot != 1 OR ct.is_bot IS NULL)
          GROUP BY pm.meta_value
          ORDER BY count DESC
          LIMIT 15",
-        ARRAY_A
-    );
+        $period_start_date
+    ), ARRAY_A);
     
-    // Derniers appels (uniquement les humains, les bots sont exclus des stats)
-    $recent_calls = $wpdb->get_results(
+    // Derniers appels pour la période (uniquement les humains, les bots sont exclus des stats)
+    $recent_calls = $wpdb->get_results($wpdb->prepare(
         "SELECT * FROM $table_name 
-         WHERE (is_bot != 1 OR is_bot IS NULL)
+         WHERE created_at >= %s AND (is_bot != 1 OR is_bot IS NULL)
          ORDER BY created_at DESC 
          LIMIT 100",
-        ARRAY_A
-    );
+        $period_start_date
+    ), ARRAY_A);
 } else {
     $recent_calls = array();
     $total_bots = 0;
@@ -98,7 +114,16 @@ if ($table_exists) {
                 </p>
             <?php endif; ?>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center">
+            <div class="me-3">
+                <label for="period-select" class="form-label mb-0 me-2" style="font-size: 0.9em;"><?php _e('Période:', 'osmose-ads'); ?></label>
+                <select id="period-select" class="form-select form-select-sm" style="width: auto; display: inline-block;" onchange="window.location.href='<?php echo admin_url('admin.php?page=osmose-ads-calls'); ?>&period=' + this.value;">
+                    <option value="7" <?php selected($selected_period, 7); ?>><?php _e('7 derniers jours', 'osmose-ads'); ?></option>
+                    <option value="30" <?php selected($selected_period, 30); ?>><?php _e('30 derniers jours', 'osmose-ads'); ?></option>
+                    <option value="90" <?php selected($selected_period, 90); ?>><?php _e('90 derniers jours', 'osmose-ads'); ?></option>
+                    <option value="365" <?php selected($selected_period, 365); ?>><?php _e('1 an', 'osmose-ads'); ?></option>
+                </select>
+            </div>
             <button type="button" class="btn btn-outline-secondary" id="recalculate-bots-btn" onclick="if(confirm('<?php echo esc_js(__('Recalculer le statut Bot/Humain pour tous les appels et visites ? Cette opération peut prendre quelques secondes.', 'osmose-ads')); ?>')) { recalculateBotStatus(); }">
                 <i class="bi bi-robot"></i> <?php _e('Recalculer Bots/Humains', 'osmose-ads'); ?>
             </button>
@@ -121,7 +146,7 @@ if ($table_exists) {
             <div class="card text-center">
                 <div class="card-body">
                     <div class="display-4 text-primary mb-2"><?php echo number_format_i18n($total_calls); ?></div>
-                    <h6 class="text-muted"><?php _e('Total des Appels', 'osmose-ads'); ?></h6>
+                    <h6 class="text-muted"><?php printf(__('Total (%d jours)', 'osmose-ads'), $period_days); ?></h6>
                 </div>
             </div>
         </div>

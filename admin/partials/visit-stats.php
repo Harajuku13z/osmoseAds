@@ -12,6 +12,16 @@ $table_name = $wpdb->prefix . 'osmose_ads_visits';
 // Vérifier que la table existe
 $table_exists = ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name);
 
+// Récupérer la période sélectionnée (7, 30, 90, 365 jours)
+$selected_period = isset($_GET['period']) ? intval($_GET['period']) : 30;
+if (!in_array($selected_period, array(7, 30, 90, 365))) {
+    $selected_period = 30;
+}
+
+// Calculer la date de début selon la période
+$period_start_date = date('Y-m-d H:i:s', strtotime('-' . $selected_period . ' days', current_time('timestamp')));
+$period_days = $selected_period;
+
 // Récupérer les statistiques
  $total_visits = 0;
 $visits_today = 0;
@@ -37,29 +47,41 @@ if ($table_exists) {
         $has_is_bot_column = true;
     }
 
-    // Total des visites (en excluant les bots si possible)
+    // Total des visites pour la période sélectionnée (en excluant les bots si possible)
     if ($filter_ad_id > 0) {
         if ($has_is_bot_column) {
             $total_visits = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
+                "SELECT COUNT(*) FROM $table_name WHERE visit_time >= %s AND ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
+                $period_start_date,
                 $filter_ad_id
             ));
             $total_bots_visits = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE ad_id = %d AND is_bot = 1",
+                "SELECT COUNT(*) FROM $table_name WHERE visit_time >= %s AND ad_id = %d AND is_bot = 1",
+                $period_start_date,
                 $filter_ad_id
             ));
         } else {
             $total_visits = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE ad_id = %d",
+                "SELECT COUNT(*) FROM $table_name WHERE visit_time >= %s AND ad_id = %d",
+                $period_start_date,
                 $filter_ad_id
             ));
         }
     } else {
         if ($has_is_bot_column) {
-            $total_visits = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE (is_bot != 1 OR is_bot IS NULL)");
-            $total_bots_visits = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE is_bot = 1");
+            $total_visits = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE visit_time >= %s AND (is_bot != 1 OR is_bot IS NULL)",
+                $period_start_date
+            ));
+            $total_bots_visits = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE visit_time >= %s AND is_bot = 1",
+                $period_start_date
+            ));
         } else {
-            $total_visits = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+            $total_visits = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE visit_time >= %s",
+                $period_start_date
+            ));
         }
     }
     
@@ -154,10 +176,29 @@ if ($table_exists) {
         }
     }
 
-    // Visites des 7 derniers jours (y compris aujourd'hui)
+    // Visites pour la période sélectionnée (adaptation du graphique selon la période)
     $labels_tmp = array();
     $counts_tmp = array();
-    $start_timestamp = current_time('timestamp') - (6 * DAY_IN_SECONDS);
+    
+    // Déterminer le nombre de points et l'intervalle selon la période
+    if ($selected_period <= 7) {
+        $num_points = $selected_period;
+        $interval_days = 1;
+        $start_timestamp = current_time('timestamp') - (($selected_period - 1) * DAY_IN_SECONDS);
+    } elseif ($selected_period <= 30) {
+        $num_points = 15; // 15 points pour 30 jours = 1 point tous les 2 jours
+        $interval_days = 2;
+        $start_timestamp = current_time('timestamp') - (($selected_period - 1) * DAY_IN_SECONDS);
+    } elseif ($selected_period <= 90) {
+        $num_points = 13; // 13 points pour 90 jours = 1 point par semaine
+        $interval_days = 7;
+        $start_timestamp = current_time('timestamp') - (($selected_period - 1) * DAY_IN_SECONDS);
+    } else {
+        $num_points = 12; // 12 points pour 1 an = 1 point par mois
+        $interval_days = 30;
+        $start_timestamp = current_time('timestamp') - (($selected_period - 1) * DAY_IN_SECONDS);
+    }
+    
     $start_date = date('Y-m-d', $start_timestamp);
 
     if ($filter_ad_id > 0) {
@@ -211,119 +252,136 @@ if ($table_exists) {
         }
     }
 
-    for ($i = 0; $i < 7; $i++) {
-        $ts = $start_timestamp + ($i * DAY_IN_SECONDS);
+    for ($i = 0; $i < $num_points; $i++) {
+        $ts = $start_timestamp + ($i * $interval_days * DAY_IN_SECONDS);
         $date_key = date('Y-m-d', $ts);
-        $labels_tmp[] = date_i18n('d/m', $ts);
-        $counts_tmp[] = isset($map_7days[$date_key]) ? (int) $map_7days[$date_key] : 0;
+        if ($selected_period <= 7) {
+            $labels_tmp[] = date_i18n('d/m', $ts);
+        } elseif ($selected_period <= 30) {
+            $labels_tmp[] = date_i18n('d/m', $ts);
+        } elseif ($selected_period <= 90) {
+            $labels_tmp[] = date_i18n('d/m', $ts);
+        } else {
+            $labels_tmp[] = date_i18n('M Y', $ts);
+        }
+        // Pour les périodes longues, agréger les visites sur l'intervalle
+        $period_count = 0;
+        for ($j = 0; $j < $interval_days && ($ts + ($j * DAY_IN_SECONDS)) <= current_time('timestamp'); $j++) {
+            $day_ts = $ts + ($j * DAY_IN_SECONDS);
+            $day_key = date('Y-m-d', $day_ts);
+            $period_count += isset($map_7days[$day_key]) ? (int) $map_7days[$day_key] : 0;
+        }
+        $counts_tmp[] = $period_count;
     }
 
     $visits_last7_labels = $labels_tmp;
     $visits_last7_counts = $counts_tmp;
     
-    // Visites par annonce (en excluant les bots si possible)
+    // Visites par annonce pour la période (en excluant les bots si possible)
     if ($has_is_bot_column) {
-        $visits_by_ad = $wpdb->get_results(
+        $visits_by_ad = $wpdb->get_results($wpdb->prepare(
             "SELECT ad_id, ad_slug, city_name, COUNT(*) as count 
              FROM $table_name 
-             WHERE (is_bot != 1 OR is_bot IS NULL)
+             WHERE visit_time >= %s AND (is_bot != 1 OR is_bot IS NULL)
              GROUP BY ad_id, ad_slug, city_name 
              ORDER BY count DESC 
              LIMIT 20",
-            ARRAY_A
-        );
+            $period_start_date
+        ), ARRAY_A);
     } else {
-        $visits_by_ad = $wpdb->get_results(
+        $visits_by_ad = $wpdb->get_results($wpdb->prepare(
             "SELECT ad_id, ad_slug, city_name, COUNT(*) as count 
              FROM $table_name 
+             WHERE visit_time >= %s
              GROUP BY ad_id, ad_slug, city_name 
              ORDER BY count DESC 
              LIMIT 20",
-            ARRAY_A
-        );
+            $period_start_date
+        ), ARRAY_A);
     }
     
-    // Visites par referrer (domaine)
+    // Visites par referrer (domaine) pour la période
     if ($has_is_bot_column) {
-        $visits_by_referrer = $wpdb->get_results(
+        $visits_by_referrer = $wpdb->get_results($wpdb->prepare(
             "SELECT referrer_domain, COUNT(*) as count 
              FROM $table_name 
-             WHERE referrer_domain IS NOT NULL AND referrer_domain != '' AND (is_bot != 1 OR is_bot IS NULL)
+             WHERE visit_time >= %s AND referrer_domain IS NOT NULL AND referrer_domain != '' AND (is_bot != 1 OR is_bot IS NULL)
              GROUP BY referrer_domain 
              ORDER BY count DESC 
              LIMIT 20",
-            ARRAY_A
-        );
+            $period_start_date
+        ), ARRAY_A);
     } else {
-        $visits_by_referrer = $wpdb->get_results(
+        $visits_by_referrer = $wpdb->get_results($wpdb->prepare(
             "SELECT referrer_domain, COUNT(*) as count 
              FROM $table_name 
-             WHERE referrer_domain IS NOT NULL AND referrer_domain != ''
+             WHERE visit_time >= %s AND referrer_domain IS NOT NULL AND referrer_domain != ''
              GROUP BY referrer_domain 
              ORDER BY count DESC 
              LIMIT 20",
-            ARRAY_A
-        );
+            $period_start_date
+        ), ARRAY_A);
     }
     
-    // Visites par type d'appareil
+    // Visites par type d'appareil pour la période
     if ($has_is_bot_column) {
-        $visits_by_device = $wpdb->get_results(
+        $visits_by_device = $wpdb->get_results($wpdb->prepare(
             "SELECT device_type, COUNT(*) as count 
              FROM $table_name 
-             WHERE device_type IS NOT NULL AND (is_bot != 1 OR is_bot IS NULL)
+             WHERE visit_time >= %s AND device_type IS NOT NULL AND (is_bot != 1 OR is_bot IS NULL)
              GROUP BY device_type 
              ORDER BY count DESC",
-            ARRAY_A
-        );
+            $period_start_date
+        ), ARRAY_A);
     } else {
-        $visits_by_device = $wpdb->get_results(
+        $visits_by_device = $wpdb->get_results($wpdb->prepare(
             "SELECT device_type, COUNT(*) as count 
              FROM $table_name 
-             WHERE device_type IS NOT NULL
+             WHERE visit_time >= %s AND device_type IS NOT NULL
              GROUP BY device_type 
              ORDER BY count DESC",
-            ARRAY_A
-        );
+            $period_start_date
+        ), ARRAY_A);
     }
     
-    // Visites par navigateur
+    // Visites par navigateur pour la période
     if ($has_is_bot_column) {
-        $visits_by_browser = $wpdb->get_results(
+        $visits_by_browser = $wpdb->get_results($wpdb->prepare(
             "SELECT browser, COUNT(*) as count 
              FROM $table_name 
-             WHERE browser IS NOT NULL AND (is_bot != 1 OR is_bot IS NULL)
+             WHERE visit_time >= %s AND browser IS NOT NULL AND (is_bot != 1 OR is_bot IS NULL)
              GROUP BY browser 
              ORDER BY count DESC",
-            ARRAY_A
-        );
+            $period_start_date
+        ), ARRAY_A);
     } else {
-        $visits_by_browser = $wpdb->get_results(
+        $visits_by_browser = $wpdb->get_results($wpdb->prepare(
             "SELECT browser, COUNT(*) as count 
              FROM $table_name 
-             WHERE browser IS NOT NULL
+             WHERE visit_time >= %s AND browser IS NOT NULL
              GROUP BY browser 
              ORDER BY count DESC",
-            ARRAY_A
-        );
+            $period_start_date
+        ), ARRAY_A);
     }
     
-    // Dernières visites
+    // Dernières visites pour la période
     if ($has_is_bot_column) {
-        $recent_visits = $wpdb->get_results(
+        $recent_visits = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
-             WHERE (is_bot != 1 OR is_bot IS NULL)
+             WHERE visit_time >= %s AND (is_bot != 1 OR is_bot IS NULL)
              ORDER BY visit_time DESC 
              LIMIT 100",
-            ARRAY_A
-        );
+            $period_start_date
+        ), ARRAY_A);
     } else {
-        $recent_visits = $wpdb->get_results(
+        $recent_visits = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
+             WHERE visit_time >= %s
              ORDER BY visit_time DESC 
              LIMIT 100",
-            ARRAY_A
-        );
+            $period_start_date
+        ), ARRAY_A);
     }
 }
 
@@ -342,7 +400,16 @@ if ($table_exists) {
                 </p>
             <?php endif; ?>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center">
+            <div class="me-3">
+                <label for="period-select-visits" class="form-label mb-0 me-2" style="font-size: 0.9em;"><?php _e('Période:', 'osmose-ads'); ?></label>
+                <select id="period-select-visits" class="form-select form-select-sm" style="width: auto; display: inline-block;" onchange="var url = '<?php echo admin_url('admin.php?page=osmose-ads-visits'); ?>&period=' + this.value; <?php if ($filter_ad_id > 0): ?>url += '&ad_id=<?php echo $filter_ad_id; ?>';<?php endif; ?> window.location.href = url;">
+                    <option value="7" <?php selected($selected_period, 7); ?>><?php _e('7 derniers jours', 'osmose-ads'); ?></option>
+                    <option value="30" <?php selected($selected_period, 30); ?>><?php _e('30 derniers jours', 'osmose-ads'); ?></option>
+                    <option value="90" <?php selected($selected_period, 90); ?>><?php _e('90 derniers jours', 'osmose-ads'); ?></option>
+                    <option value="365" <?php selected($selected_period, 365); ?>><?php _e('1 an', 'osmose-ads'); ?></option>
+                </select>
+            </div>
             <button type="button" class="btn btn-outline-secondary" id="recalculate-bots-visits-btn" onclick="if(confirm('<?php echo esc_js(__('Recalculer le statut Bot/Humain pour toutes les visites et appels ? Cette opération peut prendre quelques secondes.', 'osmose-ads')); ?>')) { recalculateBotStatusVisits(); }">
                 <i class="bi bi-robot"></i> <?php _e('Recalculer Bots/Humains', 'osmose-ads'); ?>
             </button>
@@ -413,7 +480,7 @@ function recalculateBotStatusVisits() {
             <div class="card text-center">
                 <div class="card-body">
                     <div class="display-4 text-primary mb-2"><?php echo number_format_i18n($total_visits); ?></div>
-                    <h6 class="text-muted"><?php _e('Total des Visites', 'osmose-ads'); ?></h6>
+                    <h6 class="text-muted"><?php printf(__('Total (%d jours)', 'osmose-ads'), $period_days); ?></h6>
                 </div>
             </div>
         </div>
@@ -450,7 +517,7 @@ function recalculateBotStatusVisits() {
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="bi bi-graph-up-arrow me-2"></i><?php _e('Visites sur les 7 derniers jours', 'osmose-ads'); ?>
+                        <i class="bi bi-graph-up-arrow me-2"></i><?php printf(__('Visites sur les %d derniers jours', 'osmose-ads'), $period_days); ?>
                     </h5>
                     <?php if ($filter_ad_id > 0): ?>
                         <span class="badge bg-secondary"><?php _e('Filtré par annonce', 'osmose-ads'); ?></span>
