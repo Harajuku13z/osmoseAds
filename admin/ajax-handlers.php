@@ -1230,6 +1230,67 @@ function osmose_ads_handle_create_template() {
 }
 
 /**
+ * Récupérer depuis une API externe une liste de bots (User-Agents de crawlers)
+ * et la mettre en cache dans les options WordPress.
+ *
+ * L'URL peut être modifiée via le filtre 'osmose_ads_bot_list_api_url'.
+ * Par défaut on utilise une liste publique de crawlers :
+ * https://github.com/monperrus/crawler-user-agents
+ *
+ * @param bool $force_refresh Forcer un rafraîchissement immédiat depuis l'API
+ * @return array Liste de patterns (en minuscules)
+ */
+function osmose_ads_get_remote_bot_patterns($force_refresh = false) {
+    $option_key = 'osmose_ads_remote_bot_patterns';
+    $cached     = get_option($option_key);
+
+    // Utiliser le cache si disponible et pas trop ancien (24h)
+    if (
+        !$force_refresh &&
+        is_array($cached) &&
+        !empty($cached['patterns']) &&
+        !empty($cached['updated_at']) &&
+        (time() - (int) $cached['updated_at']) < DAY_IN_SECONDS
+    ) {
+        return is_array($cached['patterns']) ? $cached['patterns'] : array();
+    }
+
+    $default_url = 'https://raw.githubusercontent.com/monperrus/crawler-user-agents/master/crawler-user-agents.json';
+    $api_url     = apply_filters('osmose_ads_bot_list_api_url', $default_url);
+
+    $response = wp_remote_get($api_url, array(
+        'timeout' => 10,
+    ));
+
+    if (is_wp_error($response)) {
+        error_log('Osmose ADS: Failed to fetch remote bot list: ' . $response->get_error_message());
+        return is_array($cached['patterns'] ?? null) ? $cached['patterns'] : array();
+    }
+
+    $body = wp_remote_retrieve_body($response);
+    $data = json_decode($body, true);
+
+    $patterns = array();
+    if (is_array($data)) {
+        foreach ($data as $entry) {
+            // Format attendu: chaque entrée a une clé "pattern" (regex ou substring)
+            if (is_array($entry) && !empty($entry['pattern'])) {
+                $patterns[] = strtolower($entry['pattern']);
+            }
+        }
+    }
+
+    if (!empty($patterns)) {
+        update_option($option_key, array(
+            'patterns'   => $patterns,
+            'updated_at' => time(),
+        ));
+    }
+
+    return $patterns;
+}
+
+/**
  * Détecter si un User-Agent donné correspond à un bot
  */
 function osmose_ads_is_bot_user_agent($user_agent_raw) {
@@ -1240,7 +1301,7 @@ function osmose_ads_is_bot_user_agent($user_agent_raw) {
         return false;
     }
     
-    // Liste des bots connus (patterns spécifiques uniquement)
+    // Liste locale de bots connus (patterns spécifiques uniquement)
     $bot_patterns = array(
         // Bots de recherche (patterns spécifiques)
         'googlebot/', 'bingbot/', 'slurp', 'duckduckbot', 'baiduspider',
@@ -1268,15 +1329,21 @@ function osmose_ads_is_bot_user_agent($user_agent_raw) {
         // Autres bots spécifiques
         'bitrix link preview', 'smtbot',
     );
+
+    // Ajouter la liste dynamique récupérée depuis l'API
+    $remote_patterns = osmose_ads_get_remote_bot_patterns(false);
+    if (!empty($remote_patterns) && is_array($remote_patterns)) {
+        $bot_patterns = array_merge($bot_patterns, $remote_patterns);
+    }
     
-    // Vérifier les patterns spécifiques
+    // Vérifier les patterns spécifiques (locaux + distants)
     foreach ($bot_patterns as $pattern) {
         if (strpos($user_agent, $pattern) !== false) {
             return true;
         }
     }
     
-    // Vérifier les patterns génériques mais seulement s'ils sont au début ou suivis d'un slash
+    // Vérifier les patterns génériques
     $generic_bot_patterns = array(
         '/bot', 'bot/', 'crawler/', 'spider/', 'scraper/',
     );
@@ -1434,6 +1501,9 @@ function osmose_ads_handle_recalculate_bot_status() {
             'humans' => 0,
         ),
     );
+
+    // Mettre à jour la liste de bots distante avant de recalculer (force rafraîchissement)
+    osmose_ads_get_remote_bot_patterns(true);
 
     // --- Table des appels ---
     $table_calls = $wpdb->prefix . 'osmose_ads_call_tracking';
