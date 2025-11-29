@@ -656,36 +656,6 @@ class Osmose_Ads_Public {
     }
     
     /**
-     * Ajouter un lien "Devis" dans le menu header
-     */
-    public function add_simulator_menu_item($items, $args) {
-        // Récupérer l'URL de la page simulateur
-        $simulator_page_id = get_option('osmose_ads_simulator_page_id');
-        if ($simulator_page_id) {
-            $simulator_url = get_permalink($simulator_page_id);
-        } else {
-            $simulator_url = home_url('/simulateur-devis/');
-        }
-        
-        // Vérifier que c'est le menu principal (généralement 'primary' ou 'main')
-        // Tu peux ajuster selon le nom de ton menu
-        if ($args->theme_location === 'primary' || $args->theme_location === 'main' || $args->theme_location === 'header' || empty($args->theme_location)) {
-            // Créer le lien vers le simulateur
-            $simulator_link = '<li class="menu-item menu-item-type-custom menu-item-object-custom osmose-simulator-menu-item">';
-            $simulator_link .= '<a href="' . esc_url($simulator_url) . '" class="osmose-open-simulator">';
-            $simulator_link .= '<span style="vertical-align: middle; margin-right: 5px;">📋</span>';
-            $simulator_link .= __('Devis Gratuit', 'osmose-ads');
-            $simulator_link .= '</a>';
-            $simulator_link .= '</li>';
-            
-            // Ajouter à la fin du menu
-            $items .= $simulator_link;
-        }
-        
-        return $items;
-    }
-    
-    /**
      * Ajouter un bouton flottant pour ouvrir le simulateur
      */
     public function add_simulator_floating_button() {
