@@ -86,16 +86,17 @@ if ($table_exists) {
     }
     
     // Visites aujourd'hui (en excluant les bots si possible)
+    // Utiliser visit_time pour être compatible avec les anciennes données où visit_date peut être NULL
     if ($filter_ad_id > 0) {
         if ($has_is_bot_column) {
             $visits_today = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_date) = %s AND ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
+                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_time) = %s AND ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
                 current_time('Y-m-d'),
                 $filter_ad_id
             ));
         } else {
             $visits_today = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_date) = %s AND ad_id = %d",
+                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_time) = %s AND ad_id = %d",
                 current_time('Y-m-d'),
                 $filter_ad_id
             ));
@@ -103,28 +104,29 @@ if ($table_exists) {
     } else {
         if ($has_is_bot_column) {
             $visits_today = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_date) = %s AND (is_bot != 1 OR is_bot IS NULL)",
+                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_time) = %s AND (is_bot != 1 OR is_bot IS NULL)",
                 current_time('Y-m-d')
             ));
         } else {
             $visits_today = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_date) = %s",
+                "SELECT COUNT(*) FROM $table_name WHERE DATE(visit_time) = %s",
                 current_time('Y-m-d')
             ));
         }
     }
     
     // Visites cette semaine (en excluant les bots si possible)
+    // Utiliser YEARWEEK sur visit_time pour rester compatible
     if ($filter_ad_id > 0) {
         if ($has_is_bot_column) {
             $visits_this_week = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_date, 1) = YEARWEEK(%s, 1) AND ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
+                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_time, 1) = YEARWEEK(%s, 1) AND ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
                 current_time('Y-m-d'),
                 $filter_ad_id
             ));
         } else {
             $visits_this_week = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_date, 1) = YEARWEEK(%s, 1) AND ad_id = %d",
+                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_time, 1) = YEARWEEK(%s, 1) AND ad_id = %d",
                 current_time('Y-m-d'),
                 $filter_ad_id
             ));
@@ -132,29 +134,30 @@ if ($table_exists) {
     } else {
         if ($has_is_bot_column) {
             $visits_this_week = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_date, 1) = YEARWEEK(%s, 1) AND (is_bot != 1 OR is_bot IS NULL)",
+                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_time, 1) = YEARWEEK(%s, 1) AND (is_bot != 1 OR is_bot IS NULL)",
                 current_time('Y-m-d')
             ));
         } else {
             $visits_this_week = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_date, 1) = YEARWEEK(%s, 1)",
+                "SELECT COUNT(*) FROM $table_name WHERE YEARWEEK(visit_time, 1) = YEARWEEK(%s, 1)",
                 current_time('Y-m-d')
             ));
         }
     }
     
     // Visites ce mois (en excluant les bots si possible)
+    // Utiliser YEAR/MONTH sur visit_time pour rester compatible
     if ($filter_ad_id > 0) {
         if ($has_is_bot_column) {
             $visits_this_month = (int) $wpdb->get_var($wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_date) = %d AND MONTH(visit_date) = %d AND ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
+                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_time) = %d AND MONTH(visit_time) = %d AND ad_id = %d AND (is_bot != 1 OR is_bot IS NULL)",
                 current_time('Y'),
                 current_time('m'),
                 $filter_ad_id
             )));
         } else {
             $visits_this_month = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_date) = %d AND MONTH(visit_date) = %d AND ad_id = %d",
+                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_time) = %d AND MONTH(visit_time) = %d AND ad_id = %d",
                 current_time('Y'),
                 current_time('m'),
                 $filter_ad_id
@@ -163,13 +166,13 @@ if ($table_exists) {
     } else {
         if ($has_is_bot_column) {
             $visits_this_month = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_date) = %d AND MONTH(visit_date) = %d AND (is_bot != 1 OR is_bot IS NULL)",
+                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_time) = %d AND MONTH(visit_time) = %d AND (is_bot != 1 OR is_bot IS NULL)",
                 current_time('Y'),
                 current_time('m')
             ));
         } else {
             $visits_this_month = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_date) = %d AND MONTH(visit_date) = %d",
+                "SELECT COUNT(*) FROM $table_name WHERE YEAR(visit_time) = %d AND MONTH(visit_time) = %d",
                 current_time('Y'),
                 current_time('m')
             ));
