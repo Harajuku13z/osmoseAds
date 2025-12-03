@@ -177,6 +177,42 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
     font-weight: 600;
 }
 
+/* Progress mobile simple */
+.osmose-mobile-progress {
+    display: none;
+    padding: 24px 20px;
+    text-align: center;
+}
+
+.mobile-step-text {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.mobile-step-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 16px;
+}
+
+.mobile-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.mobile-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
 /* Form container */
 .osmose-simulator-form {
     padding: 40px;
@@ -461,20 +497,14 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
         justify-content: center;
     }
 
+    /* Masquer la progress desktop sur mobile */
     .osmose-simulator-progress {
-        padding: 30px 20px 15px;
-        overflow-x: auto;
+        display: none !important;
     }
 
-    .step-number {
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
-    }
-
-    .step-label {
-        font-size: 0.65rem;
-        max-width: 70px;
+    /* Afficher la version mobile */
+    .osmose-mobile-progress {
+        display: block;
     }
 
     .osmose-simulator-form {
@@ -540,7 +570,7 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
 
         <div class="osmose-simulator-container" id="osmose-simulator">
             <div class="osmose-simulator-wrapper">
-                <!-- Progress Steps -->
+                <!-- Progress Desktop -->
                 <div class="osmose-simulator-progress">
                     <div class="osmose-step-indicator active" data-step="0">
                         <div class="step-number">1</div>
@@ -561,6 +591,15 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
                     <div class="osmose-step-indicator" data-step="4">
                         <div class="step-number">5</div>
                         <div class="step-label"><?php _e('Détails', 'osmose-ads'); ?></div>
+                    </div>
+                </div>
+
+                <!-- Progress Mobile -->
+                <div class="osmose-mobile-progress">
+                    <div class="mobile-step-text">Étape <span id="current-step-mobile">1</span> sur 5</div>
+                    <div class="mobile-step-title" id="current-step-title-mobile">Informations</div>
+                    <div class="mobile-progress-bar">
+                        <div class="mobile-progress-fill" id="mobile-progress-fill" style="width: 20%;"></div>
                     </div>
                 </div>
 
@@ -716,7 +755,7 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
 
                 <!-- Success Message -->
                 <div class="osmose-simulator-success" style="display: none;">
-                    <div class="success-icon">✓ </div>
+                    <div class="success-icon">✓</div>
                     <h3><?php _e('Demande envoyée avec succès !', 'osmose-ads'); ?></h3>
                     <p><?php _e('Nous vous contacterons dans les plus brefs délais.', 'osmose-ads'); ?></p>
                 </div>
