@@ -108,3 +108,7 @@ echo "<h2>Réparation terminée</h2>";
 echo "<p><a href='" . admin_url('admin.php?page=osmose-ads-quotes') . "'>Voir les demandes de devis</a></p>";
 echo "<p><a href='" . admin_url() . "'>Retour à l'admin</a></p>";
 
+
+
+
+

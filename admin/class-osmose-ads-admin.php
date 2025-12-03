@@ -295,8 +295,18 @@ class Osmose_Ads_Admin {
         register_setting('osmose_ads_settings', 'osmose_ads_openai_api_key');
         register_setting('osmose_ads_settings', 'osmose_ads_ai_provider');
         register_setting('osmose_ads_settings', 'osmose_ads_services');
+        // Settings SMTP personnalisés pour les emails du simulateur
+        register_setting('osmose_ads_settings', 'osmose_ads_smtp_enabled');
+        register_setting('osmose_ads_settings', 'osmose_ads_smtp_host');
+        register_setting('osmose_ads_settings', 'osmose_ads_smtp_port');
+        register_setting('osmose_ads_settings', 'osmose_ads_smtp_encryption');
+        register_setting('osmose_ads_settings', 'osmose_ads_smtp_username');
+        register_setting('osmose_ads_settings', 'osmose_ads_smtp_password');
+        register_setting('osmose_ads_settings', 'osmose_ads_smtp_from_email');
+        register_setting('osmose_ads_settings', 'osmose_ads_smtp_from_name');
         
         // Settings pour le simulateur
+        register_setting('osmose_ads_simulator_settings', 'osmose_ads_simulator_enabled');
         register_setting('osmose_ads_simulator_settings', 'osmose_ads_simulator_page_id');
         register_setting('osmose_ads_simulator_settings', 'osmose_ads_simulator_page_slug');
         register_setting('osmose_ads_simulator_settings', 'osmose_ads_simulator_title');
@@ -1029,6 +1039,9 @@ class Osmose_Ads_Admin {
         
         try {
             // Générer l'email de test
+            if (!class_exists('Osmose_Ads_Email')) {
+                require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/class-osmose-ads-email.php';
+            }
             $html_message = Osmose_Ads_Email::generate_admin_notification_email($test_data);
             $subject = __('[TEST] Email de test - Osmose ADS', 'osmose-ads');
             
@@ -1038,7 +1051,8 @@ class Osmose_Ads_Admin {
                 'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
             );
             
-            $mail_sent = wp_mail($test_email, $subject, $html_message, $headers);
+            // Utiliser le helper qui applique les réglages SMTP si activés
+            $mail_sent = Osmose_Ads_Email::send_mail($test_email, $subject, $html_message, $headers);
             
             if ($mail_sent) {
                 wp_send_json_success(array(

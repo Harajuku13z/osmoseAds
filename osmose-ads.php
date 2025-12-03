@@ -45,15 +45,29 @@ function osmose_ads_deactivate() {
 
 /**
  * Initialisation du plugin
+ * On attend que WordPress soit complètement chargé avant d'initialiser
  */
-require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/class-osmose-ads.php';
-
 function osmose_ads_run() {
-    $plugin = new Osmose_Ads();
-    $plugin->run();
+    // S'assurer que toutes les fonctions WordPress sont disponibles
+    if (!function_exists('add_action')) {
+        return;
+    }
+    
+    require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/class-osmose-ads.php';
+    
+    try {
+        $plugin = new Osmose_Ads();
+        $plugin->run();
+    } catch (Exception $e) {
+        error_log('Osmose ADS: Erreur lors de l\'initialisation: ' . $e->getMessage());
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            wp_die('Erreur Osmose ADS: ' . $e->getMessage());
+        }
+    }
 }
 
-osmose_ads_run();
+// Initialiser le plugin après que WordPress soit complètement chargé
+add_action('plugins_loaded', 'osmose_ads_run', 10);
 
 
 

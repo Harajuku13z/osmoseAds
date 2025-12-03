@@ -126,6 +126,12 @@ try {
         ));
     }
     
+    // Récupérer le code postal de la ville (pour l'afficher dans les titres)
+    $postal_code = '';
+    if (!$is_article && $city && isset($city->ID)) {
+        $postal_code = get_post_meta($city->ID, 'postal_code', true);
+    }
+
 } catch (Exception $e) {
     error_log('Osmose ADS: Error loading ad data: ' . $e->getMessage());
     get_header();
@@ -136,6 +142,10 @@ try {
 
 // Métadonnées SEO
 $page_title = $meta['meta_title'] ?? get_the_title();
+// Ajouter le code postal à la balise title si disponible (sans dupliquer)
+if (!empty($postal_code) && strpos($page_title, $postal_code) === false) {
+    $page_title .= ' - ' . $postal_code;
+}
 $page_description = $meta['meta_description'] ?? '';
 $meta_keywords = $meta['meta_keywords'] ?? '';
 
@@ -202,7 +212,14 @@ get_header();
             <div class="osmose-hero-content-modern">
                 <h1 class="osmose-hero-title-modern">
                     <i class="fas fa-tools"></i>
-                    <?php echo esc_html(get_the_title()); ?>
+                    <?php
+                    $hero_title = get_the_title();
+                    // Ajouter le code postal dans le titre visible si disponible
+                    if (!empty($postal_code) && strpos($hero_title, $postal_code) === false) {
+                        $hero_title .= ' - ' . $postal_code;
+                    }
+                    echo esc_html($hero_title);
+                    ?>
                 </h1>
                 <p class="osmose-hero-description">
                     <?php 

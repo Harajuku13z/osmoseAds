@@ -95,6 +95,12 @@ $nav_items = array(
         'icon' => 'dashicons-visibility',
         'url' => admin_url('admin.php?page=osmose-ads-visits'),
     ),
+    // Lien direct vers les réglages du simulateur
+    'osmose-ads-simulator-config' => array(
+        'title' => __('Réglages Simulateur', 'osmose-ads'),
+        'icon' => 'dashicons-chart-area',
+        'url' => admin_url('admin.php?page=osmose-ads-simulator-config'),
+    ),
     'osmose-ads-settings' => array(
         'title' => __('Réglages', 'osmose-ads'),
         'icon' => 'dashicons-admin-settings',

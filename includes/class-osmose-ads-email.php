@@ -10,6 +10,74 @@ if (!defined('ABSPATH')) {
 class Osmose_Ads_Email {
     
     /**
+     * Envoyer un email en utilisant éventuellement la configuration SMTP du plugin
+     */
+    public static function send_mail($to, $subject, $message, $headers = array()) {
+        $smtp_enabled = get_option('osmose_ads_smtp_enabled', 0);
+        $callback = null;
+        
+        if ($smtp_enabled) {
+            $callback = function($phpmailer) {
+                // Forcer SMTP
+                $phpmailer->isSMTP();
+                
+                $host = get_option('osmose_ads_smtp_host', '');
+                $port = intval(get_option('osmose_ads_smtp_port', 587));
+                $encryption = get_option('osmose_ads_smtp_encryption', 'tls');
+                $username = get_option('osmose_ads_smtp_username', '');
+                $password = get_option('osmose_ads_smtp_password', '');
+                $from_email = get_option('osmose_ads_smtp_from_email', '');
+                $from_name = get_option('osmose_ads_smtp_from_name', '');
+                if (empty($from_name) && function_exists('get_bloginfo')) {
+                    $from_name = get_bloginfo('name');
+                }
+                
+                if (!empty($host)) {
+                    $phpmailer->Host = $host;
+                }
+                if (!empty($port)) {
+                    $phpmailer->Port = $port;
+                }
+                
+                // Auth SMTP
+                if (!empty($username) && !empty($password)) {
+                    $phpmailer->SMTPAuth = true;
+                    $phpmailer->Username = $username;
+                    $phpmailer->Password = $password;
+                } else {
+                    $phpmailer->SMTPAuth = false;
+                }
+                
+                // Chiffrement
+                if ($encryption === 'ssl' || $encryption === 'tls') {
+                    $phpmailer->SMTPSecure = $encryption;
+                } else {
+                    $phpmailer->SMTPSecure = '';
+                }
+                
+                // Expéditeur
+                if (!empty($from_email)) {
+                    if (empty($from_name) && function_exists('get_bloginfo')) {
+                        $from_name = get_bloginfo('name');
+                    }
+                    $phpmailer->setFrom($from_email, $from_name ?: 'WordPress');
+                }
+            };
+            
+            // Attacher la configuration SMTP juste pour cet envoi
+            add_action('phpmailer_init', $callback);
+        }
+        
+        $result = wp_mail($to, $subject, $message, $headers);
+        
+        if ($callback) {
+            remove_action('phpmailer_init', $callback);
+        }
+        
+        return $result;
+    }
+    
+    /**
      * Générer le template HTML de base pour les emails
      */
     public static function get_email_template($content, $title = '') {
@@ -323,4 +391,6 @@ class Osmose_Ads_Email {
         return self::get_email_template($content, $title);
     }
 }
+
+
 

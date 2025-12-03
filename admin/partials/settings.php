@@ -15,6 +15,18 @@ if (isset($_POST['submit'])) {
     update_option('osmose_ads_devis_url', esc_url_raw($_POST['devis_url'] ?? ''));
     update_option('osmose_ads_openai_api_key', sanitize_text_field($_POST['openai_api_key'] ?? ''));
     update_option('osmose_ads_ai_provider', sanitize_text_field($_POST['ai_provider'] ?? 'openai'));
+    // SMTP custom pour les emails du simulateur
+    update_option('osmose_ads_smtp_enabled', isset($_POST['smtp_enabled']) ? 1 : 0);
+    update_option('osmose_ads_smtp_host', sanitize_text_field($_POST['smtp_host'] ?? ''));
+    update_option('osmose_ads_smtp_port', intval($_POST['smtp_port'] ?? 587));
+    update_option('osmose_ads_smtp_encryption', sanitize_text_field($_POST['smtp_encryption'] ?? 'tls'));
+    update_option('osmose_ads_smtp_username', sanitize_text_field($_POST['smtp_username'] ?? ''));
+    // Ne pas afficher le mot de passe en clair plus tard, mais l'enregistrer
+    if (isset($_POST['smtp_password']) && $_POST['smtp_password'] !== '') {
+        update_option('osmose_ads_smtp_password', sanitize_text_field($_POST['smtp_password']));
+    }
+    update_option('osmose_ads_smtp_from_email', sanitize_email($_POST['smtp_from_email'] ?? ''));
+    update_option('osmose_ads_smtp_from_name', sanitize_text_field($_POST['smtp_from_name'] ?? ''));
     
     if (isset($_POST['services'])) {
         $services = array_map('sanitize_text_field', $_POST['services']);
@@ -39,6 +51,14 @@ $devis_url = get_option('osmose_ads_devis_url', '');
 $openai_api_key = get_option('osmose_ads_openai_api_key', '');
 $ai_provider = get_option('osmose_ads_ai_provider', 'openai');
 $services = get_option('osmose_ads_services', array());
+// SMTP
+$smtp_enabled = get_option('osmose_ads_smtp_enabled', 0);
+$smtp_host = get_option('osmose_ads_smtp_host', '');
+$smtp_port = get_option('osmose_ads_smtp_port', 587);
+$smtp_encryption = get_option('osmose_ads_smtp_encryption', 'tls');
+$smtp_username = get_option('osmose_ads_smtp_username', '');
+$smtp_from_email = get_option('osmose_ads_smtp_from_email', '');
+$smtp_from_name = get_option('osmose_ads_smtp_from_name', get_bloginfo('name'));
 ?>
 
 <!-- Page Header -->
@@ -133,6 +153,72 @@ $services = get_option('osmose_ads_services', array());
                         <?php endif; ?>
                     </div>
                     <button type="button" id="add-service" class="button"><?php _e('Ajouter un Service', 'osmose-ads'); ?></button>
+                </td>
+            </tr>
+
+            <tr>
+                <th colspan="2"><h2><?php _e('Emails du simulateur - SMTP personnalisé', 'osmose-ads'); ?></h2></th>
+            </tr>
+            <tr>
+                <th scope="row"><?php _e('Activer SMTP personnalisé', 'osmose-ads'); ?></th>
+                <td>
+                    <label>
+                        <input type="checkbox" name="smtp_enabled" value="1" <?php checked($smtp_enabled, 1); ?>>
+                        <?php _e('Utiliser ces paramètres SMTP pour les emails du simulateur (au lieu de la configuration WordPress par défaut)', 'osmose-ads'); ?>
+                    </label>
+                    <p class="description"><?php _e('Recommandé si votre hébergeur bloque la fonction mail() de PHP ou si vous utilisez un service SMTP externe (Gmail, Outlook, Mailgun, etc.).', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><?php _e('Hôte SMTP', 'osmose-ads'); ?></th>
+                <td>
+                    <input type="text" name="smtp_host" value="<?php echo esc_attr($smtp_host); ?>" class="regular-text" placeholder="smtp.exemple.com">
+                    <p class="description"><?php _e('Exemples : smtp.gmail.com, smtp.office365.com, smtp.mailgun.org…', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><?php _e('Port SMTP', 'osmose-ads'); ?></th>
+                <td>
+                    <input type="number" name="smtp_port" value="<?php echo esc_attr($smtp_port); ?>" class="small-text">
+                    <p class="description"><?php _e('Ports courants : 587 (TLS), 465 (SSL), 25.', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><?php _e('Chiffrement', 'osmose-ads'); ?></th>
+                <td>
+                    <select name="smtp_encryption">
+                        <option value="none" <?php selected($smtp_encryption, 'none'); ?>><?php _e('Aucun', 'osmose-ads'); ?></option>
+                        <option value="tls" <?php selected($smtp_encryption, 'tls'); ?>>TLS</option>
+                        <option value="ssl" <?php selected($smtp_encryption, 'ssl'); ?>>SSL</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><?php _e('Identifiant SMTP', 'osmose-ads'); ?></th>
+                <td>
+                    <input type="text" name="smtp_username" value="<?php echo esc_attr($smtp_username); ?>" class="regular-text" placeholder="user@exemple.com">
+                    <p class="description"><?php _e('Le login / email utilisé pour se connecter au serveur SMTP.', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><?php _e('Mot de passe SMTP', 'osmose-ads'); ?></th>
+                <td>
+                    <input type="password" name="smtp_password" value="" class="regular-text" autocomplete="new-password">
+                    <p class="description"><?php _e('Laisser vide pour ne pas modifier le mot de passe déjà enregistré.', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><?php _e('Email d\'expéditeur', 'osmose-ads'); ?></th>
+                <td>
+                    <input type="email" name="smtp_from_email" value="<?php echo esc_attr($smtp_from_email); ?>" class="regular-text" placeholder="no-reply@exemple.com">
+                    <p class="description"><?php _e('Adresse email qui apparaîtra comme expéditeur des emails du simulateur.', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><?php _e('Nom d\'expéditeur', 'osmose-ads'); ?></th>
+                <td>
+                    <input type="text" name="smtp_from_name" value="<?php echo esc_attr($smtp_from_name); ?>" class="regular-text" placeholder="<?php echo esc_attr(get_bloginfo('name')); ?>">
+                    <p class="description"><?php _e('Nom affiché comme expéditeur (ex : Nom de votre entreprise).', 'osmose-ads'); ?></p>
                 </td>
             </tr>
         </table>

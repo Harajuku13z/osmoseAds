@@ -11,6 +11,7 @@ if (isset($_POST['osmose_simulator_config_submit']) && current_user_can('manage_
     check_admin_referer('osmose_simulator_config');
     
     // Récupérer les valeurs
+    $simulator_enabled = isset($_POST['simulator_enabled']) ? 1 : 0;
     $page_slug = sanitize_title($_POST['simulator_page_slug'] ?? 'simulateur-devis');
     $page_title = sanitize_text_field($_POST['simulator_page_title'] ?? 'Simulateur de Devis');
     $email_notification = isset($_POST['simulator_email_notification']) ? 1 : 0;
@@ -23,6 +24,7 @@ if (isset($_POST['osmose_simulator_config_submit']) && current_user_can('manage_
     $hero_enabled = isset($_POST['simulator_hero_enabled']) ? 1 : 0;
     
     // Mettre à jour les options
+    update_option('osmose_ads_simulator_enabled', $simulator_enabled);
     update_option('osmose_ads_simulator_page_slug', $page_slug);
     update_option('osmose_ads_simulator_title', $page_title);
     update_option('osmose_ads_simulator_email_notification', $email_notification);
@@ -96,6 +98,7 @@ if (isset($_POST['osmose_simulator_config_submit']) && current_user_can('manage_
 
 // Récupérer les valeurs actuelles
 $page_id = get_option('osmose_ads_simulator_page_id');
+$simulator_enabled = get_option('osmose_ads_simulator_enabled', 1);
 $page_slug = get_option('osmose_ads_simulator_page_slug', 'simulateur-devis');
 $page_title = get_option('osmose_ads_simulator_title', 'Simulateur de Devis');
 $email_notification = get_option('osmose_ads_simulator_email_notification', 1);
@@ -139,6 +142,23 @@ if ($page_id) {
                 <div class="card-body">
                     <form method="post" action="">
                         <?php wp_nonce_field('osmose_simulator_config'); ?>
+                        
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="simulator_enabled"
+                                       name="simulator_enabled"
+                                       value="1"
+                                       <?php checked($simulator_enabled, 1); ?>>
+                                <label class="form-check-label" for="simulator_enabled">
+                                    <?php _e('Activer le simulateur (bouton et page visibles)', 'osmose-ads'); ?>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">
+                                <?php _e('Si cette option est désactivée, le bouton flottant "Devis Gratuit" n\'apparaîtra plus sur le site.', 'osmose-ads'); ?>
+                            </small>
+                        </div>
                         
                         <div class="mb-3">
                             <label for="simulator_page_title" class="form-label">

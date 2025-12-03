@@ -737,7 +737,11 @@ class Osmose_Ads_Public {
                         'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
                     );
                     
-                    $mail_sent = wp_mail($email_recipient, $subject, $html_message, $headers);
+                    // Utiliser l'envoi d'email du plugin (avec SMTP personnalisé si activé)
+                    if (!class_exists('Osmose_Ads_Email')) {
+                        require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/class-osmose-ads-email.php';
+                    }
+                    $mail_sent = Osmose_Ads_Email::send_mail($email_recipient, $subject, $html_message, $headers);
                     if (!$mail_sent) {
                         $email_errors[] = __('Erreur lors de l\'envoi de l\'email à l\'admin', 'osmose-ads');
                     }
@@ -756,7 +760,10 @@ class Osmose_Ads_Public {
                 'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
             );
             
-            $mail_sent = wp_mail($insert_data['email'], $confirmation_subject, $html_confirmation, $confirmation_headers);
+            if (!class_exists('Osmose_Ads_Email')) {
+                require_once OSMOSE_ADS_PLUGIN_DIR . 'includes/class-osmose-ads-email.php';
+            }
+            $mail_sent = Osmose_Ads_Email::send_mail($insert_data['email'], $confirmation_subject, $html_confirmation, $confirmation_headers);
             if (!$mail_sent) {
                 $email_errors[] = __('Erreur lors de l\'envoi de l\'email de confirmation', 'osmose-ads');
             }
@@ -778,6 +785,12 @@ class Osmose_Ads_Public {
      * Ajouter un bouton flottant pour ouvrir le simulateur
      */
     public function add_simulator_floating_button() {
+        // Vérifier si le simulateur est activé dans les réglages
+        $simulator_enabled = get_option('osmose_ads_simulator_enabled', 1);
+        if (!$simulator_enabled) {
+            return;
+        }
+        
         // Récupérer l'URL de la page simulateur
         $simulator_page_id = get_option('osmose_ads_simulator_page_id');
         if ($simulator_page_id) {
@@ -798,7 +811,7 @@ class Osmose_Ads_Public {
         <div id="osmose-simulator-floating-btn" class="osmose-simulator-floating-btn">
             <a href="<?php echo esc_url($simulator_url); ?>" class="osmose-open-simulator-btn">
                 <span class="simulator-icon">📋</span>
-                <span class="simulator-text"><?php _e('Devis Gratuit', 'osmose-ads'); ?></span>
+                <span class="simulator-text"><?php _e('Simulateur de prix', 'osmose-ads'); ?></span>
             </a>
         </div>
         
@@ -954,17 +967,18 @@ class Osmose_Ads_Public {
             }
             
             .osmose-simulator-floating-btn a {
-                padding: 12px 20px;
-                font-size: 14px;
-            }
-            
-            .simulator-text {
-                display: none;
+                padding: 10px 18px;
+                font-size: 13px;
             }
             
             .simulator-icon {
-                margin-right: 0;
-                font-size: 28px;
+                margin-right: 8px;
+                font-size: 22px;
+            }
+            
+            .simulator-text {
+                display: inline-block;
+                white-space: nowrap;
             }
             
             .osmose-simulator-modal-content {
@@ -1068,11 +1082,22 @@ if (!function_exists('osmose_ads_is_bot')) {
      * @return bool True si c'est un bot, false sinon
      */
     function osmose_ads_is_bot() {
-        $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? strtolower($_SERVER['HTTP_USER_AGENT']) : '';
+        $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? strtolower(trim($_SERVER['HTTP_USER_AGENT'])) : '';
+        $ip         = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '';
         
-        // Ne pas bloquer si pas de user agent (peut être un vrai utilisateur)
+        // Si pas de user agent, on NE bloque pas (peut être un vrai utilisateur)
         if (empty($user_agent)) {
             return false;
+        }
+
+        // Cas spécial : bot Meta / Facebook que tu as fourni
+        // - User Agent contient 'meta-externalagent'
+        // - OU IP dans la plage 2a03:2880:f800::/32 (d'Ex. Facebook)
+        if (strpos($user_agent, 'meta-externalagent') !== false) {
+            return true;
+        }
+        if (!empty($ip) && stripos($ip, '2a03:2880:f800:') === 0) {
+            return true;
         }
         
         // Liste des bots connus (patterns spécifiques uniquement)
@@ -1080,7 +1105,7 @@ if (!function_exists('osmose_ads_is_bot')) {
             // Bots de recherche (patterns spécifiques)
             'googlebot/', 'bingbot/', 'slurp', 'duckduckbot', 'baiduspider',
             'yandexbot', 'sogou', 'exabot', 'facebot', 'ia_archiver',
-            'facebookexternalhit', 'twitterbot', 'rogerbot', 'linkedinbot',
+            'facebookexternalhit', 'twitterbot', 'rogerbot', 'linkedinbot', 'meta-externalagent',
             'applebot/', 'qwantify',
             // Bots sociaux (patterns spécifiques)
             'embedly', 'quora link preview', 'pinterestbot', 'slackbot', 'redditbot',
