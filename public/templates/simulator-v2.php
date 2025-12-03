@@ -26,7 +26,8 @@ $project_types = get_option('osmose_ads_simulator_project_types', array(
     box-sizing: border-box;
 }
 
-body {
+/* Styles du simulateur - uniquement lorsque la classe osmose-simulator-page est présente sur le body */
+body.osmose-simulator-page {
     margin: 0 !important;
     padding: 0 !important;
     /* Fond blanc simple pour le simulateur, sans dégradé */
@@ -35,12 +36,46 @@ body {
     min-height: 100vh;
 }
 
-/* Masquer les éléments du thème */
-header, footer, .site-header, .site-footer, .elementor-location-header,
-.elementor-location-footer, #masthead, #colophon, .main-header,
-.main-footer, .page-header, .navbar, .footer, .header,
-.container-header, .container-footer {
+/* Masquer les éléments du thème - uniquement lorsque la classe osmose-simulator-page est présente sur le body */
+body.osmose-simulator-page header,
+body.osmose-simulator-page footer,
+body.osmose-simulator-page .site-header,
+body.osmose-simulator-page .site-footer,
+body.osmose-simulator-page .elementor-location-header,
+body.osmose-simulator-page .elementor-location-footer,
+body.osmose-simulator-page #masthead,
+body.osmose-simulator-page #colophon,
+body.osmose-simulator-page .main-header,
+body.osmose-simulator-page .main-footer,
+body.osmose-simulator-page .page-header,
+body.osmose-simulator-page .navbar,
+body.osmose-simulator-page .footer,
+body.osmose-simulator-page .header,
+body.osmose-simulator-page .container-header,
+body.osmose-simulator-page .container-footer {
     display: none !important;
+}
+
+/* Protection absolue du header et titre du simulateur */
+.osmose-simulator-header-bar,
+.osmose-simulator-header-bar *,
+.osmose-simulator-title-main {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    clip: auto !important;
+    clip-path: none !important;
+    position: relative !important;
+    z-index: 99999 !important;
+}
+
+.osmose-simulator-title-main {
+    display: block !important;
 }
 
 /* Container principal */
@@ -76,13 +111,22 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
 .osmose-simulator-title-main {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #ffffff;
-    margin: 0;
+    color: #ffffff !important;
+    margin: 0 !important;
     letter-spacing: -0.5px;
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
     text-align: center;
+    position: relative !important;
+    z-index: 9999 !important;
+    height: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    clip: auto !important;
+    clip-path: none !important;
 }
 
 /* Progress bar */
@@ -580,8 +624,8 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
                 <form id="osmose-simulator-form" class="osmose-simulator-form">
                     <!-- Step 0: Informations de contact -->
                     <div class="osmose-step-content active" data-step="0">
-                        <h3 class="step-title"><?php _e('Vos informations de contact', 'osmose-ads'); ?></h3>
-                        <p class="step-description"><?php _e('Ces informations sont nécessaires pour vous contacter', 'osmose-ads'); ?></p>
+                        <h3 class="step-title"><?php _e('Bienvenue dans notre simulateur de devis', 'osmose-ads'); ?></h3>
+                        <p class="step-description"><?php _e('Ce simulateur va nous permettre de collecter les informations nécessaires pour vous fournir une estimation personnalisée. Commençons par vos coordonnées de contact.', 'osmose-ads'); ?></p>
                         <div class="osmose-form-fields">
                             <div class="osmose-form-group">
                                 <label for="first_name"><?php _e('Prénom', 'osmose-ads'); ?> <span class="required">*</span></label>
@@ -748,52 +792,162 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
 // Passer les types de projets au JavaScript
 window.osmoseSimulatorProjects = <?php echo json_encode($project_types); ?>;
 
+// Ajouter la classe au body pour scoper les styles CSS uniquement à la page du simulateur
+(function() {
+    if (document.body && document.querySelector('.osmose-simulator-fullpage')) {
+        document.body.classList.add('osmose-simulator-page');
+    }
+    // Aussi avec jQuery si disponible
+    if (typeof jQuery !== 'undefined') {
+        jQuery(document).ready(function() {
+            if (jQuery('.osmose-simulator-fullpage').length) {
+                jQuery('body').addClass('osmose-simulator-page');
+            }
+        });
+    }
+})();
+
 // Forcer l'affichage du header et du titre (protection contre les scripts qui pourraient les cacher)
 (function() {
     function forceHeaderDisplay() {
         var $headerBar = jQuery('.osmose-simulator-header-bar');
         var $title = jQuery('.osmose-simulator-title-main');
+        var titleText = 'Simulateur de devis';
+        
+        // Si le titre n'existe plus, le recréer
+        if ($headerBar.length && !$title.length) {
+            var newTitle = jQuery('<h1>', {
+                'class': 'osmose-simulator-title-main',
+                'text': titleText
+            });
+            $headerBar.prepend(newTitle);
+            $title = newTitle;
+        }
         
         if ($headerBar.length) {
             $headerBar.css({
-                'display': 'flex',
-                'visibility': 'visible',
-                'opacity': '1'
+                'display': 'flex !important',
+                'visibility': 'visible !important',
+                'opacity': '1 !important',
+                'height': 'auto !important',
+                'max-height': 'none !important',
+                'overflow': 'visible !important'
             });
+            if ($headerBar[0]) {
+                $headerBar[0].style.setProperty('display', 'flex', 'important');
+                $headerBar[0].style.setProperty('visibility', 'visible', 'important');
+                $headerBar[0].style.setProperty('opacity', '1', 'important');
+            }
         }
         
         if ($title.length) {
             $title.css({
-                'display': 'block',
-                'visibility': 'visible',
-                'opacity': '1'
+                'display': 'block !important',
+                'visibility': 'visible !important',
+                'opacity': '1 !important',
+                'height': 'auto !important',
+                'width': 'auto !important',
+                'max-width': 'none !important',
+                'max-height': 'none !important',
+                'overflow': 'visible !important',
+                'clip': 'auto !important',
+                'clip-path': 'none !important'
             });
+            if ($title[0]) {
+                $title[0].style.setProperty('display', 'block', 'important');
+                $title[0].style.setProperty('visibility', 'visible', 'important');
+                $title[0].style.setProperty('opacity', '1', 'important');
+            }
+            
+            // S'assurer que le contenu texte est présent
+            if (!$title.text().trim()) {
+                if ($title.data('original-text')) {
+                    $title.text($title.data('original-text'));
+                } else {
+                    $title.text(titleText);
+                    $title.data('original-text', titleText);
+                }
+            }
         }
+    }
+    
+    // Sauvegarder le texte original immédiatement (sans attendre jQuery)
+    var titleElement = document.querySelector('.osmose-simulator-title-main');
+    if (titleElement && !titleElement.dataset.originalText) {
+        titleElement.dataset.originalText = titleElement.textContent || titleElement.innerText || 'Simulateur de devis';
     }
     
     // Exécuter immédiatement
     if (typeof jQuery !== 'undefined') {
+        // Sauvegarder aussi avec jQuery
+        jQuery(document).ready(function() {
+            var $title = jQuery('.osmose-simulator-title-main');
+            if ($title.length && !$title.data('original-text')) {
+                var text = $title.text() || titleElement ? (titleElement.textContent || titleElement.innerText) : 'Simulateur de devis';
+                $title.data('original-text', text);
+            }
+        });
+        
         forceHeaderDisplay();
         
-        // Vérifier périodiquement (toutes les 500ms pendant 5 secondes)
-        var checkCount = 0;
+        // Vérifier continuellement toutes les 100ms
         var checkInterval = setInterval(function() {
             forceHeaderDisplay();
-            checkCount++;
-            if (checkCount >= 10) {
-                clearInterval(checkInterval);
-            }
-        }, 500);
+        }, 100);
+        
+        // Ne jamais arrêter la vérification
+        // Utiliser MutationObserver pour détecter les changements
+        if (typeof MutationObserver !== 'undefined') {
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' || mutation.type === 'childList') {
+                        var target = mutation.target;
+                        if (target.classList && (target.classList.contains('osmose-simulator-header-bar') || 
+                            target.classList.contains('osmose-simulator-title-main') ||
+                            target.closest && target.closest('.osmose-simulator-header-bar'))) {
+                            forceHeaderDisplay();
+                        }
+                    }
+                });
+            });
+            
+            // Observer les changements sur le header et le titre
+            jQuery(document).ready(function() {
+                var $headerBar = jQuery('.osmose-simulator-header-bar');
+                var $title = jQuery('.osmose-simulator-title-main');
+                
+                if ($headerBar.length) {
+                    observer.observe($headerBar[0], {
+                        attributes: true,
+                        attributeFilter: ['style', 'class'],
+                        childList: true,
+                        subtree: true
+                    });
+                }
+                
+                if ($title.length) {
+                    observer.observe($title[0], {
+                        attributes: true,
+                        attributeFilter: ['style', 'class'],
+                        childList: true,
+                        subtree: true
+                    });
+                }
+            });
+        }
         
         // Vérifier après le chargement complet
         jQuery(document).ready(function() {
             forceHeaderDisplay();
         });
         
-        // Vérifier après un court délai
+        // Vérifier après plusieurs délais
+        setTimeout(forceHeaderDisplay, 50);
         setTimeout(forceHeaderDisplay, 100);
+        setTimeout(forceHeaderDisplay, 200);
         setTimeout(forceHeaderDisplay, 500);
         setTimeout(forceHeaderDisplay, 1000);
+        setTimeout(forceHeaderDisplay, 2000);
     }
 })();
 </script>
