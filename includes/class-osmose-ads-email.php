@@ -237,8 +237,33 @@ class Osmose_Ads_Email {
     
     /**
      * Récupérer l'URL du logo
+     *
+     * Priorité :
+     * 1. Logo du site défini dans WordPress (Personnaliser > Identité du site)
+     * 2. Icône du site (favicon)
+     * 3. Logo par défaut du plugin
      */
     private static function get_logo_url() {
+        // 1. Logo du site (custom logo)
+        if (function_exists('get_theme_mod') && function_exists('wp_get_attachment_image_src')) {
+            $custom_logo_id = get_theme_mod('custom_logo');
+            if ($custom_logo_id) {
+                $logo_image = wp_get_attachment_image_src($custom_logo_id, 'full');
+                if ($logo_image && !empty($logo_image[0])) {
+                    return $logo_image[0];
+                }
+            }
+        }
+
+        // 2. Icône du site
+        if (function_exists('has_site_icon') && function_exists('get_site_icon_url') && has_site_icon()) {
+            $site_icon_url = get_site_icon_url(200);
+            if (!empty($site_icon_url)) {
+                return $site_icon_url;
+            }
+        }
+
+        // 3. Logo par défaut du plugin
         $logo_paths = array(
             OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.png',
             OSMOSE_ADS_PLUGIN_DIR . 'admin/img/logo.jpg',

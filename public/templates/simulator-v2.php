@@ -560,7 +560,7 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
 <div class="osmose-simulator-fullpage">
     <div class="osmose-simulator-fullpage-inner">
         <div class="osmose-simulator-header-bar">
-            <h1 class="osmose-simulator-title-main"><?php _e('Simulateur de Prix', 'osmose-ads'); ?></h1>
+            <h1 class="osmose-simulator-title-main"><?php _e('Simulateur de devis', 'osmose-ads'); ?></h1>
             <?php if (!empty($phone_raw)): ?>
                 <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="osmose-simulator-call-btn">
                     <i class="fas fa-phone"></i>
