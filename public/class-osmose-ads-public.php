@@ -51,6 +51,14 @@ class Osmose_Ads_Public {
                 array(),
                 '1.11.0'
             );
+
+            // Ajouter Font Awesome pour les icônes (utilisées dans le template public)
+            wp_enqueue_style(
+                'font-awesome-5',
+                'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css',
+                array(),
+                '5.15.4'
+            );
         }
     }
 

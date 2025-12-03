@@ -201,6 +201,13 @@ if ($company_name) {
 get_header();
 ?>
 
+<style>
+/* Forcer la suppression du scroll horizontal sur les pages d'annonces */
+html, body {
+    overflow-x: hidden !important;
+}
+</style>
+
 <div class="osmose-ad-page-modern">
     
     <!-- Hero Section -->
