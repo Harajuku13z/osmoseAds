@@ -68,10 +68,12 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
 .osmose-simulator-header-bar {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     padding: 32px 40px;
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: space-between;
     gap: 20px;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .osmose-simulator-title-main {
@@ -80,6 +82,9 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
     color: #ffffff;
     margin: 0;
     letter-spacing: -0.5px;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .osmose-simulator-call-btn {
@@ -782,4 +787,53 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
 <script>
 // Passer les types de projets au JavaScript
 window.osmoseSimulatorProjects = <?php echo json_encode($project_types); ?>;
+
+// Forcer l'affichage du header et du titre (protection contre les scripts qui pourraient les cacher)
+(function() {
+    function forceHeaderDisplay() {
+        var $headerBar = jQuery('.osmose-simulator-header-bar');
+        var $title = jQuery('.osmose-simulator-title-main');
+        
+        if ($headerBar.length) {
+            $headerBar.css({
+                'display': 'flex',
+                'visibility': 'visible',
+                'opacity': '1'
+            });
+        }
+        
+        if ($title.length) {
+            $title.css({
+                'display': 'block',
+                'visibility': 'visible',
+                'opacity': '1'
+            });
+        }
+    }
+    
+    // Exécuter immédiatement
+    if (typeof jQuery !== 'undefined') {
+        forceHeaderDisplay();
+        
+        // Vérifier périodiquement (toutes les 500ms pendant 5 secondes)
+        var checkCount = 0;
+        var checkInterval = setInterval(function() {
+            forceHeaderDisplay();
+            checkCount++;
+            if (checkCount >= 10) {
+                clearInterval(checkInterval);
+            }
+        }, 500);
+        
+        // Vérifier après le chargement complet
+        jQuery(document).ready(function() {
+            forceHeaderDisplay();
+        });
+        
+        // Vérifier après un court délai
+        setTimeout(forceHeaderDisplay, 100);
+        setTimeout(forceHeaderDisplay, 500);
+        setTimeout(forceHeaderDisplay, 1000);
+    }
+})();
 </script>
