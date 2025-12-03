@@ -785,5 +785,12 @@
         max-width: 100%;
         overflow-x: hidden;
     }
+
+    /* Forcer la casse des textes très longs à l'intérieur de la page d'annonce */
+    .osmose-ad-page-modern,
+    .osmose-ad-page-modern * {
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+    }
 }
 
