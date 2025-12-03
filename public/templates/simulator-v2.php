@@ -71,9 +71,15 @@ footer,
 
 @media (max-width: 767px) {
     .osmose-simulator-fullpage-inner {
-        padding: 20px 16px;
+        padding: 16px 14px;
         border-radius: 0;
         box-shadow: none;
+    }
+
+    .osmose-simulator-fullpage {
+        align-items: flex-start;
+        justify-content: center;
+        padding: 12px 8px;
     }
 }
 
