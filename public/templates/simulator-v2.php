@@ -32,7 +32,8 @@ $phone_display = get_option('osmose_ads_company_phone', $phone_raw);
 body {
     margin: 0 !important;
     padding: 0 !important;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    /* Fond blanc simple pour le simulateur, sans dégradé */
+    background: #ffffff !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     min-height: 100vh;
 }

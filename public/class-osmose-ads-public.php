@@ -621,51 +621,52 @@ class Osmose_Ads_Public {
         // Préparer les données pour la base
         global $wpdb;
         $table_name = $wpdb->prefix . 'osmose_ads_quote_requests';
-        
-        // Vérifier que la table existe
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
-            // Créer la table si elle n'existe pas
-            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-            $charset_collate = $wpdb->get_charset_collate();
-            $sql = "CREATE TABLE IF NOT EXISTS $table_name (
-                id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-                property_type varchar(50),
-                work_type text,
-                first_name varchar(100),
-                last_name varchar(100),
-                email varchar(255),
-                phone varchar(50),
-                address varchar(500),
-                city varchar(255),
-                postal_code varchar(20),
-                surface varchar(50),
-                project_type varchar(100),
-                project_details text,
-                message text,
-                status varchar(50) DEFAULT 'pending',
-                user_ip varchar(45),
-                user_agent text,
-                page_url varchar(500),
-                created_at datetime DEFAULT CURRENT_TIMESTAMP,
-                updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                PRIMARY KEY (id),
-                KEY idx_status (status),
-                KEY idx_created_at (created_at),
-                KEY idx_email (email)
-            ) $charset_collate;";
-            
-            // Vérifier si les nouvelles colonnes existent, sinon les ajouter
-            $columns = $wpdb->get_col("DESC $table_name");
-            if (!in_array('surface', $columns)) {
+
+        // S'assurer que la table et toutes les colonnes nécessaires existent (création/mise à jour via dbDelta)
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        $charset_collate = $wpdb->get_charset_collate();
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            property_type varchar(50),
+            work_type text,
+            first_name varchar(100),
+            last_name varchar(100),
+            email varchar(255),
+            phone varchar(50),
+            address varchar(500),
+            city varchar(255),
+            postal_code varchar(20),
+            surface varchar(50),
+            project_type varchar(100),
+            project_details text,
+            message text,
+            status varchar(50) DEFAULT 'pending',
+            user_ip varchar(45),
+            user_agent text,
+            page_url varchar(500),
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_status (status),
+            KEY idx_created_at (created_at),
+            KEY idx_email (email)
+        ) $charset_collate;";
+
+        // dbDelta gère à la fois la création et la mise à jour de la structure
+        dbDelta($sql);
+
+        // Par sécurité, vérifier que les nouvelles colonnes existent bien (pour les anciennes installations)
+        $columns = $wpdb->get_col("DESC $table_name");
+        if ($columns) {
+            if (!in_array('surface', $columns, true)) {
                 $wpdb->query("ALTER TABLE $table_name ADD COLUMN surface varchar(50) AFTER postal_code");
             }
-            if (!in_array('project_type', $columns)) {
+            if (!in_array('project_type', $columns, true)) {
                 $wpdb->query("ALTER TABLE $table_name ADD COLUMN project_type varchar(100) AFTER surface");
             }
-            if (!in_array('project_details', $columns)) {
+            if (!in_array('project_details', $columns, true)) {
                 $wpdb->query("ALTER TABLE $table_name ADD COLUMN project_details text AFTER project_type");
             }
-            dbDelta($sql);
         }
         
         // Préparer les données d'insertion
@@ -723,6 +724,9 @@ class Osmose_Ads_Public {
         );
         
         if ($result === false) {
+            // Logger l'erreur SQL pour faciliter le débogage
+            error_log('Osmose ADS - Erreur lors de l\'insertion dans osmose_ads_quote_requests: ' . $wpdb->last_error);
+            error_log('Osmose ADS - Dernière requête SQL (quote_requests): ' . $wpdb->last_query);
             wp_send_json_error(array('message' => __('Erreur lors de l\'enregistrement', 'osmose-ads')));
             return;
         }
