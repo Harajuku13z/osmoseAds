@@ -16,6 +16,18 @@ $project_types = get_option('osmose_ads_simulator_project_types', array(
     )
 ));
 
+// Vérifier si on est vraiment sur la page du simulateur
+$is_simulator_page = false;
+$simulator_page_id = get_option('osmose_ads_simulator_page_id');
+if ($simulator_page_id && is_page($simulator_page_id)) {
+    $is_simulator_page = true;
+} else {
+    $simulator_slug = get_option('osmose_ads_simulator_page_slug', 'simulateur-devis');
+    if (is_page($simulator_slug)) {
+        $is_simulator_page = true;
+    }
+}
+
 ?>
 
 <style>
@@ -26,8 +38,9 @@ $project_types = get_option('osmose_ads_simulator_project_types', array(
     box-sizing: border-box;
 }
 
-/* Styles du simulateur - uniquement lorsque la classe osmose-simulator-page est présente sur le body */
-body.osmose-simulator-page {
+<?php if ($is_simulator_page): ?>
+/* Styles du simulateur - uniquement sur la page du simulateur */
+body {
     margin: 0 !important;
     padding: 0 !important;
     /* Fond blanc simple pour le simulateur, sans dégradé */
@@ -36,25 +49,14 @@ body.osmose-simulator-page {
     min-height: 100vh;
 }
 
-/* Masquer les éléments du thème - uniquement lorsque la classe osmose-simulator-page est présente sur le body */
-body.osmose-simulator-page header,
-body.osmose-simulator-page footer,
-body.osmose-simulator-page .site-header,
-body.osmose-simulator-page .site-footer,
-body.osmose-simulator-page .elementor-location-header,
-body.osmose-simulator-page .elementor-location-footer,
-body.osmose-simulator-page #masthead,
-body.osmose-simulator-page #colophon,
-body.osmose-simulator-page .main-header,
-body.osmose-simulator-page .main-footer,
-body.osmose-simulator-page .page-header,
-body.osmose-simulator-page .navbar,
-body.osmose-simulator-page .footer,
-body.osmose-simulator-page .header,
-body.osmose-simulator-page .container-header,
-body.osmose-simulator-page .container-footer {
+/* Masquer les éléments du thème - uniquement sur la page du simulateur */
+header, footer, .site-header, .site-footer, .elementor-location-header,
+.elementor-location-footer, #masthead, #colophon, .main-header,
+.main-footer, .page-header, .navbar, .footer, .header,
+.container-header, .container-footer {
     display: none !important;
 }
+<?php endif; ?>
 
 /* Protection absolue du header et titre du simulateur */
 .osmose-simulator-header-bar,
@@ -791,21 +793,6 @@ body.osmose-simulator-page .container-footer {
 <script>
 // Passer les types de projets au JavaScript
 window.osmoseSimulatorProjects = <?php echo json_encode($project_types); ?>;
-
-// Ajouter la classe au body pour scoper les styles CSS uniquement à la page du simulateur
-(function() {
-    if (document.body && document.querySelector('.osmose-simulator-fullpage')) {
-        document.body.classList.add('osmose-simulator-page');
-    }
-    // Aussi avec jQuery si disponible
-    if (typeof jQuery !== 'undefined') {
-        jQuery(document).ready(function() {
-            if (jQuery('.osmose-simulator-fullpage').length) {
-                jQuery('body').addClass('osmose-simulator-page');
-            }
-        });
-    }
-})();
 
 // Forcer l'affichage du header et du titre (protection contre les scripts qui pourraient les cacher)
 (function() {
