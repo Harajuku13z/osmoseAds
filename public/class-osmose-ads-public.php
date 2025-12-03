@@ -1162,44 +1162,49 @@ if (!function_exists('osmose_ads_track_visit')) {
         
         $table_name = $wpdb->prefix . 'osmose_ads_visits';
         
-        // Vérifier que la table existe
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
-            // Créer la table si elle n'existe pas
-            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-            $charset_collate = $wpdb->get_charset_collate();
-            
-            $sql = "CREATE TABLE IF NOT EXISTS $table_name (
-                id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-                ad_id bigint(20) UNSIGNED NOT NULL,
-                ad_slug varchar(255),
-                page_url varchar(500),
-                user_ip varchar(45),
-                user_agent text,
-                referrer varchar(500),
-                referrer_domain varchar(255),
-                utm_source varchar(100),
-                utm_medium varchar(100),
-                utm_campaign varchar(100),
-                device_type varchar(50),
-                browser varchar(100),
-                country varchar(100),
-                city_name varchar(255),
-                template_id bigint(20) UNSIGNED,
-                visit_date date,
-                visit_time datetime DEFAULT CURRENT_TIMESTAMP,
-                created_at datetime DEFAULT CURRENT_TIMESTAMP,
-                is_bot tinyint(1) DEFAULT 0,
-                PRIMARY KEY (id),
-                KEY idx_ad_id (ad_id),
-                KEY idx_visit_date (visit_date),
-                KEY idx_visit_time (visit_time),
-                KEY idx_referrer_domain (referrer_domain),
-                KEY idx_template_id (template_id),
-                KEY idx_ad_visit_date (ad_id, visit_date),
-                KEY idx_is_bot (is_bot)
-            ) $charset_collate;";
-            
-            dbDelta($sql);
+        // Vérifier que la table existe, sinon la créer / mettre à jour le schéma
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            ad_id bigint(20) UNSIGNED NOT NULL,
+            ad_slug varchar(255),
+            page_url varchar(500),
+            user_ip varchar(45),
+            user_agent text,
+            referrer varchar(500),
+            referrer_domain varchar(255),
+            utm_source varchar(100),
+            utm_medium varchar(100),
+            utm_campaign varchar(100),
+            device_type varchar(50),
+            browser varchar(100),
+            country varchar(100),
+            city_name varchar(255),
+            template_id bigint(20) UNSIGNED,
+            visit_date date,
+            visit_time datetime DEFAULT CURRENT_TIMESTAMP,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            is_bot tinyint(1) DEFAULT 0,
+            PRIMARY KEY (id),
+            KEY idx_ad_id (ad_id),
+            KEY idx_visit_date (visit_date),
+            KEY idx_visit_time (visit_time),
+            KEY idx_referrer_domain (referrer_domain),
+            KEY idx_template_id (template_id),
+            KEY idx_ad_visit_date (ad_id, visit_date),
+            KEY idx_is_bot (is_bot)
+        ) $charset_collate;";
+        
+        // dbDelta gère à la fois la création et la mise à jour (ajout de colonnes manquantes)
+        dbDelta($sql);
+        
+        // S'assurer que la colonne is_bot existe bien même sur d'anciennes installations
+        $has_is_bot_column = $wpdb->get_var("SHOW COLUMNS FROM $table_name LIKE 'is_bot'");
+        if (!$has_is_bot_column) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN is_bot tinyint(1) DEFAULT 0");
+            $wpdb->query("ALTER TABLE $table_name ADD KEY idx_is_bot (is_bot)");
         }
         
         // Récupérer les informations du visiteur
@@ -1235,7 +1240,7 @@ if (!function_exists('osmose_ads_track_visit')) {
         $visit_time = current_time('mysql');
         
         // Insérer la visite dans la base de données
-        $wpdb->insert(
+        $result = $wpdb->insert(
             $table_name,
             array(
                 'ad_id' => $ad_id,
@@ -1260,6 +1265,12 @@ if (!function_exists('osmose_ads_track_visit')) {
                 '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%d'
             )
         );
+        
+        if ($result === false) {
+            // Logger l'erreur pour debug sans casser le front
+            error_log('Osmose ADS: erreur lors de l\'insertion dans la table des visites: ' . $wpdb->last_error);
+            error_log('Osmose ADS: dernière requête SQL: ' . $wpdb->last_query);
+        }
     }
     
     /**
