@@ -25,6 +25,15 @@
     min-height: 100vh;
     /* Empêcher le scroll horizontal sur les pages d'annonces, surtout mobile */
     overflow-x: hidden;
+    width: 100%;
+}
+
+/* Rendre tout le contenu interne responsive (images, iframes, etc.) */
+.osmose-ad-page-modern img,
+.osmose-ad-page-modern iframe {
+    max-width: 100%;
+    height: auto;
+    display: block;
 }
 
 /* ========== HERO SECTION ========== */
@@ -59,6 +68,8 @@
     padding: 0 1rem;
     position: relative;
     z-index: 10;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .osmose-hero-content-modern {
@@ -194,6 +205,8 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 1rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .osmose-content-wrapper {
@@ -205,6 +218,8 @@
     border-radius: 1rem;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     padding: 2rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
@@ -291,6 +306,7 @@
     margin-bottom: 1.5rem;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    max-width: 100%;
 }
 
 .osmose-list {
@@ -314,6 +330,8 @@
 .osmose-sidebar-card {
     padding: 1.5rem;
     border-radius: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .osmose-card-green {
@@ -449,6 +467,8 @@
     gap: 0.75rem;
     font-size: 0.875rem;
     color: var(--gray-700);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .osmose-info-list i {
@@ -580,6 +600,9 @@
     background: #ffffff;
     box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     border: 1px solid var(--gray-200);
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 .osmose-reviews-title {
@@ -598,6 +621,14 @@
 .osmose-reviews-widget {
     border-radius: 0.75rem;
     overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* S'assurer que le widget d'avis (Trustindex / Google Reviews) ne dépasse pas en largeur */
+.osmose-reviews-widget iframe,
+.osmose-reviews-widget > div {
+    max-width: 100% !important;
 }
 
 /* ========== ANNONCES SIMILAIRES ========== */
@@ -736,10 +767,23 @@
     
     .osmose-content-card {
         padding: 1.5rem;
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .osmose-sidebar-modern {
         margin-top: 2rem;
+    }
+
+    /* Sécurité supplémentaire en mobile pour éviter tout débordement horizontal */
+    .osmose-hero-container,
+    .osmose-container,
+    .osmose-content-wrapper,
+    .osmose-content-grid,
+    .osmose-reviews-section,
+    .osmose-reviews-widget {
+        max-width: 100%;
+        overflow-x: hidden;
     }
 }
 
