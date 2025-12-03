@@ -792,6 +792,18 @@
         word-wrap: break-word;
         overflow-wrap: anywhere;
         box-sizing: border-box;
+        max-width: 100%;
+    }
+
+    /* S'assurer que tous les blocs principaux s'adaptent bien en largeur */
+    .osmose-ad-page-modern .osmose-content-card,
+    .osmose-ad-page-modern .osmose-sidebar-card,
+    .osmose-ad-page-modern .osmose-reviews-section,
+    .osmose-ad-page-modern .osmose-reviews-widget,
+    .osmose-ad-page-modern .osmose-content-text {
+        max-width: 100%;
+        width: 100%;
+        overflow-x: hidden;
     }
 
     /* Annuler tout white-space: nowrap éventuel sur les textes dans la page annonce */
