@@ -369,22 +369,48 @@ if ($table_exists) {
     }
     
     // Dernières visites pour la période
-    if ($has_is_bot_column) {
-        $recent_visits = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM $table_name 
-             WHERE visit_time >= %s AND (is_bot != 1 OR is_bot IS NULL)
-             ORDER BY visit_time DESC 
-             LIMIT 100",
-            $period_start_date
-        ), ARRAY_A);
+    // Si un filtre par annonce est actif, on limite aussi la liste à cette annonce
+    if ($filter_ad_id > 0) {
+        if ($has_is_bot_column) {
+            $recent_visits = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $table_name 
+                 WHERE visit_time >= %s 
+                   AND ad_id = %d
+                   AND (is_bot != 1 OR is_bot IS NULL)
+                 ORDER BY visit_time DESC 
+                 LIMIT 200",
+                $period_start_date,
+                $filter_ad_id
+            ), ARRAY_A);
+        } else {
+            $recent_visits = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $table_name 
+                 WHERE visit_time >= %s 
+                   AND ad_id = %d
+                 ORDER BY visit_time DESC 
+                 LIMIT 200",
+                $period_start_date,
+                $filter_ad_id
+            ), ARRAY_A);
+        }
     } else {
-        $recent_visits = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM $table_name 
-             WHERE visit_time >= %s
-             ORDER BY visit_time DESC 
-             LIMIT 100",
-            $period_start_date
-        ), ARRAY_A);
+        if ($has_is_bot_column) {
+            $recent_visits = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $table_name 
+                 WHERE visit_time >= %s AND (is_bot != 1 OR is_bot IS NULL)
+                 ORDER BY visit_time DESC 
+                 LIMIT 200",
+                $period_start_date
+            ), ARRAY_A);
+        } else {
+            $recent_visits = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $table_name 
+                 WHERE visit_time >= %s
+                 ORDER BY visit_time DESC 
+                 LIMIT 200",
+                $period_start_date
+            ), ARRAY_A);
+        }
     }
 }
 
