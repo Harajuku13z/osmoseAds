@@ -74,89 +74,15 @@ footer,
 }
 
 /* Zone d'en-tête interne (logo + titre + bouton appel) */
-.osmose-simulator-header-simple {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 24px;
-}
-
-.osmose-simulator-header-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.osmose-simulator-logo {
-    max-height: 40px;
-    width: auto;
-}
-
 .osmose-simulator-title-main {
     font-size: 1.5rem;
     font-weight: 700;
-}
-
-.osmose-simulator-call-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    border: none;
-    background: #10b981;
-    color: #ffffff;
-    font-weight: 600;
-    text-decoration: none;
-    font-size: 0.95rem;
-}
-
-.osmose-simulator-call-btn i {
-    font-size: 1.1rem;
-}
-
-@media (max-width: 767px) {
-    .osmose-simulator-header-simple {
-        flex-direction: column;
-        align-items: flex-start;
-    }
 }
 </style>
 
 <div class="osmose-simulator-fullpage">
     <div class="osmose-simulator-fullpage-inner">
-        <?php
-        // Logo du site (custom logo si disponible)
-        $logo_html = '';
-        if (function_exists('get_custom_logo')) {
-            $logo_html = get_custom_logo();
-        }
-        ?>
-
-        <div class="osmose-simulator-header-simple">
-            <div class="osmose-simulator-header-left">
-                <?php if (!empty($logo_html)): ?>
-                    <div class="osmose-simulator-logo-wrapper">
-                        <?php echo $logo_html; ?>
-                    </div>
-                <?php else: ?>
-                    <span class="osmose-simulator-title-main"><?php echo esc_html(get_bloginfo('name')); ?></span>
-                <?php endif; ?>
-                <span class="osmose-simulator-title-main"><?php _e('Simulateur de Prix', 'osmose-ads'); ?></span>
-            </div>
-
-            <?php
-            $phone_raw = get_option('osmose_ads_company_phone_raw', '');
-            $phone_display = get_option('osmose_ads_company_phone', $phone_raw);
-            if ($phone_raw):
-            ?>
-                <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="osmose-simulator-call-btn">
-                    <i class="fas fa-phone"></i>
-                    <span><?php echo esc_html($phone_display); ?></span>
-                </a>
-            <?php endif; ?>
-        </div>
+        <h1 class="osmose-simulator-title-main"><?php _e('Simulateur de Prix', 'osmose-ads'); ?></h1>
 
         <div class="osmose-simulator-container" id="osmose-simulator">
             <div class="osmose-simulator-wrapper">
