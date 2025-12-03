@@ -791,6 +791,21 @@
     .osmose-ad-page-modern * {
         word-wrap: break-word;
         overflow-wrap: anywhere;
+        box-sizing: border-box;
+    }
+
+    /* Annuler tout white-space: nowrap éventuel sur les textes dans la page annonce */
+    .osmose-ad-page-modern p,
+    .osmose-ad-page-modern li,
+    .osmose-ad-page-modern span,
+    .osmose-ad-page-modern a,
+    .osmose-ad-page-modern h1,
+    .osmose-ad-page-modern h2,
+    .osmose-ad-page-modern h3,
+    .osmose-ad-page-modern h4,
+    .osmose-ad-page-modern h5,
+    .osmose-ad-page-modern h6 {
+        white-space: normal !important;
     }
 }
 
