@@ -25,7 +25,23 @@ body {
     background: #ffffff !important;
 }
 
-header, footer, .site-header, .site-footer {
+/* Masquer un maximum de wrappers de thème pour obtenir une page vraiment blanche */
+header,
+footer,
+.site-header,
+.site-footer,
+.elementor-location-header,
+.elementor-location-footer,
+#masthead,
+#colophon,
+.main-header,
+.main-footer,
+.page-header,
+.navbar,
+.footer,
+.header,
+.container-header,
+.container-footer {
     display: none !important;
 }
 
