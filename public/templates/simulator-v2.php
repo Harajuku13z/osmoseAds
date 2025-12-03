@@ -716,7 +716,7 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
 
                 <!-- Success Message -->
                 <div class="osmose-simulator-success" style="display: none;">
-                    <div class="success-icon">✓</div>
+                    <div class="success-icon">✓ </div>
                     <h3><?php _e('Demande envoyée avec succès !', 'osmose-ads'); ?></h3>
                     <p><?php _e('Nous vous contacterons dans les plus brefs délais.', 'osmose-ads'); ?></p>
                 </div>
