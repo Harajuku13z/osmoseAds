@@ -16,9 +16,6 @@ $project_types = get_option('osmose_ads_simulator_project_types', array(
     )
 ));
 
-// Numéro de téléphone
-$phone_raw     = get_option('osmose_ads_company_phone_raw', '');
-$phone_display = get_option('osmose_ads_company_phone', $phone_raw);
 ?>
 
 <style>
@@ -70,7 +67,7 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
     padding: 32px 40px;
     display: flex !important;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 20px;
     visibility: visible !important;
     opacity: 1 !important;
@@ -85,32 +82,7 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-}
-
-.osmose-simulator-call-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 24px;
-    border-radius: 12px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    color: #ffffff;
-    font-weight: 600;
-    text-decoration: none;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-}
-
-.osmose-simulator-call-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: translateY(-2px);
-}
-
-.osmose-simulator-call-btn i {
-    font-size: 1.1rem;
+    text-align: center;
 }
 
 /* Progress bar */
@@ -490,19 +462,13 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
 
     .osmose-simulator-header-bar {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
+        justify-content: center;
         padding: 14px 14px;
     }
 
     .osmose-simulator-title-main {
         font-size: 1.2rem;
-    }
-
-    .osmose-simulator-call-btn {
-        width: 100%;
-        justify-content: center;
-        padding: 8px 12px;
-        font-size: 0.9rem;
     }
 
     /* Masquer la progress desktop sur mobile */
@@ -573,12 +539,6 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
     <div class="osmose-simulator-fullpage-inner">
         <div class="osmose-simulator-header-bar">
             <h1 class="osmose-simulator-title-main"><?php _e('Simulateur de devis', 'osmose-ads'); ?></h1>
-            <?php if (!empty($phone_raw)): ?>
-                <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="osmose-simulator-call-btn">
-                    <i class="fas fa-phone"></i>
-                    <span><?php echo esc_html($phone_display); ?></span>
-                </a>
-            <?php endif; ?>
         </div>
 
         <div class="osmose-simulator-container" id="osmose-simulator">
