@@ -51,8 +51,14 @@ $hero_image = get_option('osmose_ads_simulator_hero_image', '');
         </section>
     <?php endif; ?>
 
-    <div class="osmose-simulator-container" id="osmose-simulator">
-        <div class="osmose-simulator-wrapper">
+    <!-- Section contenu avec la même carte centrale que les pages d'annonces -->
+    <section class="osmose-content-section">
+        <div class="osmose-container">
+            <div class="osmose-content-wrapper">
+                <div class="osmose-content-card">
+
+                    <div class="osmose-simulator-container" id="osmose-simulator">
+                        <div class="osmose-simulator-wrapper">
             <!-- Header (affiché seulement si le hero n'est pas activé) -->
             <?php if (!$hero_enabled || empty($hero_title)): ?>
                 <div class="osmose-simulator-header">
@@ -247,11 +253,13 @@ $hero_image = get_option('osmose_ads_simulator_hero_image', '');
             <div class="error-icon">✗</div>
             <h3><?php _e('Erreur', 'osmose-ads'); ?></h3>
             <p class="error-message"></p>
-        </div>
-    </div>
-</div>
+                        </div>
+                    </div>
 
-    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
 
 <script>
