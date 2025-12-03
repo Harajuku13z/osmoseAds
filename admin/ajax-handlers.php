@@ -1306,7 +1306,7 @@ function osmose_ads_is_bot_user_agent($user_agent_raw) {
         // Bots de recherche (patterns spécifiques)
         'googlebot/', 'bingbot/', 'slurp', 'duckduckbot', 'baiduspider',
         'yandexbot', 'sogou', 'exabot', 'facebot', 'ia_archiver',
-        'facebookexternalhit', 'twitterbot', 'rogerbot', 'linkedinbot',
+        'facebookexternalhit', 'twitterbot', 'rogerbot', 'linkedinbot', 'meta-externalagent',
         'applebot/', 'qwantify',
         // Bots sociaux (patterns spécifiques)
         'embedly', 'quora link preview', 'pinterestbot', 'slackbot', 'redditbot',

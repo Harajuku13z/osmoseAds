@@ -1158,11 +1158,6 @@ if (!function_exists('osmose_ads_is_bot')) {
 
 if (!function_exists('osmose_ads_track_visit')) {
     function osmose_ads_track_visit($ad_id, $ad_slug, $page_url, $template_id = null, $city = null) {
-        // Ne pas tracker les visites des bots
-        if (osmose_ads_is_bot()) {
-            return;
-        }
-        
         global $wpdb;
         
         $table_name = $wpdb->prefix . 'osmose_ads_visits';
@@ -1193,13 +1188,15 @@ if (!function_exists('osmose_ads_track_visit')) {
                 visit_date date,
                 visit_time datetime DEFAULT CURRENT_TIMESTAMP,
                 created_at datetime DEFAULT CURRENT_TIMESTAMP,
+                is_bot tinyint(1) DEFAULT 0,
                 PRIMARY KEY (id),
                 KEY idx_ad_id (ad_id),
                 KEY idx_visit_date (visit_date),
                 KEY idx_visit_time (visit_time),
                 KEY idx_referrer_domain (referrer_domain),
                 KEY idx_template_id (template_id),
-                KEY idx_ad_visit_date (ad_id, visit_date)
+                KEY idx_ad_visit_date (ad_id, visit_date),
+                KEY idx_is_bot (is_bot)
             ) $charset_collate;";
             
             dbDelta($sql);
@@ -1209,6 +1206,7 @@ if (!function_exists('osmose_ads_track_visit')) {
         $user_ip = osmose_ads_get_user_ip();
         $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
         $referrer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
+        $is_bot = osmose_ads_is_bot() ? 1 : 0;
         
         // Extraire le domaine du referrer
         $referrer_domain = '';
@@ -1256,9 +1254,10 @@ if (!function_exists('osmose_ads_track_visit')) {
                 'template_id' => $template_id,
                 'visit_date' => $visit_date,
                 'visit_time' => $visit_time,
+                'is_bot' => $is_bot,
             ),
             array(
-                '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s'
+                '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%d'
             )
         );
     }
