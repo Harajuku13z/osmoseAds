@@ -475,27 +475,29 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
 /* Responsive mobile */
 @media (max-width: 768px) {
     .osmose-simulator-fullpage {
-        padding: 20px 12px;
+        padding: 10px 8px;
         align-items: flex-start;
     }
 
     .osmose-simulator-fullpage-inner {
-        border-radius: 16px;
+        border-radius: 12px;
     }
 
     .osmose-simulator-header-bar {
         flex-direction: column;
         align-items: flex-start;
-        padding: 24px 20px;
+        padding: 14px 14px;
     }
 
     .osmose-simulator-title-main {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
     }
 
     .osmose-simulator-call-btn {
         width: 100%;
         justify-content: center;
+        padding: 8px 12px;
+        font-size: 0.9rem;
     }
 
     /* Masquer la progress desktop sur mobile */
@@ -509,44 +511,49 @@ header, footer, .site-header, .site-footer, .elementor-location-header,
     }
 
     .osmose-simulator-form {
-        padding: 24px 20px;
+        padding: 16px 14px;
     }
 
     .step-title {
-        font-size: 1.25rem;
+        font-size: 1.1rem;
+        margin-bottom: 8px;
     }
 
     .step-description {
-        font-size: 0.9rem;
-        margin-bottom: 24px;
+        font-size: 0.85rem;
+        margin-bottom: 14px;
     }
 
     .osmose-form-fields {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 10px;
     }
 
     .osmose-option-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
+        gap: 8px;
     }
 
     .osmose-option-card {
-        padding: 20px 12px;
-        min-height: 120px;
+        padding: 12px 8px;
+        min-height: 100px;
     }
 
     .option-icon {
-        font-size: 2.5rem;
+        font-size: 2rem;
     }
 
     .osmose-step-actions {
         flex-direction: column-reverse;
+        gap: 8px;
+        margin-top: 12px;
     }
 
     .osmose-btn {
         width: 100%;
         justify-content: center;
+        padding: 8px 12px;
+        font-size: 0.9rem;
     }
 }
 

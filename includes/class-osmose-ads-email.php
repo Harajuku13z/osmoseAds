@@ -82,7 +82,6 @@ class Osmose_Ads_Email {
      */
     public static function get_email_template($content, $title = '') {
         $company_name = get_bloginfo('name');
-        $logo_url = self::get_logo_url();
         
         $html = '<!DOCTYPE html>
 <html lang="fr">
@@ -196,13 +195,8 @@ class Osmose_Ads_Email {
 </head>
 <body>
     <div class="email-container">
-        <div class="email-header">';
-        
-        if ($logo_url) {
-            $html .= '<img src="' . esc_url($logo_url) . '" alt="' . esc_attr($company_name) . '" class="email-logo">';
-        }
-        
-        $html .= '<h1 class="email-company-name">' . esc_html($company_name) . '</h1>
+        <div class="email-header">
+            <h1 class="email-company-name">' . esc_html($company_name) . '</h1>
         </div>
         <div class="email-body">
             ' . $content . '
