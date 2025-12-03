@@ -15,6 +15,10 @@ $project_types = get_option('osmose_ads_simulator_project_types', array(
         'options' => array('hydrofuge', 'démoussage', 'réparation', 'remplacement', 'isolation')
     )
 ));
+
+// Numéro de téléphone (pour le bouton d'appel dans le header interne)
+$phone_raw     = get_option('osmose_ads_company_phone_raw', '');
+$phone_display = get_option('osmose_ads_company_phone', $phone_raw);
 ?>
 
 <style>
@@ -73,16 +77,63 @@ footer,
     }
 }
 
-/* Zone d'en-tête interne (logo + titre + bouton appel) */
+/* Barre d'en-tête interne (titre + bouton appel) */
+.osmose-simulator-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
 .osmose-simulator-title-main {
     font-size: 1.5rem;
     font-weight: 700;
+    margin: 0;
+}
+
+.osmose-simulator-call-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: none;
+    background: #10b981;
+    color: #ffffff;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.osmose-simulator-call-btn i {
+    font-size: 1.1rem;
+    color: #ffffff;
+}
+
+.osmose-simulator-call-btn span {
+    color: #ffffff;
+}
+
+@media (max-width: 767px) {
+    .osmose-simulator-header-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 </style>
 
 <div class="osmose-simulator-fullpage">
     <div class="osmose-simulator-fullpage-inner">
-        <h1 class="osmose-simulator-title-main"><?php _e('Simulateur de Prix', 'osmose-ads'); ?></h1>
+        <div class="osmose-simulator-header-bar">
+            <h1 class="osmose-simulator-title-main"><?php _e('Simulateur de Prix', 'osmose-ads'); ?></h1>
+            <?php if (!empty($phone_raw)): ?>
+                <a href="tel:<?php echo esc_attr($phone_raw); ?>" class="osmose-simulator-call-btn">
+                    <i class="fas fa-phone"></i>
+                    <span><?php echo esc_html($phone_display); ?></span>
+                </a>
+            <?php endif; ?>
+        </div>
 
         <div class="osmose-simulator-container" id="osmose-simulator">
             <div class="osmose-simulator-wrapper">
