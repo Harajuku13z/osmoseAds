@@ -27,6 +27,8 @@ if (isset($_POST['submit'])) {
     }
     update_option('osmose_ads_smtp_from_email', sanitize_email($_POST['smtp_from_email'] ?? ''));
     update_option('osmose_ads_smtp_from_name', sanitize_text_field($_POST['smtp_from_name'] ?? ''));
+    // Notifications admin (emails leads / simulateur)
+    update_option('osmose_ads_simulator_email_recipient', sanitize_email($_POST['simulator_notification_email'] ?? ''));
     
     if (isset($_POST['services'])) {
         $services = array_map('sanitize_text_field', $_POST['services']);
@@ -59,6 +61,8 @@ $smtp_encryption = get_option('osmose_ads_smtp_encryption', 'tls');
 $smtp_username = get_option('osmose_ads_smtp_username', '');
 $smtp_from_email = get_option('osmose_ads_smtp_from_email', '');
 $smtp_from_name = get_option('osmose_ads_smtp_from_name', get_bloginfo('name'));
+// Email de notification admin (leads)
+$simulator_notification_email = get_option('osmose_ads_simulator_email_recipient', get_option('admin_email'));
 ?>
 
 <!-- Page Header -->
@@ -157,7 +161,7 @@ $smtp_from_name = get_option('osmose_ads_smtp_from_name', get_bloginfo('name'));
             </tr>
 
             <tr>
-                <th colspan="2"><h2><?php _e('Emails du simulateur - SMTP personnalisé', 'osmose-ads'); ?></h2></th>
+                <th colspan="2"><h2><?php _e('Emails du simulateur - Paramètres SMTP', 'osmose-ads'); ?></h2></th>
             </tr>
             <tr>
                 <th scope="row"><?php _e('Activer SMTP personnalisé', 'osmose-ads'); ?></th>
@@ -170,7 +174,7 @@ $smtp_from_name = get_option('osmose_ads_smtp_from_name', get_bloginfo('name'));
                 </td>
             </tr>
             <tr>
-                <th scope="row"><?php _e('Hôte SMTP', 'osmose-ads'); ?></th>
+                <th scope="row"><?php _e('Serveur SMTP', 'osmose-ads'); ?></th>
                 <td>
                     <input type="text" name="smtp_host" value="<?php echo esc_attr($smtp_host); ?>" class="regular-text" placeholder="smtp.exemple.com">
                     <p class="description"><?php _e('Exemples : smtp.gmail.com, smtp.office365.com, smtp.mailgun.org…', 'osmose-ads'); ?></p>
@@ -184,7 +188,7 @@ $smtp_from_name = get_option('osmose_ads_smtp_from_name', get_bloginfo('name'));
                 </td>
             </tr>
             <tr>
-                <th scope="row"><?php _e('Chiffrement', 'osmose-ads'); ?></th>
+                <th scope="row"><?php _e('Encryption', 'osmose-ads'); ?></th>
                 <td>
                     <select name="smtp_encryption">
                         <option value="none" <?php selected($smtp_encryption, 'none'); ?>><?php _e('Aucun', 'osmose-ads'); ?></option>
@@ -194,31 +198,52 @@ $smtp_from_name = get_option('osmose_ads_smtp_from_name', get_bloginfo('name'));
                 </td>
             </tr>
             <tr>
-                <th scope="row"><?php _e('Identifiant SMTP', 'osmose-ads'); ?></th>
+                <th scope="row"><?php _e('Nom d\'utilisateur (email)', 'osmose-ads'); ?></th>
                 <td>
                     <input type="text" name="smtp_username" value="<?php echo esc_attr($smtp_username); ?>" class="regular-text" placeholder="user@exemple.com">
-                    <p class="description"><?php _e('Le login / email utilisé pour se connecter au serveur SMTP.', 'osmose-ads'); ?></p>
+                    <p class="description"><?php _e('Le login / email utilisé pour se connecter au serveur SMTP (ex : votre adresse Hostinger).', 'osmose-ads'); ?></p>
                 </td>
             </tr>
             <tr>
                 <th scope="row"><?php _e('Mot de passe SMTP', 'osmose-ads'); ?></th>
                 <td>
                     <input type="password" name="smtp_password" value="" class="regular-text" autocomplete="new-password">
-                    <p class="description"><?php _e('Laisser vide pour ne pas modifier le mot de passe déjà enregistré.', 'osmose-ads'); ?></p>
+                    <p class="description"><?php _e('Le mot de passe de votre compte email (par ex. Hostinger). Laisser vide pour ne pas modifier le mot de passe déjà enregistré.', 'osmose-ads'); ?></p>
                 </td>
             </tr>
             <tr>
-                <th scope="row"><?php _e('Email d\'expéditeur', 'osmose-ads'); ?></th>
+                <th scope="row"><?php _e('Email d\'expédition', 'osmose-ads'); ?></th>
                 <td>
                     <input type="email" name="smtp_from_email" value="<?php echo esc_attr($smtp_from_email); ?>" class="regular-text" placeholder="no-reply@exemple.com">
                     <p class="description"><?php _e('Adresse email qui apparaîtra comme expéditeur des emails du simulateur.', 'osmose-ads'); ?></p>
                 </td>
             </tr>
             <tr>
-                <th scope="row"><?php _e('Nom d\'expéditeur', 'osmose-ads'); ?></th>
+                <th scope="row"><?php _e('Nom d\'expédition', 'osmose-ads'); ?></th>
                 <td>
                     <input type="text" name="smtp_from_name" value="<?php echo esc_attr($smtp_from_name); ?>" class="regular-text" placeholder="<?php echo esc_attr(get_bloginfo('name')); ?>">
                     <p class="description"><?php _e('Nom affiché comme expéditeur (ex : Nom de votre entreprise).', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+
+            <tr>
+                <th colspan="2"><h2><?php _e('Notifications admin', 'osmose-ads'); ?></h2></th>
+            </tr>
+            <tr>
+                <th scope="row"><?php _e('Email pour recevoir les notifications', 'osmose-ads'); ?></th>
+                <td>
+                    <input type="email" name="simulator_notification_email" value="<?php echo esc_attr($simulator_notification_email); ?>" class="regular-text" placeholder="vous@exemple.com">
+                    <p class="description"><?php _e('Email où vous recevrez les notifications de nouvelles soumissions du simulateur (leads).', 'osmose-ads'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><?php _e('Tester l\'envoi', 'osmose-ads'); ?></th>
+                <td>
+                    <button type="button" class="button button-secondary" id="osmose-ads-test-email-btn">
+                        <?php _e('Tester l\'envoi d\'un email', 'osmose-ads'); ?>
+                    </button>
+                    <p class="description"><?php _e('Un email de test sera envoyé à l\'adresse de notification ci-dessus pour vérifier la configuration SMTP.', 'osmose-ads'); ?></p>
+                    <div id="osmose-ads-test-email-result" style="margin-top:8px;"></div>
                 </td>
             </tr>
         </table>
@@ -351,6 +376,38 @@ jQuery(document).ready(function($) {
     
     $(document).on('click', '.remove-service', function() {
         $(this).parent().remove();
+    });
+
+    // Test d'envoi d'email SMTP
+    $('#osmose-ads-test-email-btn').on('click', function(e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var $result = $('#osmose-ads-test-email-result');
+        var email = $('input[name="simulator_notification_email"]').val();
+
+        if (!email) {
+            email = '<?php echo esc_js(get_option('admin_email')); ?>';
+        }
+
+        $btn.prop('disabled', true).text('<?php echo esc_js(__('Envoi en cours...', 'osmose-ads')); ?>');
+        $result.removeClass('updated error').text('');
+
+        $.post(osmoseAds.ajax_url, {
+            action: 'osmose_ads_test_email',
+            nonce: osmoseAds.nonce,
+            email: email
+        }).done(function(response) {
+            if (response && response.success) {
+                $result.removeClass('error').addClass('updated').text(response.data.message || '<?php echo esc_js(__('Email de test envoyé.', 'osmose-ads')); ?>');
+            } else {
+                var msg = (response && response.data && response.data.message) ? response.data.message : '<?php echo esc_js(__('Erreur lors de l\'envoi de l\'email de test.', 'osmose-ads')); ?>';
+                $result.removeClass('updated').addClass('error').text(msg);
+            }
+        }).fail(function() {
+            $result.removeClass('updated').addClass('error').text('<?php echo esc_js(__('Erreur AJAX lors de l\'envoi de l\'email de test.', 'osmose-ads')); ?>');
+        }).always(function() {
+            $btn.prop('disabled', false).text('<?php echo esc_js(__('Tester l\'envoi d\'un email', 'osmose-ads')); ?>');
+        });
     });
 });
 </script>
