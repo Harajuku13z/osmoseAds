@@ -246,42 +246,71 @@ class Osmose_Ads_Rewrite {
             $has_is_bot_column = true;
         }
         
-        // Préparer les données à insérer
-        $insert_data = array(
-            'ad_id' => $ad_id ?: null,
-            'ad_slug' => $ad_slug ?: '',
-            'page_url' => $page_url ?: $referrer,
-            'phone_number' => $phone ?: '',
-            'user_ip' => $user_ip ?: '',
-            'user_agent' => $user_agent ?: '',
-            'referrer' => $referrer ?: '',
-            'is_bot' => $is_bot ? 1 : 0,
-            'call_time' => current_time('mysql'),
-            'created_at' => current_time('mysql')
+        // Protection anti-doublon : ne pas enregistrer plusieurs fois le même appel en quelques secondes
+        // On vérifie si un appel identique (même annonce, même téléphone, même IP) existe déjà
+        $duplicate_window_seconds = 60; // fenêtre de 60s pour considérer un doublon
+        $recent_call = $wpdb->get_var(
+            $wpdb->prepare(
+                "
+                SELECT id 
+                FROM {$table_name}
+                WHERE 
+                    (%d = 0 OR ad_id = %d)
+                    AND phone_number = %s
+                    AND user_ip = %s
+                    AND call_time >= (NOW() - INTERVAL %d SECOND)
+                ORDER BY id DESC
+                LIMIT 1
+                ",
+                $ad_id,
+                $ad_id,
+                $phone,
+                $user_ip,
+                $duplicate_window_seconds
+            )
         );
-        
-        $insert_format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s');
-        
-        // Ajouter 'source' si la colonne existe
-        if ($has_source_column) {
-            $insert_data['source'] = $source;
-            $insert_format[] = '%s';
-        }
-        
-        // Enregistrer l'appel (même si c'est un bot, pour avoir une trace)
-        $result = $wpdb->insert(
-            $table_name,
-            $insert_data,
-            $insert_format
-        );
-        
-        if ($result === false) {
-            error_log('Osmose ADS: ERROR inserting call - ' . $wpdb->last_error);
+
+        if (!empty($recent_call)) {
+            // Ne pas recréer une ligne, mais continuer la redirection
+            error_log('Osmose ADS: Duplicate call detected in URL handler, skipping insert. Existing ID: ' . $recent_call);
         } else {
-            if ($is_bot) {
-                error_log('Osmose ADS: Bot call tracked (marked as bot). ID: ' . $wpdb->insert_id);
+            // Préparer les données à insérer
+            $insert_data = array(
+                'ad_id' => $ad_id ?: null,
+                'ad_slug' => $ad_slug ?: '',
+                'page_url' => $page_url ?: $referrer,
+                'phone_number' => $phone ?: '',
+                'user_ip' => $user_ip ?: '',
+                'user_agent' => $user_agent ?: '',
+                'referrer' => $referrer ?: '',
+                'is_bot' => $is_bot ? 1 : 0,
+                'call_time' => current_time('mysql'),
+                'created_at' => current_time('mysql')
+            );
+            
+            $insert_format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s');
+            
+            // Ajouter 'source' si la colonne existe
+            if ($has_source_column) {
+                $insert_data['source'] = $source;
+                $insert_format[] = '%s';
+            }
+            
+            // Enregistrer l'appel (même si c'est un bot, pour avoir une trace)
+            $result = $wpdb->insert(
+                $table_name,
+                $insert_data,
+                $insert_format
+            );
+            
+            if ($result === false) {
+                error_log('Osmose ADS: ERROR inserting call - ' . $wpdb->last_error);
             } else {
-                error_log('Osmose ADS: Call tracked successfully! ID: ' . $wpdb->insert_id);
+                if ($is_bot) {
+                    error_log('Osmose ADS: Bot call tracked (marked as bot). ID: ' . $wpdb->insert_id);
+                } else {
+                    error_log('Osmose ADS: Call tracked successfully! ID: ' . $wpdb->insert_id);
+                }
             }
         }
         

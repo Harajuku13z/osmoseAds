@@ -1437,10 +1437,10 @@ function osmose_ads_track_call() {
     }
     
     // Récupérer les données
-    $ad_id = intval($_POST['ad_id'] ?? 0);
+    $ad_id   = intval($_POST['ad_id'] ?? 0);
     $ad_slug = sanitize_text_field($_POST['ad_slug'] ?? '');
     $page_url = esc_url_raw($_POST['page_url'] ?? '');
-    $phone = sanitize_text_field($_POST['phone'] ?? '');
+    $phone    = sanitize_text_field($_POST['phone'] ?? '');
     
     // Si page_url n'est pas défini, utiliser l'URL actuelle
     if (empty($page_url)) {
@@ -1449,25 +1449,59 @@ function osmose_ads_track_call() {
     }
     
     // Récupérer les informations de l'utilisateur
-    $user_ip = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
+    $user_ip    = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
     $user_agent = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
-    $referrer = esc_url_raw($_SERVER['HTTP_REFERER'] ?? '');
+    $referrer   = esc_url_raw($_SERVER['HTTP_REFERER'] ?? '');
     
     error_log('Osmose ADS: Inserting call tracking. Ad ID: ' . $ad_id . ', Slug: ' . $ad_slug . ', Phone: ' . $phone);
+
+    // Protection anti-doublon : ne pas enregistrer plusieurs fois le même appel en quelques secondes
+    // On vérifie si un appel identique (même annonce, même téléphone, même IP) existe déjà
+    $duplicate_window_seconds = 60; // fenêtre de 60s pour considérer un doublon
+    $recent_call = $wpdb->get_var(
+        $wpdb->prepare(
+            "
+            SELECT id 
+            FROM {$table_name}
+            WHERE 
+                (%d = 0 OR ad_id = %d)
+                AND phone_number = %s
+                AND user_ip = %s
+                AND call_time >= (NOW() - INTERVAL %d SECOND)
+            ORDER BY id DESC
+            LIMIT 1
+            ",
+            $ad_id,
+            $ad_id,
+            $phone,
+            $user_ip,
+            $duplicate_window_seconds
+        )
+    );
+
+    if (!empty($recent_call)) {
+        // Ne pas recréer une ligne, mais renvoyer un succès "virtuel"
+        error_log('Osmose ADS: Duplicate call detected in AJAX handler, skipping insert. Existing ID: ' . $recent_call);
+        wp_send_json_success(array(
+            'message'   => __('Appel déjà enregistré récemment', 'osmose-ads'),
+            'duplicate' => true,
+            'existing_id' => intval($recent_call),
+        ));
+    }
     
     // Enregistrer l'appel
     $result = $wpdb->insert(
         $table_name,
         array(
-            'ad_id' => $ad_id ?: null,
-            'ad_slug' => $ad_slug ?: '',
-            'page_url' => $page_url ?: '',
+            'ad_id'        => $ad_id ?: null,
+            'ad_slug'      => $ad_slug ?: '',
+            'page_url'     => $page_url ?: '',
             'phone_number' => $phone ?: '',
-            'user_ip' => $user_ip ?: '',
-            'user_agent' => $user_agent ?: '',
-            'referrer' => $referrer ?: '',
-            'call_time' => current_time('mysql'),
-            'created_at' => current_time('mysql')
+            'user_ip'      => $user_ip ?: '',
+            'user_agent'   => $user_agent ?: '',
+            'referrer'     => $referrer ?: '',
+            'call_time'    => current_time('mysql'),
+            'created_at'   => current_time('mysql')
         ),
         array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
     );
