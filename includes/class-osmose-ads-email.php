@@ -14,24 +14,26 @@ class Osmose_Ads_Email {
      */
     public static function send_mail($to, $subject, $message, $headers = array()) {
         $smtp_enabled = get_option('osmose_ads_smtp_enabled', 0);
-        $callback = null;
-        
+        $callback     = null;
+
+        // Préparer les infos d'expéditeur configurées dans les réglages SMTP
+        $smtp_from_email = get_option('osmose_ads_smtp_from_email', '');
+        $smtp_from_name  = get_option('osmose_ads_smtp_from_name', '');
+        if (empty($smtp_from_name) && function_exists('get_bloginfo')) {
+            $smtp_from_name = get_bloginfo('name');
+        }
+
         if ($smtp_enabled) {
-            $callback = function($phpmailer) {
+            $callback = function($phpmailer) use ($smtp_from_email, $smtp_from_name) {
                 // Forcer SMTP
                 $phpmailer->isSMTP();
                 
-                $host = get_option('osmose_ads_smtp_host', '');
-                $port = intval(get_option('osmose_ads_smtp_port', 587));
+                $host       = get_option('osmose_ads_smtp_host', '');
+                $port       = intval(get_option('osmose_ads_smtp_port', 587));
                 $encryption = get_option('osmose_ads_smtp_encryption', 'tls');
-                $username = get_option('osmose_ads_smtp_username', '');
-                $password = get_option('osmose_ads_smtp_password', '');
-                $from_email = get_option('osmose_ads_smtp_from_email', '');
-                $from_name = get_option('osmose_ads_smtp_from_name', '');
-                if (empty($from_name) && function_exists('get_bloginfo')) {
-                    $from_name = get_bloginfo('name');
-                }
-                
+                $username   = get_option('osmose_ads_smtp_username', '');
+                $password   = get_option('osmose_ads_smtp_password', '');
+
                 if (!empty($host)) {
                     $phpmailer->Host = $host;
                 }
@@ -55,17 +57,56 @@ class Osmose_Ads_Email {
                     $phpmailer->SMTPSecure = '';
                 }
                 
-                // Expéditeur
-                if (!empty($from_email)) {
-                    if (empty($from_name) && function_exists('get_bloginfo')) {
-                        $from_name = get_bloginfo('name');
-                    }
-                    $phpmailer->setFrom($from_email, $from_name ?: 'WordPress');
+                // Expéditeur (doit correspondre à ce qui est configuré côté SMTP)
+                if (!empty($smtp_from_email)) {
+                    $phpmailer->setFrom(
+                        $smtp_from_email,
+                        $smtp_from_name ?: 'WordPress',
+                        false // ne pas forcer, laisse WP/PHPMailer gérer Reply-To si nécessaire
+                    );
                 }
             };
             
             // Attacher la configuration SMTP juste pour cet envoi
             add_action('phpmailer_init', $callback);
+
+            // Harmoniser aussi le header "From:" passé à wp_mail pour éviter un rejet SMTP
+            $from_header_value = '';
+            if (!empty($smtp_from_email)) {
+                $from_header_value = 'From: ' . ($smtp_from_name ?: 'WordPress') . ' <' . $smtp_from_email . '>';
+            }
+
+            if ($from_header_value) {
+                if (is_array($headers)) {
+                    // Supprimer tout header From existant
+                    $filtered = array();
+                    foreach ($headers as $h) {
+                        if (stripos($h, 'from:') === 0) {
+                            continue;
+                        }
+                        $filtered[] = $h;
+                    }
+                    $filtered[] = $from_header_value;
+                    $headers = $filtered;
+                } elseif (is_string($headers) && trim($headers) !== '') {
+                    // En-têtes au format string, on filtre grossièrement les lignes "From:"
+                    $lines   = preg_split("/\r\n|\n|\r/", $headers);
+                    $filtered_lines = array();
+                    foreach ($lines as $line) {
+                        if (stripos($line, 'from:') === 0) {
+                            continue;
+                        }
+                        if ($line !== '') {
+                            $filtered_lines[] = $line;
+                        }
+                    }
+                    $filtered_lines[] = $from_header_value;
+                    $headers = implode("\r\n", $filtered_lines);
+                } else {
+                    // Aucun header existant
+                    $headers = array($from_header_value);
+                }
+            }
         }
         
         $result = wp_mail($to, $subject, $message, $headers);
