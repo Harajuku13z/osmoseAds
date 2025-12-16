@@ -231,7 +231,7 @@ if (!current_user_can('manage_options')) {
         
         // Vérifier la colonne 'source'
         $columns = $wpdb->get_results("SHOW COLUMNS FROM $table_name");
-        $has_source = false;
+        $has_source   = false;
         $has_referrer = false;
         
         echo '<h3>Colonnes actuelles :</h3>';
@@ -269,6 +269,83 @@ if (!current_user_can('manage_options')) {
         } else {
             echo '<p class="success">✅ Colonne "source" présente</p>';
             $success[] = 'Colonne source présente';
+        }
+
+        // Nettoyer les doublons historiques d'appels (créés avant la protection anti-doublon)
+        echo '<h3>Nettoyage des doublons d\'appels existants</h3>';
+
+        // Doublon strict = même annonce, même IP, même téléphone, même horodatage
+        $duplicate_groups = $wpdb->get_results(
+            "
+            SELECT ad_id, phone_number, user_ip, call_time, COUNT(*) AS c
+            FROM {$table_name}
+            GROUP BY ad_id, phone_number, user_ip, call_time
+            HAVING c > 1
+            "
+        );
+
+        if (empty($duplicate_groups)) {
+            echo '<p class="success">✅ Aucun doublon strict détecté dans la table des appels.</p>';
+        } else {
+            $total_groups  = count($duplicate_groups);
+            $total_deleted = 0;
+
+            foreach ($duplicate_groups as $group) {
+                // Récupérer toutes les lignes du groupe concerné
+                $rows = $wpdb->get_results(
+                    $wpdb->prepare(
+                        "
+                        SELECT id
+                        FROM {$table_name}
+                        WHERE ad_id = %d
+                          AND phone_number = %s
+                          AND user_ip = %s
+                          AND call_time = %s
+                        ORDER BY id DESC
+                        ",
+                        $group->ad_id,
+                        $group->phone_number,
+                        $group->user_ip,
+                        $group->call_time
+                    )
+                );
+
+                if (!$rows || count($rows) < 2) {
+                    continue;
+                }
+
+                // Garder la ligne la plus récente (id le plus grand) et supprimer les autres
+                $ids_to_delete = [];
+                foreach ($rows as $index => $row) {
+                    if ($index === 0) {
+                        continue; // on garde la première (id max)
+                    }
+                    $ids_to_delete[] = (int) $row->id;
+                }
+
+                if (!empty($ids_to_delete)) {
+                    $placeholders = implode(',', array_fill(0, count($ids_to_delete), '%d'));
+                    $deleted = $wpdb->query(
+                        $wpdb->prepare(
+                            "DELETE FROM {$table_name} WHERE id IN ($placeholders)",
+                            $ids_to_delete
+                        )
+                    );
+
+                    if ($deleted !== false) {
+                        $total_deleted += $deleted;
+                    }
+                }
+            }
+
+            if ($total_deleted > 0) {
+                echo '<p class="success">✅ Doublons nettoyés : ' . intval($total_deleted) . ' enregistrement(s) supprimé(s) dans ' . intval($total_groups) . ' groupe(s).</p>';
+                $actions_performed[] = 'Nettoyage des doublons d\'appels (' . intval($total_deleted) . ' lignes supprimées)';
+                $success[] = 'Doublons d\'appels nettoyés';
+            } else {
+                echo '<p class="warning">⚠️ Des groupes de doublons ont été détectés mais aucune suppression n\'a été effectuée (vérifiez manuellement la table).</p>';
+                $warnings[] = 'Groupes de doublons détectés mais non supprimés';
+            }
         }
     }
     echo '</div>';
