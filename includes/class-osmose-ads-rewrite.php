@@ -480,6 +480,28 @@ class Osmose_Ads_Rewrite {
     public function force_template_redirect() {
         global $post, $wp_query;
         
+        // Gestion globale des anciennes URLs /ad/slug -> redirection propre vers l'URL canonique
+        // Exemple : /ad/renovation-toiture-x/ -> /renovation-toiture-x/
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+        $path        = $request_uri ? parse_url($request_uri, PHP_URL_PATH) : '';
+
+        if (!empty($path) && preg_match('#^/ad/([^/]+)/?$#', $path, $matches)) {
+            $slug = sanitize_title($matches[1]);
+
+            // Retrouver l'annonce par son slug
+            $ad_post = get_page_by_path($slug, OBJECT, 'ad');
+
+            if ($ad_post && !is_wp_error($ad_post)) {
+                $target_url = get_permalink($ad_post->ID);
+
+                // Rediriger uniquement si l'URL cible est différente (évite toute boucle)
+                if ($target_url && home_url($path) !== $target_url) {
+                    wp_redirect($target_url, 301);
+                    exit;
+                }
+            }
+        }
+        
         // Ne rien faire en admin
         if (is_admin()) {
             return;
