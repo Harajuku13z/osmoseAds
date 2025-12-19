@@ -488,17 +488,14 @@ class Osmose_Ads_Rewrite {
         if (!empty($path) && preg_match('#^/ad/([^/]+)/?$#', $path, $matches)) {
             $slug = sanitize_title($matches[1]);
 
-            // Retrouver l'annonce par son slug
-            $ad_post = get_page_by_path($slug, OBJECT, 'ad');
+            // Construire directement l'URL canonique supposée: /slug/
+            // (les annonces utilisent maintenant la même structure que les posts standards)
+            $target_url = home_url('/' . $slug . '/');
 
-            if ($ad_post && !is_wp_error($ad_post)) {
-                $target_url = get_permalink($ad_post->ID);
-
-                // Rediriger uniquement si l'URL cible est différente (évite toute boucle)
-                if ($target_url && home_url($path) !== $target_url) {
-                    wp_redirect($target_url, 301);
-                    exit;
-                }
+            // Rediriger uniquement si l'URL cible est différente (évite toute boucle potentielle)
+            if ($target_url && home_url($path) !== $target_url) {
+                wp_redirect($target_url, 301);
+                exit;
             }
         }
         
