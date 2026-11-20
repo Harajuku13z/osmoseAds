@@ -27,7 +27,7 @@ class OA_Admin {
 
         $ajax = array(
             'city_search', 'city_nearby', 'city_bulk', 'trade', 'suggest_keywords', 'create_batch', 'process',
-            'queue', 'job_action', 'manual_prompt', 'manual_import', 'regenerate', 'reanalyze', 'test_ai', 'models',
+            'queue', 'job_action', 'manual_prompt', 'manual_import', 'regenerate', 'reanalyze', 'test_ai', 'connect_ai', 'models',
             'bank_get', 'bank_save', 'photo_targets', 'rerender',
         );
         foreach ($ajax as $a) {
@@ -484,6 +484,39 @@ class OA_Admin {
             self::out($txt);
         }
         self::out(array('message' => $txt . ' (' . round(microtime(true) - $t0, 1) . ' s)'));
+    }
+
+    /** Connexion guidée : enregistre la clé, la vérifie, active OpenAI et choisit un modèle disponible. */
+    public static function ajax_connect_ai() {
+        self::guard();
+        $key = trim(sanitize_text_field(self::post('key')));
+        if (!preg_match('/^sk-[A-Za-z0-9_\-]{20,}$/', $key)) {
+            self::out(new WP_Error('oa_key', 'Clé invalide : copiez la clé complète (elle commence par sk-).'));
+        }
+        $before = OA_Settings::all();
+        OA_Settings::save(array('ai_provider' => 'openai', 'ai_key' => $key, 'ai_base_url' => 'https://api.openai.com/v1'));
+
+        $models = (new OA_AI())->list_models();
+        if (is_wp_error($models)) {
+            OA_Settings::save(array('ai_provider' => $before['ai_provider'], 'ai_key' => $before['ai_key'], 'ai_base_url' => $before['ai_base_url']));
+            self::out(new WP_Error('oa_key', 'OpenAI refuse cette clé : ' . $models->get_error_message()));
+        }
+        $model = $before['ai_model'];
+        if ($models && !in_array($model, $models, true)) {
+            foreach (array('gpt-5-mini', 'gpt-5', 'gpt-4.1-mini', 'gpt-4o-mini') as $pref) {
+                if (in_array($pref, $models, true)) {
+                    $model = $pref;
+                    break;
+                }
+            }
+            OA_Settings::save(array('ai_model' => $model));
+        }
+
+        $txt = (new OA_AI())->text('Réponds en une phrase courte.', 'Dis « Connexion réussie ».');
+        $msg = is_wp_error($txt)
+            ? 'Clé enregistrée, mais l\'essai de génération a échoué : ' . $txt->get_error_message() . ' (vérifiez le crédit dans Billing).'
+            : 'Connecté — modèle ' . $model . ' prêt.';
+        self::out(array('message' => $msg, 'model' => $model, 'masked' => OA_Settings::masked_key()));
     }
 
     public static function ajax_models() {

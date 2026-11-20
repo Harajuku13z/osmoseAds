@@ -547,6 +547,22 @@
       var $m = $('#oa-test-msg').text('Test en cours…');
       api('test_ai').then(function (r) { $m.html('<span class="oa-ok">✔ ' + esc(r.message) + '</span>'); }, function (e) { $m.html('<span class="oa-error">✗ ' + esc(e) + '</span>'); });
     });
+    $('#oa-connect-btn').on('click', function () {
+      var key = $.trim($('#oa-connect-key').val()), $m = $('#oa-connect-msg'), $b = $(this);
+      if (!/^sk-/.test(key)) { $m.html('<span class="oa-error">La clé doit commencer par « sk- ».</span>'); return; }
+      $b.prop('disabled', true); $m.text('Vérification auprès d\'OpenAI…');
+      api('connect_ai', { key: key }).then(function (r) {
+        $m.html('<span class="oa-ok">✔ ' + esc(r.message) + '</span>');
+        $('#oa-connect-status').removeClass('is-off').addClass('is-ok').text('● Connecté');
+        $('#oa-connect-key').val('');
+        $('input[name="oa[ai_key]"]').val(r.masked);
+        $('#oa-model').val(r.model);
+        $('input[name="oa[ai_provider]"][value="openai"]').prop('checked', true);
+        providerToggle();
+        toast('Compte OpenAI connecté et activé.', 'ok');
+      }, function (e) { $m.html('<span class="oa-error">✗ ' + esc(e) + '</span>'); })
+        .always(function () { $b.prop('disabled', false); });
+    });
     $('#oa-models-btn').on('click', function () {
       api('models').then(function (list) {
         $('#oa-models').html(list.map(function (m) { return '<option value="' + esc(m) + '">'; }).join(''));

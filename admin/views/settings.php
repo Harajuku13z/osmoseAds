@@ -79,6 +79,23 @@ $pages_dd = wp_dropdown_pages(array(
                 </label>
             <?php endforeach; ?>
         </div>
+        <?php $oa_connected = ('openai' === $s['ai_provider'] && '' !== (string) $s['ai_key']); ?>
+        <div class="oa-connect" data-oa-show="openai">
+            <div class="oa-connect__head">
+                <strong>Connecter mon compte OpenAI</strong>
+                <span id="oa-connect-status" class="oa-pill <?php echo $oa_connected ? 'is-ok' : 'is-off'; ?>"><?php echo $oa_connected ? '● Connecté' : '○ Non connecté'; ?></span>
+            </div>
+            <ol class="oa-connect__steps">
+                <li>
+                    <a class="button button-primary" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">1. Ouvrir OpenAI et créer ma clé ↗</a>
+                    <small>Connectez-vous avec votre compte ChatGPT habituel, cliquez « Create new secret key », copiez la clé (sk-…). Ajoutez quelques euros de crédit dans <a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener noreferrer">Billing</a> : l'API est facturée à part de l'abonnement ChatGPT.</small>
+                </li>
+                <li>
+                    <span class="oa-inline"><input type="password" id="oa-connect-key" placeholder="2. Collez la clé ici : sk-…" autocomplete="off"><button type="button" class="button button-primary" id="oa-connect-btn">Connecter et activer</button></span>
+                    <small id="oa-connect-msg" class="oa-muted">La clé est vérifiée, enregistrée et le mode OpenAI est activé automatiquement.</small>
+                </li>
+            </ol>
+        </div>
         <div class="oa-form-grid" data-oa-show="openai,compatible">
             <label class="oa-field">Clé API <input type="password" name="<?php echo $name('ai_key'); ?>" value="<?php echo esc_attr(OA_Settings::masked_key()); ?>" autocomplete="off" placeholder="sk-…"></label>
             <label class="oa-field">Modèle

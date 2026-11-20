@@ -180,3 +180,12 @@
 .oa-savebar{position:sticky;bottom:0;background:linear-gradient(transparent,#f0f0f1 40%);padding:16px 0}
 .oa-list-plain{margin-left:18px;list-style:disc}
 .oa-form textarea{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.oa-connect{border:1.5px solid var(--line);border-radius:12px;padding:16px;margin:16px 0;background:#f8fbff}
+.oa-connect__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.oa-connect__steps{margin:0;padding:0;list-style:none;display:grid;gap:14px}
+.oa-connect__steps li{display:grid;gap:6px;margin:0}
+.oa-connect__steps small{color:var(--muted)}
+.oa-connect__steps .oa-inline input{flex:1;min-width:220px}
+.oa-pill{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px}
+.oa-pill.is-ok{background:#dcfce7;color:#166534}
+.oa-pill.is-off{background:#f1f5f9;color:#64748b}
