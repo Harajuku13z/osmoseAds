@@ -27,15 +27,5 @@ final class OA_Plugin {
         if (is_admin()) {
             OA_Admin::hooks();
         }
-
-        add_filter('cron_schedules', array($this, 'cron_schedules'));
-    }
-
-    public function cron_schedules($schedules) {
-        $schedules['oa_minute'] = array(
-            'interval' => 60,
-            'display'  => 'Osmose Ads — chaque minute',
-        );
-        return $schedules;
     }
 }
