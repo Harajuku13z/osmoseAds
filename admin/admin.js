@@ -411,31 +411,79 @@
 
     /* Mode manuel */
     var $m = $('#oa-manual');
-    $('#oa-q-rows').on('click', '[data-manual]', function () {
-      manualId = $(this).data('manual');
+    var manualWaiting = false, manualBusy = false, lastClip = '';
+    function manualMsg(html) { $('#oa-manual-msg').html(html); }
+    function copyText(text) {
+      var ta = $('#oa-manual-prompt')[0];
+      try { ta.value = text; ta.select(); document.execCommand('copy'); } catch (e) {}
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).catch(function () {});
+    }
+    function looksLikePage(t) { return t && t.indexOf('{') !== -1 && /"(sections|faq|meta_title|h1)"/.test(t); }
+    function openManual(id) {
+      manualId = id; manualWaiting = false;
       $('#oa-manual-prompt').val('Chargement…');
       $('#oa-manual-json').val('');
-      $('#oa-manual-msg').text('');
+      $('#oa-manual-send').prop('disabled', true);
+      manualMsg('Préparation du prompt…');
       $m.prop('hidden', false);
-      api('manual_prompt', { id: manualId }).then(function (r) { $('#oa-manual-prompt').val(r.prompt); }, function (e) { $('#oa-manual-prompt').val(e); });
+      var left = $('#oa-q-rows [data-manual]').length;
+      $('#oa-manual-left').text(left ? '— ' + left + ' page(s) à traiter' : '');
+      api('manual_prompt', { id: id }).then(function (r) {
+        $('#oa-manual-prompt').val(r.prompt);
+        $('#oa-manual-send').prop('disabled', false).focus();
+        manualMsg('Prêt : cliquez sur « Envoyer à ChatGPT ».');
+      }, function (e) { $('#oa-manual-prompt').val(e); manualMsg('<span class="oa-error">' + esc(e) + '</span>'); });
+    }
+    function importManual(json) {
+      if (manualBusy) return;
+      manualBusy = true; manualWaiting = false;
+      $('#oa-manual-json').val(json);
+      manualMsg('Réponse détectée — création de la page…');
+      api('manual_import', { id: manualId, json: json }).then(function (r) {
+        manualMsg('<span class="oa-ok">✔ Page créée — score SEO <b>' + r.score + '</b>/100.</span> <a target="_blank" href="' + esc(r.view) + '">Voir</a>');
+        load().then(function () {
+          var $next = $('#oa-q-rows [data-manual]').filter(function () { return +$(this).data('manual') !== +manualId; }).first();
+          if ($('#oa-manual-chain').is(':checked') && $next.length) {
+            setTimeout(function () { openManual($next.data('manual')); }, 1200);
+          } else {
+            setTimeout(function () { $m.prop('hidden', true); }, 2500);
+          }
+        });
+      }, function (e) {
+        manualWaiting = true;
+        manualMsg('<span class="oa-error">' + esc(e) + '</span> Recopiez la réponse complète dans ChatGPT puis revenez.');
+      }).always(function () { manualBusy = false; });
+    }
+    function readClipboard(fromClick) {
+      if (!navigator.clipboard || !navigator.clipboard.readText || !window.isSecureContext) {
+        if (fromClick) { $('.oa-manual-raw').prop('open', true); $('#oa-manual-json').focus(); manualMsg('Votre navigateur bloque la lecture du presse-papier : collez la réponse dans le champ ci-dessous.'); }
+        return;
+      }
+      navigator.clipboard.readText().then(function (t) {
+        if (looksLikePage(t) && t !== lastClip) { lastClip = t; importManual(t); }
+        else if (fromClick && t === lastClip) manualMsg('<span class="oa-error">C\'est la réponse de la page précédente.</span> Copiez la nouvelle réponse dans ChatGPT.');
+        else if (fromClick) manualMsg('<span class="oa-error">Le presse-papier ne contient pas la réponse JSON.</span> Cliquez sur « Copier » sous le bloc de code dans ChatGPT, puis réessayez.');
+      }, function () {
+        if (fromClick) { $('.oa-manual-raw').prop('open', true); $('#oa-manual-json').focus(); manualMsg('Autorisez l\'accès au presse-papier, ou collez la réponse dans le champ ci-dessous.'); }
+      });
+    }
+    $('#oa-q-rows').on('click', '[data-manual]', function () { openManual($(this).data('manual')); });
+    $m.on('click', '.oa-modal__close', function () { manualWaiting = false; $m.prop('hidden', true); });
+    $m.on('click', function (e) { if (e.target === this) { manualWaiting = false; $m.prop('hidden', true); } });
+    $('#oa-manual-send').on('click', function () {
+      var prompt = $('#oa-manual-prompt').val();
+      copyText(prompt);
+      var q = encodeURIComponent(prompt);
+      window.open(q.length < 12000 ? 'https://chatgpt.com/?q=' + q : 'https://chatgpt.com/', '_blank', 'noopener');
+      manualWaiting = true;
+      manualMsg('ChatGPT rédige la page… Quand il a fini, cliquez sur « Copier » sous le bloc de code et revenez sur cet onglet.');
     });
-    $m.on('click', '.oa-modal__close', function () { $m.prop('hidden', true); });
-    $m.on('click', function (e) { if (e.target === this) $m.prop('hidden', true); });
-    $('#oa-manual-copy').on('click', function () {
-      var t = $('#oa-manual-prompt')[0];
-      t.select();
-      (navigator.clipboard ? navigator.clipboard.writeText(t.value) : $.Deferred().resolve()).then(function () { toast('Prompt copié', 'ok'); });
-      try { document.execCommand('copy'); } catch (e) {}
-    });
-    $('#oa-manual-import').on('click', function () {
-      var $b = $(this).prop('disabled', true);
-      $('#oa-manual-msg').text('Création de la page…');
-      api('manual_import', { id: manualId, json: $('#oa-manual-json').val() }).then(function (r) {
-        $('#oa-manual-msg').html('✔ Page créée — score SEO <b>' + r.score + '</b>/100. <a target="_blank" href="' + esc(r.view) + '">Voir</a>');
-        load();
-        setTimeout(function () { $m.prop('hidden', true); }, 2500);
-      }, function (e) { $('#oa-manual-msg').html('<span class="oa-error">' + esc(e) + '</span>'); }).always(function () { $b.prop('disabled', false); });
-    });
+    // Retour sur l'onglet : on lit le presse-papier et on crée la page si la réponse est là.
+    $(window).on('focus', function () { if (manualWaiting && !$m.prop('hidden')) setTimeout(function () { readClipboard(false); }, 300); });
+    $('#oa-manual-paste').on('click', function () { readClipboard(true); });
+    $('#oa-manual-copy').on('click', function () { copyText($('#oa-manual-prompt').val()); toast('Prompt copié', 'ok'); });
+    $('#oa-manual-import').on('click', function () { importManual($('#oa-manual-json').val()); });
+    $('#oa-manual-json').on('paste', function () { var el = this; setTimeout(function () { if (looksLikePage(el.value)) importManual(el.value); }, 50); });
 
     load();
     setInterval(function () { if (!document.hidden) load(); }, running ? 8000 : 10000);

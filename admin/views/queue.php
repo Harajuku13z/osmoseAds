@@ -57,15 +57,30 @@ $oa_manual = 'manual' === OA_Settings::get('ai_provider');
 <div class="oa-modal" id="oa-manual" hidden>
     <div class="oa-modal__box">
         <button type="button" class="oa-modal__close" aria-label="Fermer">×</button>
-        <h2>ChatGPT manuel</h2>
-        <ol class="oa-steps-mini">
-            <li>Copiez le prompt ci-dessous et collez-le dans une <b>nouvelle conversation</b> ChatGPT.</li>
-            <li>Copiez <b>toute</b> la réponse de ChatGPT (le bloc JSON).</li>
-            <li>Collez-la dans le second champ puis cliquez sur « Créer la page ».</li>
-        </ol>
-        <div class="oa-row"><button type="button" class="button" id="oa-manual-copy">Copier le prompt</button> <a class="button" href="https://chatgpt.com/" target="_blank" rel="noopener">Ouvrir ChatGPT ↗</a></div>
-        <textarea id="oa-manual-prompt" rows="7" readonly></textarea>
-        <textarea id="oa-manual-json" rows="7" placeholder="Collez ici la réponse JSON de ChatGPT"></textarea>
-        <div class="oa-row"><button type="button" class="button button-primary" id="oa-manual-import">Créer la page</button> <span id="oa-manual-msg"></span></div>
+        <h2>ChatGPT (abonnement) <small id="oa-manual-left" class="oa-muted"></small></h2>
+        <div class="oa-flow">
+            <div class="oa-flow__step">
+                <b>1</b>
+                <div>
+                    <button type="button" class="button button-primary button-hero" id="oa-manual-send" disabled>Envoyer à ChatGPT ↗</button>
+                    <small>ChatGPT s'ouvre dans un nouvel onglet avec le prompt déjà rempli (il est aussi copié : si le champ est vide, faites <kbd>⌘V</kbd> / <kbd>Ctrl+V</kbd> puis Entrée).</small>
+                </div>
+            </div>
+            <div class="oa-flow__step">
+                <b>2</b>
+                <div>
+                    <button type="button" class="button button-primary button-hero" id="oa-manual-paste">Récupérer la réponse et créer la page</button>
+                    <small>Dans ChatGPT, cliquez sur l'icône « Copier » du bloc de code, puis revenez ici : la réponse est détectée et la page créée automatiquement.</small>
+                </div>
+            </div>
+            <label class="oa-check"><input type="checkbox" id="oa-manual-chain" checked> Enchaîner automatiquement avec la page suivante</label>
+        </div>
+        <p id="oa-manual-msg" class="oa-manual-msg"></p>
+        <details class="oa-manual-raw">
+            <summary>Afficher le prompt / coller la réponse à la main</summary>
+            <textarea id="oa-manual-prompt" rows="6" readonly></textarea>
+            <textarea id="oa-manual-json" rows="6" placeholder="Collez ici la réponse JSON de ChatGPT"></textarea>
+            <div class="oa-row"><button type="button" class="button" id="oa-manual-copy">Copier le prompt</button> <button type="button" class="button" id="oa-manual-import">Créer la page</button></div>
+        </details>
     </div>
 </div>

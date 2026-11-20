@@ -189,3 +189,12 @@
 .oa-pill{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px}
 .oa-pill.is-ok{background:#dcfce7;color:#166534}
 .oa-pill.is-off{background:#f1f5f9;color:#64748b}
+.oa-flow{display:grid;gap:14px;margin:12px 0}
+.oa-flow__step{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start}
+.oa-flow__step>b{width:34px;height:34px;border-radius:50%;background:var(--b);color:#fff;display:grid;place-items:center;font-size:15px}
+.oa-flow__step small{display:block;color:var(--muted);margin-top:6px}
+.oa-flow .button-hero{width:100%;justify-content:center;text-align:center}
+.oa-manual-msg{min-height:1.4em;font-weight:500}
+.oa-manual-raw{margin-top:8px}
+.oa-manual-raw summary{cursor:pointer;color:var(--muted)}
+.oa-manual-raw textarea{width:100%;margin-top:8px}

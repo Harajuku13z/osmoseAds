@@ -68,7 +68,7 @@ $pages_dd = wp_dropdown_pages(array(
             <?php
             $providers = array(
                 'openai'     => array('OpenAI (ChatGPT) — API', 'Recommandé pour la génération en masse. Facturation à l\'usage sur platform.openai.com (quelques centimes par page avec un modèle « mini »).'),
-                'manual'     => array('ChatGPT manuel (abonnement)', 'Utilise votre abonnement ChatGPT Plus/Pro : le plugin prépare chaque prompt, vous le collez dans ChatGPT puis recollez la réponse. Idéal pour quelques pages, pas pour des centaines.'),
+                'manual'     => array('ChatGPT manuel (abonnement)', 'Utilise votre abonnement ChatGPT Plus/Pro : un clic ouvre ChatGPT avec le prompt prêt, un clic récupère la réponse et crée la page, puis enchaîne la suivante. Sans clé API ni coût supplémentaire.'),
                 'compatible' => array('API compatible OpenAI', 'OpenRouter, Mistral, Groq, serveur local… Indiquez l\'URL de base et la clé.'),
             );
             foreach ($providers as $k => $p) :
