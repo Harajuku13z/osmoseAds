@@ -154,9 +154,18 @@ $pages_dd = wp_dropdown_pages(array(
 
         <h2>Design</h2>
         <div class="oa-form-grid">
-            <label class="oa-field">Couleur principale <input type="color" name="<?php echo $name('brand_color'); ?>" value="<?php echo esc_attr($s['brand_color']); ?>"></label>
-            <label class="oa-field">Couleur des boutons d'appel <input type="color" name="<?php echo $name('accent_color'); ?>" value="<?php echo esc_attr($s['accent_color']); ?>"></label>
+            <label class="oa-field">Couleur principale (bouton devis) <input type="color" name="<?php echo $name('brand_color'); ?>" value="<?php echo esc_attr($s['brand_color']); ?>"></label>
+            <label class="oa-field">Couleur principale foncée (liens) <input type="color" name="<?php echo $name('brand_color2'); ?>" value="<?php echo esc_attr($s['brand_color2']); ?>"></label>
+            <label class="oa-field">Texte du bouton devis <input type="color" name="<?php echo $name('button_ink'); ?>" value="<?php echo esc_attr($s['button_ink']); ?>"></label>
+            <label class="oa-field">Couleur du bouton d'appel <input type="color" name="<?php echo $name('accent_color'); ?>" value="<?php echo esc_attr($s['accent_color']); ?>"></label>
+            <label class="oa-field">Texte du bouton d'appel <input type="color" name="<?php echo $name('accent_ink'); ?>" value="<?php echo esc_attr($s['accent_ink']); ?>"></label>
+            <label class="oa-field">Couleur des titres et textes <input type="color" name="<?php echo $name('ink_color'); ?>" value="<?php echo esc_attr($s['ink_color']); ?>"></label>
+            <label class="oa-field">Police des titres (Google Fonts) <input type="text" name="<?php echo $name('heading_font'); ?>" value="<?php echo esc_attr($s['heading_font']); ?>" placeholder="ex. Anton — vide = police du thème"></label>
+            <label class="oa-field">Police du texte (Google Fonts) <input type="text" name="<?php echo $name('body_font'); ?>" value="<?php echo esc_attr($s['body_font']); ?>" placeholder="ex. DM Sans — vide = police du thème"></label>
+            <label class="oa-field">Arrondi des boutons et cartes (px) <input type="number" min="0" max="32" name="<?php echo $name('radius'); ?>" value="<?php echo esc_attr($s['radius']); ?>"></label>
+            <label class="oa-field">Libellé du bouton devis <input type="text" name="<?php echo $name('quote_label'); ?>" value="<?php echo esc_attr($s['quote_label']); ?>"></label>
         </div>
+        <label class="oa-check"><input type="checkbox" name="<?php echo $name('heading_upper'); ?>" value="1" <?php checked($s['heading_upper']); ?>> Titres en majuscules (style affiche)</label>
         <label class="oa-check"><input type="checkbox" name="<?php echo $name('sticky_cta'); ?>" value="1" <?php checked($s['sticky_cta']); ?>> Barre « Appeler / Devis » fixe sur mobile</label>
     </section>
 

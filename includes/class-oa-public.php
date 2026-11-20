@@ -50,13 +50,50 @@ class OA_Public {
             return;
         }
         $s = OA_Settings::all();
-        wp_enqueue_style('oa-front', OA_URL . 'public/front.css', array(), OA_VERSION);
-        wp_add_inline_style('oa-front', ':root{--oa-brand:' . esc_attr($s['brand_color']) . ';--oa-accent:' . esc_attr($s['accent_color']) . ';}');
+        // Polices Google éventuelles (titres / texte).
+        $families = array();
+        foreach (array('heading_font' => '400;700', 'body_font' => '400;500;700;800') as $key => $weights) {
+            if ($s[$key] && !in_array($s[$key], array('inherit', 'system-ui'), true)) {
+                $families[] = 'family=' . str_replace(' ', '+', $s[$key]) . ':wght@' . $weights;
+            }
+        }
+        $deps = array();
+        if ($families) {
+            wp_enqueue_style('oa-fonts', 'https://fonts.googleapis.com/css2?' . implode('&', array_unique($families)) . '&display=swap', array(), null);
+            $deps[] = 'oa-fonts';
+        }
+        wp_enqueue_style('oa-front', OA_URL . 'public/front.css', $deps, OA_VERSION);
+        wp_add_inline_style('oa-front', self::css_vars($s));
         wp_enqueue_script('oa-front', OA_URL . 'public/front.js', array(), OA_VERSION, true);
         wp_localize_script('oa-front', 'OA_FRONT', array(
             'ajax' => admin_url('admin-ajax.php'),
             'post' => get_queried_object_id(),
         ));
+    }
+
+    /** Variables CSS issues des réglages « Design ». */
+    public static function css_vars(array $s) {
+        $font = function ($name, $fallback) {
+            return $name ? "'" . esc_attr($name) . "', " . $fallback : 'inherit';
+        };
+        $vars = array(
+            '--oa-brand'       => $s['brand_color'],
+            '--oa-brand-2'     => $s['brand_color2'],
+            '--oa-btn-ink'     => $s['button_ink'],
+            '--oa-accent'      => $s['accent_color'],
+            '--oa-accent-ink'  => $s['accent_ink'],
+            '--oa-ink'         => $s['ink_color'],
+            '--oa-radius'      => (int) $s['radius'] . 'px',
+            '--oa-head-font'   => $font($s['heading_font'], 'system-ui, sans-serif'),
+            '--oa-body-font'   => $font($s['body_font'], 'system-ui, sans-serif'),
+            '--oa-head-tt'     => $s['heading_upper'] ? 'uppercase' : 'none',
+            '--oa-head-weight' => $s['heading_upper'] ? '400' : '800',
+        );
+        $css = '';
+        foreach ($vars as $k => $v) {
+            $css .= $k . ':' . $v . ';';
+        }
+        return '.oa-page,.oa-mesh,.oa-sticky,body.oa-local-page{' . $css . '}';
     }
 
     private static function tel_href($phone) {
@@ -71,7 +108,7 @@ class OA_Public {
         }
         $quote = $s['quote_url'] ?: ($s['email'] ? 'mailto:' . $s['email'] : '');
         if ($quote) {
-            $out .= '<a class="oa-btn oa-btn--quote" data-oa-track="quote" href="' . esc_url($quote, array('http', 'https', 'mailto')) . '">Devis gratuit</a>';
+            $out .= '<a class="oa-btn oa-btn--quote" data-oa-track="quote" href="' . esc_url($quote, array('http', 'https', 'mailto')) . '">' . esc_html($s['quote_label'] ?: 'Devis gratuit') . '</a>';
         }
         return $out ? '<div class="oa-actions">' . $out . '</div>' : '';
     }
@@ -184,7 +221,7 @@ class OA_Public {
             echo '<a class="oa-sticky__call" data-oa-track="call" href="' . esc_attr(self::tel_href($s['phone'])) . '">✆ Appeler</a>';
         }
         if ($s['quote_url']) {
-            echo '<a class="oa-sticky__quote" data-oa-track="quote" href="' . esc_url($s['quote_url']) . '">Devis gratuit</a>';
+            echo '<a class="oa-sticky__quote" data-oa-track="quote" href="' . esc_url($s['quote_url']) . '">' . esc_html($s['quote_label'] ?: 'Devis gratuit') . '</a>';
         }
         echo '</div>';
     }

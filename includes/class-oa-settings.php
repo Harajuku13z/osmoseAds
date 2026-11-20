@@ -62,7 +62,16 @@ class OA_Settings {
 
             // Design
             'brand_color'      => '#1f6feb',
+            'brand_color2'     => '#0b4fc4',
+            'button_ink'       => '#ffffff',
             'accent_color'     => '#ff7a1a',
+            'accent_ink'       => '#ffffff',
+            'ink_color'        => '#0f172a',
+            'heading_font'     => '',
+            'body_font'        => '',
+            'heading_upper'    => 0,
+            'radius'           => 14,
+            'quote_label'      => 'Devis gratuit',
             'sticky_cta'       => 1,
         );
     }
@@ -103,7 +112,7 @@ class OA_Settings {
                 $clean[$key] = sanitize_textarea_field($value);
             } elseif (in_array($key, array('quote_url', 'ai_base_url'), true)) {
                 $clean[$key] = esc_url_raw(trim($value));
-            } elseif (in_array($key, array('brand_color', 'accent_color'), true)) {
+            } elseif (in_array($key, array('brand_color', 'brand_color2', 'button_ink', 'accent_color', 'accent_ink', 'ink_color'), true)) {
                 $clean[$key] = sanitize_hex_color($value) ?: $default;
             } elseif ('email' === $key) {
                 $clean[$key] = sanitize_email($value);
@@ -119,6 +128,10 @@ class OA_Settings {
         $clean['workers']        = max(1, min(8, (int) $clean['workers']));
         $clean['ai_timeout']     = max(30, min(600, (int) $clean['ai_timeout']));
         $clean['drip_per_day']   = max(0, min(500, (int) $clean['drip_per_day']));
+        $clean['radius']         = max(0, min(32, (int) $clean['radius']));
+        foreach (array('heading_font', 'body_font') as $f) {
+            $clean[$f] = trim(preg_replace('/[^\p{L}0-9 \-]/u', '', (string) $clean[$f]));
+        }
         if (!in_array($clean['ai_provider'], array('openai', 'compatible', 'manual'), true)) {
             $clean['ai_provider'] = 'openai';
         }
@@ -135,7 +148,7 @@ class OA_Settings {
     }
 
     public static function checkboxes() {
-        return array('auto_retry', 'background', 'schema', 'external_links', 'nearby_links', 'sticky_cta');
+        return array('auto_retry', 'background', 'schema', 'external_links', 'nearby_links', 'sticky_cta', 'heading_upper');
     }
 
     /** Clé API masquée pour l'affichage. */
