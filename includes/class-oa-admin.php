@@ -28,6 +28,7 @@ class OA_Admin {
         $ajax = array(
             'city_search', 'city_nearby', 'city_bulk', 'trade', 'suggest_keywords', 'create_batch', 'process',
             'queue', 'job_action', 'manual_prompt', 'manual_import', 'regenerate', 'reanalyze', 'test_ai', 'models',
+            'bank_get', 'bank_save', 'photo_targets', 'rerender',
         );
         foreach ($ajax as $a) {
             add_action('wp_ajax_oa_' . $a, array(__CLASS__, 'ajax_' . $a));
@@ -394,6 +395,81 @@ class OA_Admin {
         update_post_meta($id, '_oa_checks', $a['checks']);
         update_post_meta($id, '_oa_words', $a['words']);
         self::out($a);
+    }
+
+    /* ---- Banque de photos ---- */
+
+    private static function thumbs(array $ids) {
+        $out = array();
+        foreach ($ids as $id) {
+            if ($url = wp_get_attachment_image_url($id, 'thumbnail')) {
+                $out[] = array('id' => (int) $id, 'url' => $url);
+            }
+        }
+        return $out;
+    }
+
+    public static function ajax_bank_get() {
+        self::guard();
+        $trade = sanitize_key(self::post('trade'));
+        $bank  = OA_Generator::bank();
+        $pool  = isset($bank[$trade]['_pool']) ? $bank[$trade]['_pool'] : array();
+        // Les photos par mot-clé sont aussi affichées (fusionnées) pour une vue d'ensemble.
+        $all = $pool;
+        if (!empty($bank[$trade])) {
+            foreach ($bank[$trade] as $list) {
+                $all = array_merge($all, (array) $list);
+            }
+        }
+        self::out(array('photos' => self::thumbs(array_values(array_unique(array_map('intval', $all))))));
+    }
+
+    public static function ajax_bank_save() {
+        self::guard();
+        $trade = sanitize_key(self::post('trade'));
+        if (!OA_Trades::get($trade)) {
+            self::out(new WP_Error('oa', 'Métier introuvable'));
+        }
+        $ids = array_values(array_filter(array_map('absint', (array) json_decode(self::post('ids', '[]'), true))));
+        OA_Generator::remember_photos($trade, array('_pool' => $ids), true);
+        self::out(array('photos' => self::thumbs($ids)));
+    }
+
+    /** Pages à traiter : sans image (mode missing) ou toutes celles du métier (mode all). */
+    public static function ajax_photo_targets() {
+        self::guard();
+        $trade = sanitize_key(self::post('trade'));
+        $mq    = array(array('key' => '_oa_generated', 'value' => '1'));
+        if ($trade) {
+            $mq[] = array('key' => '_oa_trade', 'value' => $trade);
+        }
+        if ('missing' === self::post('mode')) {
+            $mq[] = array('key' => '_thumbnail_id', 'compare' => 'NOT EXISTS');
+        }
+        self::out(get_posts(array(
+            'post_type'      => 'page',
+            'post_status'    => array('publish', 'future', 'draft', 'pending', 'private'),
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'meta_query'     => $mq,
+        )));
+    }
+
+    /** Re-met en page (sans IA) une liste de pages avec la banque de photos. */
+    public static function ajax_rerender() {
+        self::guard();
+        $ids  = array_slice(array_filter(array_map('absint', (array) json_decode(self::post('ids', '[]'), true))), 0, 20);
+        $done = array();
+        foreach ($ids as $id) {
+            $trade  = get_post_meta($id, '_oa_trade', true);
+            $kw     = get_post_meta($id, '_oa_keyword', true);
+            $photos = OA_Generator::bank_photos($trade, $kw);
+            $res    = OA_Generator::rerender($id, $photos ?: null);
+            $done[] = is_wp_error($res)
+                ? array('id' => $id, 'error' => $res->get_error_message())
+                : array('id' => $id, 'score' => $res['score'], 'images' => (int) has_post_thumbnail($id));
+        }
+        self::out($done);
     }
 
     public static function ajax_test_ai() {

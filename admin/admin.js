@@ -77,6 +77,7 @@
         renderKeywords();
         $('#oa-kw-suggest').prop('disabled', false);
       }, function (e) { toast(e, 'error'); });
+      api('bank_get', { trade: id }).then(function (r) { state.bankCount = r.photos.length; refresh(); });
       refresh();
     });
 
@@ -265,7 +266,11 @@
       } else {
         $('#oa-estimate').text('');
       }
-      if (!photoCount() && total) $('#oa-estimate').append('<br><b>Sans photo</b>, les pages seront moins attractives.');
+      if (!photoCount() && total) {
+        $('#oa-estimate').append(state.bankCount
+          ? '<br>Aucune photo choisie : la banque du métier (' + state.bankCount + ' photos) sera utilisée.'
+          : '<br><b>Aucune photo</b> : ajoutez-en à l\'étape 4, sinon les pages seront sans image.');
+      }
     }
 
     $('#oa-launch').on('click', function () {
@@ -442,6 +447,59 @@
   /* Pages                                                               */
   /* ================================================================== */
   function initPages() {
+    /* Banque de photos */
+    var bank = [];
+    function trade() { return $('#oa-bank-trade').val(); }
+    function renderBank() {
+      $('#oa-bank-thumbs').html(bank.map(function (p) {
+        return '<span class="oa-thumb"><img src="' + esc(p.url) + '" alt=""><button type="button" data-bank-rm="' + p.id + '">×</button></span>';
+      }).join('') || '<span class="oa-muted">Aucune photo dans la banque de ce métier.</span>');
+    }
+    function saveBank() {
+      return api('bank_save', { trade: trade(), ids: JSON.stringify(bank.map(function (p) { return p.id; })) }).then(function (r) { bank = r.photos; renderBank(); });
+    }
+    function loadBank() { api('bank_get', { trade: trade() }).then(function (r) { bank = r.photos; renderBank(); }); }
+    $('#oa-bank-trade').on('change', loadBank);
+    $('#oa-bank-pick').on('click', function () {
+      pickMedia('Banque de photos', true, function (sel) {
+        sel.forEach(function (a) {
+          if (!bank.some(function (p) { return p.id === a.id; })) bank.push({ id: a.id, url: (a.sizes && (a.sizes.thumbnail || a.sizes.full).url) || a.url });
+        });
+        saveBank().then(function () { toast('Banque enregistrée (' + bank.length + ' photos).', 'ok'); });
+      });
+    });
+    $('#oa-bank-thumbs').on('click', '[data-bank-rm]', function () {
+      var id = $(this).data('bank-rm');
+      bank = bank.filter(function (p) { return p.id !== id; });
+      saveBank();
+    });
+    $('#oa-bank-apply-missing, #oa-bank-apply-all').on('click', function () {
+      var mode = $(this).data('mode');
+      if (!bank.length) return toast('Ajoutez d\'abord des photos à la banque de ce métier.', 'error');
+      if (mode === 'all' && !window.confirm('Remplacer les photos de toutes les pages de ce métier par celles de la banque ? Le texte ne change pas.')) return;
+      var $btns = $('#oa-bank-apply-missing, #oa-bank-apply-all').prop('disabled', true);
+      var $bar = $('#oa-bank-progress').prop('hidden', false).find('i').css('width', 0);
+      api('photo_targets', { trade: mode === 'all' ? trade() : '', mode: mode }).then(function (ids) {
+        if (!ids.length) { $('#oa-bank-msg').text('Aucune page à traiter.'); $btns.prop('disabled', false); return; }
+        var total = ids.length, done = 0, errors = 0;
+        (function next() {
+          var chunk = ids.splice(0, 5);
+          if (!chunk.length) {
+            $('#oa-bank-msg').text(done + ' page(s) mises à jour' + (errors ? ', ' + errors + ' erreur(s)' : '') + '. Rechargement…');
+            setTimeout(function () { location.reload(); }, 1200);
+            return;
+          }
+          api('rerender', { ids: JSON.stringify(chunk) }).then(function (res) {
+            res.forEach(function (r) { if (r.error) errors++; else done++; });
+            $bar.css('width', Math.round((total - ids.length) / total * 100) + '%');
+            $('#oa-bank-msg').text((total - ids.length) + ' / ' + total + '…');
+            next();
+          }, function (e) { toast(e, 'error'); $btns.prop('disabled', false); });
+        })();
+      });
+    });
+    if ($('#oa-bank-trade').length) loadBank();
+
     $(document).on('click', '[data-oa-toggle]', function () {
       $(this).closest('tr').next('.oa-checks-row').prop('hidden', function (i, h) { return !h; });
     });

@@ -44,6 +44,10 @@ class OA_Queue {
         $skip     = !empty($opts['skip_existing']);
         $status   = !empty($opts['status']) ? $opts['status'] : $s['post_status'];
 
+        // Les photos choisies sont mémorisées pour ce métier : les prochains lots
+        // (et les pages sans photo) les réutiliseront automatiquement.
+        OA_Generator::remember_photos($trade_id, $photos);
+
         // Le hub d'abord, pour que les pages filles puissent s'y relier.
         usort($keywords, function ($a, $b) {
             return (int) !empty($b['hub']) - (int) !empty($a['hub']);

@@ -44,15 +44,23 @@ class OA_Renderer {
     }
 
     private function alt($index) {
-        $alts = isset($this->data['image_alts']) ? (array) $this->data['image_alts'] : array();
+        // Toutes les images portent l'expression-clé principale, complétée par une
+        // description propre à chaque photo (alts tous différents, pas de bourrage identique).
+        $focus = OA_Prompts::ucfirst($this->ctx['focus']);
         if (0 === $index) {
-            // Garantit l'expression-clé dans l'attribut alt de la première image.
-            return OA_Prompts::ucfirst($this->ctx['focus']);
+            return $focus;
         }
-        if (!empty($alts[$index])) {
-            return trim($alts[$index]);
+        $alts = isset($this->data['image_alts']) ? array_values((array) $this->data['image_alts']) : array();
+        $desc = !empty($alts[$index]) ? trim(str_replace('*', '', $alts[$index])) : '';
+        // Retire l'expression-clé si l'IA l'a déjà mise, pour ne pas la doubler.
+        if ($desc) {
+            $desc = trim(str_ireplace(array($this->ctx['focus'], $this->ctx['city']['name']), '', $desc), " ,-–—:");
         }
-        return OA_Prompts::ucfirst($this->ctx['keyword']['label']) . ' — ' . $this->ctx['city']['name'] . ' (' . ($index + 1) . ')';
+        if ('' === $desc) {
+            $fallback = array('réalisation', 'chantier en cours', 'travaux terminés', 'détail de finition', 'avant / après', 'intervention de notre équipe');
+            $desc     = $fallback[($index - 1) % count($fallback)];
+        }
+        return $focus . ' – ' . mb_strtolower(mb_substr($desc, 0, 1)) . mb_substr($desc, 1);
     }
 
     private function next_image($size = 'large', $class = 'oa-figure', $attrs = array()) {

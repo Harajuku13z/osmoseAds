@@ -42,7 +42,11 @@ class OA_Generator {
             $hub_id = self::find_page($city['code'], $trade['id'], null, true);
         }
 
-        $photos = array_values(array_filter(array_map('intval', isset($payload['photos']) ? (array) $payload['photos'] : array())));
+        $photos = array_values(array_filter(array_map('intval', isset($payload['photos']) ? (array) $payload['photos'] : array()), 'wp_attachment_is_image'));
+        if (!$photos) {
+            // Aucune photo choisie pour ce lot : banque mémorisée du métier.
+            $photos = self::bank_photos($trade['id'], $keyword['id']);
+        }
         if (count($photos) > 1) {
             // Rotation propre à chaque ville : deux villes n'ouvrent pas sur la même photo.
             $shift  = abs(crc32($city['code'] . $keyword['id'])) % count($photos);
@@ -65,6 +69,77 @@ class OA_Generator {
             'photos'      => $photos,
             'image_count' => min(count($photos), 7),
         );
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Banque de photos par métier                                         */
+    /* ------------------------------------------------------------------ */
+
+    /** @return array [trade_id => [ '_pool' => int[], keyword_id => int[] ]] */
+    public static function bank() {
+        $bank = get_option('oa_photo_bank', array());
+        return is_array($bank) ? $bank : array();
+    }
+
+    /** Mémorise les photos d'un lot (fusion, sans doublon). */
+    public static function remember_photos($trade_id, array $photos, $replace = false) {
+        $bank = self::bank();
+        $cur  = ($replace || !isset($bank[$trade_id])) ? array() : $bank[$trade_id];
+        foreach ($photos as $key => $ids) {
+            $ids = array_values(array_filter(array_map('intval', (array) $ids)));
+            if (!$ids && !$replace) {
+                continue;
+            }
+            $cur[$key] = array_values(array_unique(array_merge($replace ? array() : (isset($cur[$key]) ? $cur[$key] : array()), $ids)));
+        }
+        $bank[$trade_id] = array_filter($cur);
+        update_option('oa_photo_bank', $bank, false);
+    }
+
+    /** Photos à utiliser : propres au mot-clé, puis banque du métier, puis toutes les banques. */
+    public static function bank_photos($trade_id, $keyword_id) {
+        $bank = self::bank();
+        $ids  = array();
+        if (!empty($bank[$trade_id])) {
+            $t   = $bank[$trade_id];
+            $ids = array_merge(isset($t[$keyword_id]) ? $t[$keyword_id] : array(), isset($t['_pool']) ? $t['_pool'] : array());
+            if (!$ids) {
+                foreach ($t as $list) {
+                    $ids = array_merge($ids, (array) $list);
+                }
+            }
+        }
+        if (!$ids) {
+            foreach ($bank as $t) {
+                foreach ((array) $t as $list) {
+                    $ids = array_merge($ids, (array) $list);
+                }
+            }
+        }
+        return array_values(array_filter(array_unique(array_map('intval', $ids)), 'wp_attachment_is_image'));
+    }
+
+    /**
+     * Re-met en page une page existante (nouvelles photos, nouveau design) SANS appel IA :
+     * le texte déjà rédigé est conservé.
+     *
+     * @param int        $post_id
+     * @param int[]|null $photos  null = photos d'origine, sinon banque du métier.
+     */
+    public static function rerender($post_id, $photos = null) {
+        $payload = get_post_meta($post_id, '_oa_payload', true);
+        $data    = get_post_meta($post_id, '_oa_data', true);
+        if (!is_array($payload) || !is_array($data) || empty($payload['city'])) {
+            return new WP_Error('oa_payload', 'Données d\'origine absentes pour cette page.');
+        }
+        $payload['post_id'] = $post_id;
+        $payload['photos']  = null === $photos ? (isset($payload['photos']) ? $payload['photos'] : array()) : $photos;
+        $ctx = self::context($payload);
+        if (is_wp_error($ctx)) {
+            return $ctx;
+        }
+        $built = self::build($data, $ctx, $post_id);
+        return self::save($built, $ctx, $payload, 0);
     }
 
     /**

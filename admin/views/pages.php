@@ -36,7 +36,42 @@ if ('score' === $orderby) {
 }
 $q = new WP_Query($args);
 $base = admin_url('admin.php?page=oa-pages');
+$no_img = count(get_posts(array(
+    'post_type'      => 'page',
+    'post_status'    => array('publish', 'future', 'draft', 'pending', 'private'),
+    'posts_per_page' => -1,
+    'fields'         => 'ids',
+    'meta_query'     => array(
+        array('key' => '_oa_generated', 'value' => '1'),
+        array('key' => '_thumbnail_id', 'compare' => 'NOT EXISTS'),
+    ),
+)));
 ?>
+<section class="oa-card oa-photobank" id="oa-photobank">
+    <div class="oa-card__head">
+        <div>
+            <h2>Photos des pages</h2>
+            <p class="oa-muted">La banque de photos d'un métier est utilisée automatiquement dès qu'un lot n'a pas de photos. Chaque image reçoit un texte alternatif contenant l'expression-clé principale de la page. Ajouter des photos à des pages existantes <b>ne relance pas l'IA</b> : le texte est conservé.</p>
+        </div>
+        <?php if ($no_img) : ?><span class="oa-uniq oa-uniq--bad"><?php echo (int) $no_img; ?> page(s) sans photo</span><?php endif; ?>
+    </div>
+    <div class="oa-row">
+        <label>Métier
+            <select id="oa-bank-trade">
+                <?php foreach (OA_Trades::all() as $t) : ?>
+                    <option value="<?php echo esc_attr($t['id']); ?>" <?php selected($f_trade ?: 'couvreur', $t['id']); ?>><?php echo esc_html($t['name']); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <button type="button" class="button" id="oa-bank-pick">Choisir les photos de la banque</button>
+        <button type="button" class="button button-primary" id="oa-bank-apply-missing" data-mode="missing">Ajouter les photos aux pages sans image</button>
+        <button type="button" class="button" id="oa-bank-apply-all" data-mode="all">Rafraîchir les photos de toutes les pages du métier</button>
+    </div>
+    <div class="oa-thumbs" id="oa-bank-thumbs"></div>
+    <div class="oa-progress" id="oa-bank-progress" hidden><i style="width:0"></i></div>
+    <p class="oa-muted" id="oa-bank-msg"></p>
+</section>
+
 <section class="oa-card">
     <form class="oa-card__head oa-filters-form" method="get">
         <input type="hidden" name="page" value="oa-pages">
@@ -80,7 +115,7 @@ $base = admin_url('admin.php?page=oa-pages');
                     <small class="oa-muted">« <?php echo esc_html(get_post_meta($p->ID, '_oa_focus', true)); ?> » · /<?php echo esc_html($p->post_name); ?>/</small>
                 </td>
                 <td><?php echo esc_html(get_post_meta($p->ID, '_oa_city_name', true)); ?></td>
-                <td><?php echo (int) get_post_meta($p->ID, '_oa_words', true); ?></td>
+                <td><?php echo (int) get_post_meta($p->ID, '_oa_words', true); ?><?php echo has_post_thumbnail($p->ID) ? '' : '<br><small class="oa-error">sans photo</small>'; ?></td>
                 <td><span class="oa-uniq oa-uniq--<?php echo $sim <= (int) OA_Settings::get('max_similarity') ? 'good' : 'bad'; ?>"><?php echo 100 - $sim; ?> %</span></td>
                 <td><span class="oa-status oa-status--<?php echo esc_attr($p->post_status); ?>"><?php echo esc_html(get_post_status_object($p->post_status)->label); ?></span><?php echo 'future' === $p->post_status ? '<br><small class="oa-muted">' . esc_html(get_the_date('d/m H:i', $p)) . '</small>' : ''; ?></td>
                 <td class="oa-right oa-nowrap">
