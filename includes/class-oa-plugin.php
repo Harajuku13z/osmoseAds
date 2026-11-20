@@ -26,6 +26,7 @@ final class OA_Plugin {
 
         if (is_admin()) {
             OA_Admin::hooks();
+            OA_ChatGPT::hooks();
         }
     }
 }

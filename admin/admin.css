@@ -198,3 +198,10 @@
 .oa-manual-raw{margin-top:8px}
 .oa-manual-raw summary{cursor:pointer;color:var(--muted)}
 .oa-manual-raw textarea{width:100%;margin-top:8px}
+.oa-siwc-btn{display:inline-flex;align-items:center;gap:10px;background:#000;color:#fff!important;text-decoration:none;font-weight:600;font-size:15px;padding:11px 20px;border-radius:999px;line-height:1}
+.oa-siwc-btn:hover{background:#262626}
+.oa-siwc-btn:focus-visible{outline:3px solid #60a5fa;outline-offset:2px}
+.oa-siwc-config{margin-top:12px}
+.oa-siwc-config summary{cursor:pointer;color:var(--muted)}
+.oa-danger{color:#b91c1c!important}
+.oa-alert--warn{background:#fffbeb;border-color:#fde68a}

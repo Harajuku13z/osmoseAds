@@ -36,6 +36,9 @@ class OA_Settings {
             'ai_base_url'      => 'https://api.openai.com/v1',
             'ai_reasoning'     => 'low',
             'ai_timeout'       => 180,
+            'chatgpt_client_id'     => '',
+            'chatgpt_client_secret' => '',
+            'chatgpt_model'         => '',
 
             // Contenu
             'word_target'      => 1200,
@@ -132,7 +135,7 @@ class OA_Settings {
         foreach (array('heading_font', 'body_font') as $f) {
             $clean[$f] = trim(preg_replace('/[^\p{L}0-9 \-]/u', '', (string) $clean[$f]));
         }
-        if (!in_array($clean['ai_provider'], array('openai', 'compatible', 'manual'), true)) {
+        if (!in_array($clean['ai_provider'], array('openai', 'compatible', 'manual', 'chatgpt'), true)) {
             $clean['ai_provider'] = 'openai';
         }
         if (!in_array($clean['post_status'], array('publish', 'draft', 'pending'), true)) {
@@ -152,8 +155,8 @@ class OA_Settings {
     }
 
     /** Clé API masquée pour l'affichage. */
-    public static function masked_key() {
-        $key = (string) self::get('ai_key');
+    public static function masked_key($field = 'ai_key') {
+        $key = (string) self::get($field);
         if (strlen($key) < 12) {
             return $key ? '••••' : '';
         }

@@ -9,6 +9,7 @@ if (!defined('ABSPATH')) {
  * Fournisseurs :
  *  - openai     : API OpenAI (sorties JSON strictes via json_schema).
  *  - compatible : toute API compatible OpenAI (OpenRouter, Mistral, Groq, LM Studio…).
+ *  - chatgpt    : « Continuer avec ChatGPT » — forfait ChatGPT de l'utilisateur (OA_ChatGPT).
  *  - manual     : « ChatGPT manuel » — le plugin prépare le prompt, l'utilisateur le colle
  *                 dans son abonnement ChatGPT et recolle la réponse JSON.
  */
@@ -33,6 +34,9 @@ class OA_AI {
         if ($this->is_manual()) {
             return true;
         }
+        if ('chatgpt' === $this->s['ai_provider']) {
+            return OA_ChatGPT::is_connected();
+        }
         return '' !== trim((string) $this->s['ai_key']) || 'compatible' === $this->s['ai_provider'];
     }
 
@@ -55,6 +59,12 @@ class OA_AI {
     public function json($system, $user, array $schema, $schema_name = 'page', $temperature = 0.8) {
         if ($this->is_manual()) {
             return new WP_Error('oa_manual', 'Mode ChatGPT manuel', array('prompt' => self::manual_prompt($system, $user, $schema)));
+        }
+        if ('chatgpt' === $this->s['ai_provider']) {
+            if (!OA_ChatGPT::is_configured()) {
+                return new WP_Error('oa_siwc_config', 'Connexion ChatGPT non disponible : identifiant client OpenAI manquant.');
+            }
+            return OA_ChatGPT::json($system, $user, $schema, $schema_name, $this->s['chatgpt_model'] ?: 'gpt-5-mini', $this->s['ai_reasoning']);
         }
         if (!$this->is_ready()) {
             return new WP_Error('oa_no_key', 'Aucune clé API configurée (Osmose Ads → Réglages → IA).');
@@ -198,6 +208,10 @@ class OA_AI {
         if ($this->is_manual()) {
             return array();
         }
+        if ('chatgpt' === $this->s['ai_provider']) {
+            $m = OA_ChatGPT::models();
+            return is_wp_error($m) ? $m : array_keys($m);
+        }
         $headers = array();
         if ('' !== trim((string) $this->s['ai_key'])) {
             $headers['Authorization'] = 'Bearer ' . trim($this->s['ai_key']);
@@ -218,7 +232,7 @@ class OA_AI {
         return $ids;
     }
 
-    private static function track_usage($tokens) {
+    public static function track_usage($tokens) {
         $month = gmdate('Y-m');
         $usage = get_option('oa_usage', array());
         if (!isset($usage[$month])) {

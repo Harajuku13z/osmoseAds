@@ -16,6 +16,9 @@ $pages_dd = wp_dropdown_pages(array(
 ));
 ?>
 <?php if (isset($_GET['saved'])) : ?><div class="oa-alert oa-alert--ok">Réglages enregistrés.</div><?php endif; ?>
+<?php $oa_cg_notice = OA_ChatGPT::pull_notice(); if ($oa_cg_notice) : ?>
+    <div class="oa-alert oa-alert--<?php echo 'success' === $oa_cg_notice['type'] ? 'ok' : ('warning' === $oa_cg_notice['type'] ? 'warn' : 'error'); ?>"><?php echo esc_html($oa_cg_notice['message']); ?></div>
+<?php endif; ?>
 
 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="oa-settings" id="oa-settings">
     <input type="hidden" name="action" value="oa_save_settings">
@@ -67,6 +70,7 @@ $pages_dd = wp_dropdown_pages(array(
         <div class="oa-providers">
             <?php
             $providers = array(
+                'chatgpt'    => array('ChatGPT — mon abonnement', 'Connectez votre compte ChatGPT (Go, Plus, Pro ou Business) : les pages sont générées automatiquement sur votre forfait, sans clé API.'),
                 'openai'     => array('OpenAI (ChatGPT) — API', 'Recommandé pour la génération en masse. Facturation à l\'usage sur platform.openai.com (quelques centimes par page avec un modèle « mini »).'),
                 'manual'     => array('ChatGPT manuel (abonnement)', 'Utilise votre abonnement ChatGPT Plus/Pro : un clic ouvre ChatGPT avec le prompt prêt, un clic récupère la réponse et crée la page, puis enchaîne la suivante. Sans clé API ni coût supplémentaire.'),
                 'compatible' => array('API compatible OpenAI', 'OpenRouter, Mistral, Groq, serveur local… Indiquez l\'URL de base et la clé.'),
@@ -78,6 +82,50 @@ $pages_dd = wp_dropdown_pages(array(
                     <span><strong><?php echo esc_html($p[0]); ?></strong><small><?php echo esc_html($p[1]); ?></small></span>
                 </label>
             <?php endforeach; ?>
+        </div>
+        <?php
+        $oa_cg_ready = OA_ChatGPT::is_configured();
+        $oa_cg_acc   = OA_ChatGPT::account();
+        $oa_cg_on    = OA_ChatGPT::is_connected();
+        ?>
+        <div class="oa-connect oa-siwc" data-oa-show="chatgpt">
+            <div class="oa-connect__head">
+                <strong>Continuer avec ChatGPT</strong>
+                <span class="oa-pill <?php echo ($oa_cg_on && $oa_cg_acc['plan']) ? 'is-ok' : 'is-off'; ?>"><?php echo $oa_cg_on ? ($oa_cg_acc['plan'] ? '● Forfait connecté' : '◐ Forfait non autorisé') : '○ Non connecté'; ?></span>
+            </div>
+            <?php if (!$oa_cg_ready) : ?>
+                <p class="oa-alert oa-alert--warn">OpenAI réserve « Se connecter avec ChatGPT » aux partenaires approuvés. Dès que vous recevez votre identifiant client (<code>oaiapp_…</code>), collez-le ci-dessous et enregistrez : le bouton de connexion apparaîtra.</p>
+                <p><a class="button" href="<?php echo esc_url(OA_ChatGPT::FORM_URL); ?>" target="_blank" rel="noopener noreferrer">Demander l'accès à OpenAI ↗</a></p>
+            <?php elseif (!$oa_cg_on) : ?>
+                <p><a class="oa-siwc-btn" data-oai-siwc-button data-oai-siwc-button-client="<?php echo esc_attr(OA_ChatGPT::client_id()); ?>" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=oa_chatgpt_start'), 'oa_chatgpt_start')); ?>">Continuer avec ChatGPT</a></p>
+                <p class="oa-muted">Vous serez redirigé vers ChatGPT pour vous connecter, puis choisir d'autoriser Osmose Ads à utiliser votre forfait. Aucune clé API n'est créée ni partagée.</p>
+            <?php else : ?>
+                <p>Connecté en tant que <strong><?php echo esc_html($oa_cg_acc['name'] ?: $oa_cg_acc['email']); ?></strong><?php echo $oa_cg_acc['email'] && $oa_cg_acc['name'] ? ' (' . esc_html($oa_cg_acc['email']) . ')' : ''; ?><?php echo $oa_cg_acc['connected_at'] ? ' depuis le ' . esc_html(wp_date('j F Y', $oa_cg_acc['connected_at'])) : ''; ?>.</p>
+                <?php if (!$oa_cg_acc['plan']) : ?>
+                    <p class="oa-alert oa-alert--warn">L'utilisation de votre forfait n'a pas été autorisée : aucune page ne peut être générée par ce biais.</p>
+                    <p><a class="oa-siwc-btn" data-oai-siwc-button href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=oa_chatgpt_start&reconsent=1'), 'oa_chatgpt_start')); ?>">Autoriser mon forfait ChatGPT</a></p>
+                <?php endif; ?>
+                <label class="oa-field">Modèle
+                    <span class="oa-inline"><input type="text" name="<?php echo $name('chatgpt_model'); ?>" id="oa-cg-model" value="<?php echo esc_attr($s['chatgpt_model']); ?>" list="oa-cg-models"><button type="button" class="button" id="oa-cg-models-btn">Lister</button></span>
+                    <datalist id="oa-cg-models"></datalist>
+                </label>
+                <p class="oa-row">
+                    <button type="button" class="button" id="oa-cg-test">Tester</button>
+                    <a class="button" href="<?php echo esc_url(OA_ChatGPT::USAGE_URL); ?>" target="_blank" rel="noopener noreferrer">Voir ma consommation et fixer une limite ↗</a>
+                    <a class="button-link oa-danger" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=oa_chatgpt_disconnect'), 'oa_chatgpt_disconnect')); ?>" onclick="return confirm('Déconnecter ChatGPT ?');">Déconnecter</a>
+                </p>
+                <p id="oa-cg-msg" class="oa-muted">Avec Plus, la limite de 5 heures est partagée avec votre usage de ChatGPT ; préférez un rythme de publication modéré.</p>
+            <?php endif; ?>
+            <?php if (!OA_ChatGPT::from_config()) : ?>
+                <details class="oa-siwc-config" <?php echo $oa_cg_ready ? '' : 'open'; ?>>
+                    <summary>Identifiant client OpenAI</summary>
+                    <div class="oa-form-grid">
+                        <label class="oa-field">Client ID <input type="text" name="<?php echo $name('chatgpt_client_id'); ?>" value="<?php echo esc_attr($s['chatgpt_client_id']); ?>" placeholder="oaiapp_…" autocomplete="off"></label>
+                        <label class="oa-field">Client secret (si client confidentiel) <input type="password" name="<?php echo $name('chatgpt_client_secret'); ?>" value="<?php echo esc_attr(OA_Settings::masked_key('chatgpt_client_secret')); ?>" autocomplete="off"></label>
+                    </div>
+                    <p class="oa-muted">URL de retour à déclarer chez OpenAI, à l'identique : <code><?php echo esc_html(OA_ChatGPT::redirect_uri()); ?></code></p>
+                </details>
+            <?php endif; ?>
         </div>
         <?php $oa_connected = ('openai' === $s['ai_provider'] && '' !== (string) $s['ai_key']); ?>
         <div class="oa-connect" data-oa-show="openai">

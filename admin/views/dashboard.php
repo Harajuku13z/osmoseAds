@@ -80,7 +80,7 @@ $total_b = max(1, $b('good') + $b('ok') + $b('bad'));
 
         <section class="oa-card">
             <h2>IA ce mois-ci</h2>
-            <p><strong><?php echo number_format_i18n($month['calls']); ?></strong> appels · <strong><?php echo number_format_i18n($month['tokens']); ?></strong> tokens · fournisseur <strong><?php echo esc_html(array('openai' => 'OpenAI', 'compatible' => 'API compatible', 'manual' => 'ChatGPT manuel')[OA_Settings::get('ai_provider')]); ?></strong> (<?php echo esc_html(OA_Settings::get('ai_model')); ?>)</p>
+            <p><strong><?php echo number_format_i18n($month['calls']); ?></strong> appels · <strong><?php echo number_format_i18n($month['tokens']); ?></strong> tokens · fournisseur <strong><?php echo esc_html(array('openai' => 'OpenAI', 'compatible' => 'API compatible', 'manual' => 'ChatGPT manuel', 'chatgpt' => 'Forfait ChatGPT')[OA_Settings::get('ai_provider')]); ?></strong> (<?php echo esc_html('chatgpt' === OA_Settings::get('ai_provider') ? OA_Settings::get('chatgpt_model') : OA_Settings::get('ai_model')); ?>)</p>
         </section>
     </div>
 </div>

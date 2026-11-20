@@ -611,6 +611,17 @@
       }, function (e) { $m.html('<span class="oa-error">✗ ' + esc(e) + '</span>'); })
         .always(function () { $b.prop('disabled', false); });
     });
+    $('#oa-cg-models-btn').on('click', function () {
+      api('models').then(function (list) {
+        $('#oa-cg-models').html(list.map(function (m) { return '<option value="' + esc(m) + '">'; }).join(''));
+        toast(list.length + ' modèles disponibles dans votre forfait.', 'ok');
+        $('#oa-cg-model').focus();
+      }, function (e) { toast(e, 'error'); });
+    });
+    $('#oa-cg-test').on('click', function () {
+      var $m = $('#oa-cg-msg').text('Test en cours avec votre forfait…');
+      api('test_ai').then(function (r) { $m.html('<span class="oa-ok">✔ ' + esc(r.message) + '</span>'); }, function (e) { $m.html('<span class="oa-error">✗ ' + esc(e) + '</span>'); });
+    });
     $('#oa-models-btn').on('click', function () {
       api('models').then(function (list) {
         $('#oa-models').html(list.map(function (m) { return '<option value="' + esc(m) + '">'; }).join(''));

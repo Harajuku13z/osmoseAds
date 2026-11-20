@@ -108,8 +108,10 @@ class OA_Admin {
         check_admin_referer('oa_settings');
         $input = isset($_POST['oa']) && is_array($_POST['oa']) ? $_POST['oa'] : array();
         // La clé masquée affichée ne doit pas écraser la vraie clé.
-        if (isset($input['ai_key']) && (false !== strpos($input['ai_key'], '•'))) {
-            unset($input['ai_key']);
+        foreach (array('ai_key', 'chatgpt_client_secret') as $secret) {
+            if (isset($input[$secret]) && (false !== strpos($input[$secret], '•'))) {
+                unset($input[$secret]);
+            }
         }
         OA_Settings::save($input, true);
         $tab = isset($_POST['tab']) ? sanitize_key($_POST['tab']) : '';
