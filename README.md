@@ -1,182 +1,76 @@
-# Osmose ADS - Plugin WordPress
+# Osmose Ads 2 — Pages locales SEO pour WordPress
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue.svg)
-![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
-![License](https://img.shields.io/badge/license-GPL%20v2-green.svg)
+Génère en masse des pages de service locales **uniques** : pour chaque ville, jusqu'à **8 pages**, une par mot-clé métier.
 
-Système de génération automatique et manuelle de pages de services géolocalisées avec personnalisation IA. Optimisé pour le SEO local.
+Exemple, couvreur à Chalon-sur-Saône :
 
-## 📋 Description
+| Page | URL |
+|---|---|
+| Couvreur à Chalon-sur-Saône *(page principale / hub)* | `/couvreur-a-chalon-sur-saone/` |
+| Rénovation de toiture à Chalon-sur-Saône | `/renovation-de-toiture-a-chalon-sur-saone/` |
+| Réfection de toiture à Chalon-sur-Saône | `/refection-de-toiture-a-chalon-sur-saone/` |
+| Zinguerie à Chalon-sur-Saône | `/zinguerie-a-chalon-sur-saone/` |
+| Traitement hydrofuge de toiture à Chalon-sur-Saône | … |
 
-Osmose ADS permet de créer des pages uniques pour chaque combinaison service/ville, optimisées pour le référencement local. Le plugin offre :
+## Ce qui rend chaque page unique (et pas générique)
 
-- ✅ Génération automatique de templates de contenu avec IA (OpenAI/Groq)
-- ✅ Personnalisation du contenu par ville (avec ou sans IA)
-- ✅ Génération en masse d'annonces
-- ✅ Import de villes via l'API officielle française (data.gouv.fr)
-- ✅ Optimisation SEO automatique
-- ✅ Interface d'administration moderne et intuitive
+- **Une intention par page** : chaque mot-clé a ses mots-clés secondaires, son angle éditorial, et l'IA a l'interdiction de développer les sujets des pages sœurs (anti-cannibalisation).
+- **Données locales officielles** (geo.api.gouv.fr) : code postal, département, région, population, communes voisines réelles.
+- **Plan éditorial tournant** : 6 structures × 5 accroches, choisies selon la ville et le mot-clé.
+- **Anti-duplication mesurée** : chaque page est comparée aux pages du même mot-clé dans les autres villes (empreinte par 5-grammes, noms de ville neutralisés). Au-delà du seuil, l'IA réécrit.
+- **Photos** : vos photos de chantier, ordre différent par ville, textes alternatifs optimisés.
 
-## ✨ Fonctionnalités
+## SEO / AIOSEO
 
-### Gestion des Templates
-- Création automatique de templates avec IA
-- Création manuelle de templates
-- Personnalisation par ville avec remplacement de variables
-- Personnalisation IA avancée pour contenu unique
+- Analyse type **TruSEO** (21 critères : expression-clé dans titre/début de titre/méta/URL/intro/sous-titres/alt, densité, longueur, liens internes/externes, phrases, transitions, voix passive, paragraphes, répartition des sous-titres).
+- Si le score est sous le seuil (80 par défaut), l'IA est relancée **avec la liste précise des critères ratés**.
+- Corrections automatiques garanties : titre SEO 40–60 caractères commençant par l'expression-clé, méta-description 120–160, alt de l'image principale, FAQ titrée avec l'expression-clé, lien interne et lien d'autorité.
+- Écriture directe dans **All in One SEO** (titre, description, expression-clé principale + secondaires, score, Open Graph). Compatible Yoast et Rank Math. Sans plugin SEO : méta et Open Graph gérés par Osmose Ads.
+- **Schema.org** : LocalBusiness typé (RoofingContractor, Plumber…) + Service + FAQPage, fusionnés dans le graphe AIOSEO.
+- **Maillage interne automatique** : page principale ↔ pages de la ville, et même service dans les communes voisines (triées par distance).
+- **Publication progressive** optionnelle (X pages/jour) pour un rythme naturel.
 
-### Génération d'Annonces
-- Génération en masse pour plusieurs villes
-- Personnalisation automatique du contenu
-- Métadonnées SEO optimisées
-- Gestion des slugs uniques
+## Intelligence artificielle
 
-### Import de Villes
-- Import par département
-- Import par région
-- Import par rayon (distance)
-- Utilisation de l'API GeoAPI officielle (data.gouv.fr)
+| Mode | Usage |
+|---|---|
+| **OpenAI API** (recommandé) | Génération de masse automatique. Sorties JSON strictes. Modèle au choix (`gpt-5-mini` par défaut). |
+| **ChatGPT manuel** | Utilise votre abonnement ChatGPT : le plugin prépare chaque prompt, vous le collez dans ChatGPT puis recollez la réponse. Pour quelques pages. |
+| **API compatible** | OpenRouter, Mistral, Groq, serveur local… |
 
-### Interface Admin
-- Design moderne avec palette bleue
-- Dashboard avec statistiques
-- Configuration initiale guidée
-- Masquage des notifications WordPress
+> Un abonnement ChatGPT Plus/Pro ne fournit pas d'accès programmatique : l'automatiser (scraping, réutilisation de session) est interdit par les conditions d'OpenAI et peut faire bannir le compte. Pour un SaaS, chaque client renseigne sa propre clé API (modèle « BYOK »), ce que fait déjà l'écran Réglages → IA.
 
-## 🚀 Installation
+## Installation
 
-### Méthode 1 : Installation manuelle
+1. Téléversez `osmose-ads.zip` dans *Extensions → Ajouter → Téléverser*.
+2. *Osmose Ads → Réglages* : entreprise (téléphone, garanties **réelles**), IA, publication.
+3. *Osmose Ads → Générer* : métier → villes → mots-clés (8 max) → photos → **Lancer**.
+4. Suivez la progression dans *File d'attente* ; scores et détails dans *Pages & SEO*.
 
-1. Téléchargez ou clonez ce dépôt
-2. Uploadez le dossier `osmose-ads` dans `/wp-content/plugins/`
-3. Activez le plugin depuis le menu "Extensions" de WordPress
-4. Suivez le guide de configuration initiale
+Pour des volumes importants, remplacez WP-Cron par une vraie tâche cron serveur :
+`* * * * * wget -q -O - https://votre-site.fr/wp-cron.php?doing_wp_cron >/dev/null 2>&1`
+et ajoutez `define('DISABLE_WP_CRON', true);` dans `wp-config.php`.
 
-### Méthode 2 : Via GitHub
-
-```bash
-cd wp-content/plugins
-git clone https://github.com/votre-username/osmose-ads.git
-```
-
-Puis activez le plugin dans WordPress.
-
-## 📖 Configuration
-
-### Configuration initiale
-
-1. Après activation, vous serez redirigé vers la page de configuration
-2. Remplissez les informations :
-   - Téléphone de l'entreprise
-   - Liste des services
-   - Villes (ou importez-en via l'API)
-   - Clé API IA (optionnel)
-
-### Import de villes via l'API
-
-1. Allez dans **Osmose ADS > Villes**
-2. Cliquez sur l'onglet "Import en Masse"
-3. Choisissez votre méthode :
-   - **Par Département** : Importe toutes les communes d'un département
-   - **Par Région** : Importe toutes les communes d'une région
-   - **Par Rayon** : Importe les communes dans un rayon autour d'une ville
-
-### Génération d'annonces
-
-1. Allez dans **Osmose ADS > Génération en Masse**
-2. Sélectionnez un service
-3. Sélectionnez les villes
-4. Cliquez sur "Générer les Annonces"
-
-## 🔧 Prérequis
-
-- WordPress 5.0 ou supérieur
-- PHP 7.4 ou supérieur
-- Mémoire PHP recommandée : 256MB
-- Clé API OpenAI ou Groq (optionnel, pour la personnalisation IA)
-
-## 🎨 Variables Disponibles
-
-Dans vos templates, vous pouvez utiliser ces variables :
-
-- `[VILLE]` → Nom de la ville
-- `[DÉPARTEMENT]` → Département
-- `[RÉGION]` → Région
-- `[CODE_POSTAL]` → Code postal
-- `[FORM_URL]` → URL du formulaire de devis
-- `[PHONE]` → Numéro de téléphone formaté
-- `[PHONE_RAW]` → Numéro de téléphone brut
-- `[TITRE]` → Titre de l'annonce
-
-## 📁 Structure du Projet
+## Architecture
 
 ```
-osmose-ads/
-├── osmose-ads.php              # Fichier principal
-├── includes/                   # Classes principales
-│   ├── models/                # Modèles de données
-│   └── services/              # Services (IA, API Geo)
-├── admin/                     # Interface admin
-│   ├── partials/             # Templates admin
-│   ├── css/                  # Styles admin
-│   └── js/                   # Scripts admin
-├── public/                    # Interface publique
-│   ├── templates/            # Templates publics
-│   ├── css/                  # Styles publics
-│   └── js/                   # Scripts publics
-├── README.md                  # Documentation
-├── LICENSE                    # Licence GPL v2
-└── .gitignore                # Fichiers ignorés par Git
+osmose-ads.php                 amorçage + autoload
+includes/
+  class-oa-plugin.php          branchement des modules
+  class-oa-install.php         tables oa_jobs (file) et oa_calls (clics)
+  class-oa-settings.php        réglages
+  class-oa-trades.php          14 métiers, grappes de mots-clés, prépositions (« au Creusot »)
+  class-oa-geo.php             geo.api.gouv.fr + calcul de proximité
+  class-oa-ai.php              OpenAI / compatible / manuel, relances, suivi des tokens
+  class-oa-prompts.php         prompts + schéma JSON de page
+  class-oa-generator.php       pipeline complet d'une page
+  class-oa-renderer.php        JSON → HTML sémantique (tout texte IA échappé)
+  class-oa-seo.php             analyse TruSEO, similarité, AIOSEO/Yoast/RankMath, schema
+  class-oa-queue.php           file atomique, travailleurs parallèles, cron, drip
+  class-oa-public.php          shortcodes, maillage, barre mobile, suivi des appels
+  class-oa-admin.php           menus, formulaires, AJAX
+admin/  views/*.php, admin.css, admin.js
+public/ front.css, front.js
 ```
 
-## 🔗 API Utilisées
-
-- **GeoAPI** : https://geo.api.gouv.fr (API officielle française)
-- **OpenAI** : https://api.openai.com (Optionnel)
-- **Groq** : https://api.groq.com (Optionnel)
-
-## 📝 Changelog
-
-### Version 1.0.0
-- Version initiale
-- Génération automatique de templates avec IA
-- Import de villes via API française
-- Interface admin moderne
-- Génération en masse d'annonces
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à :
-1. Fork le projet
-2. Créer une branche pour votre feature (`git checkout -b feature/AmazingFeature`)
-3. Commit vos changements (`git commit -m 'Add some AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouvrir une Pull Request
-
-## 📄 Licence
-
-Ce projet est sous licence GPL v2 ou ultérieure. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
-## 👤 Auteur
-
-**Osmose**
-
-- Website: [osmose.com](https://osmose.com)
-- GitHub: [@votre-username](https://github.com/votre-username)
-
-## 🙏 Remerciements
-
-- API GeoAPI de data.gouv.fr pour les données géographiques
-- WordPress pour le framework
-- La communauté WordPress pour le support
-
-## 📞 Support
-
-Pour toute question ou problème :
-- Ouvrez une issue sur GitHub
-- Consultez la documentation dans le dossier `docs/`
-
----
-
-⭐ Si ce projet vous a aidé, n'hésitez pas à lui donner une étoile sur GitHub !
+Les pages générées sont des **pages WordPress natives** : elles restent en place et éditables si le plugin est désactivé (seuls les shortcodes de boutons/maillage ne s'affichent plus).
