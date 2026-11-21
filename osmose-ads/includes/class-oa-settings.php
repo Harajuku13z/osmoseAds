@@ -84,6 +84,13 @@ class OA_Settings {
             'realisations_url' => '',
             'realisations_title' => 'Nos réalisations',
             'post_tagline'     => 'Des conseils d\'artisans et un devis gratuit, sur place.',
+            'reviews_list'     => '',
+            'reviews_title'    => 'Avis clients',
+            'reviews_url'      => '',
+            'reviews_count'    => '',
+            'sidebar'          => 1,
+            'lead_form'        => 1,
+            'lead_email'       => '',
         );
     }
 
@@ -119,13 +126,13 @@ class OA_Settings {
             $value = wp_unslash($input[$key]);
             if (is_int($default)) {
                 $clean[$key] = (int) $value;
-            } elseif (in_array($key, array('usps', 'extra_rules', 'certifications', 'address', 'services_list', 'realisations_list'), true)) {
+            } elseif (in_array($key, array('usps', 'extra_rules', 'certifications', 'address', 'services_list', 'realisations_list', 'reviews_list'), true)) {
                 $clean[$key] = sanitize_textarea_field($value);
-            } elseif (in_array($key, array('quote_url', 'ai_base_url', 'realisations_url'), true)) {
+            } elseif (in_array($key, array('quote_url', 'ai_base_url', 'realisations_url', 'reviews_url'), true)) {
                 $clean[$key] = esc_url_raw(trim($value));
             } elseif (in_array($key, array('brand_color', 'brand_color2', 'button_ink', 'accent_color', 'accent_ink', 'ink_color'), true)) {
                 $clean[$key] = sanitize_hex_color($value) ?: $default;
-            } elseif ('email' === $key) {
+            } elseif ('email' === $key || 'lead_email' === $key) {
                 $clean[$key] = sanitize_email($value);
             } else {
                 $clean[$key] = sanitize_text_field($value);
@@ -159,7 +166,7 @@ class OA_Settings {
     }
 
     public static function checkboxes() {
-        return array('auto_retry', 'background', 'schema', 'external_links', 'nearby_links', 'sticky_cta', 'heading_upper', 'style_posts', 'text_photos');
+        return array('auto_retry', 'background', 'schema', 'external_links', 'nearby_links', 'sticky_cta', 'heading_upper', 'style_posts', 'text_photos', 'sidebar', 'lead_form');
     }
 
     /** Clé API masquée pour l'affichage. */
@@ -186,6 +193,19 @@ class OA_Settings {
             }
         }
         return array_values(array_unique($out));
+    }
+
+    /** Avis « Nom | Texte | mots-clés » (une ligne par avis). */
+    public static function reviews() {
+        $out = array();
+        foreach (preg_split('/\r\n|\r|\n/', (string) self::get('reviews_list')) as $line) {
+            $p = array_map('trim', explode('|', $line));
+            if (count($p) < 2 || '' === $p[0] || '' === $p[1]) {
+                continue;
+            }
+            $out[] = array('name' => $p[0], 'text' => $p[1], 'tags' => isset($p[2]) ? $p[2] : '');
+        }
+        return $out;
     }
 
     public static function cards($key) {

@@ -133,6 +133,9 @@ class OA_Renderer {
         $html    .= '<div class="oa-hero alignwide' . ($hero_img ? ' has-media' : '') . "\">\n" . $hero_img
             . '<div class="oa-hero__inner"><p class="oa-hero__tagline">' . self::inline($d['hero_tagline']) . "</p>\n[oa_cta]\n[oa_trust]</div>\n</div>\n";
 
+        // Mise en page deux colonnes : contenu + colonne de droite (appel, avis, formulaire).
+        $html .= "<div class=\"oa-layout\"><div class=\"oa-main\">\n";
+
         // INTRO
         $html .= '<div class="oa-intro">' . "\n" . $this->p((array) $d['intro']) . "</div>\n";
 
@@ -188,7 +191,7 @@ class OA_Renderer {
         }
 
         // LANDING : toutes nos réalisations + appel à l'action.
-        $html .= "[oa_realisations]\n";
+        $html .= "[oa_realisations]\n[oa_avis]\n";
 
         // LOCAL
         if (!empty($d['local']['paragraphs'])) {
@@ -225,6 +228,7 @@ class OA_Renderer {
 
         // MAILLAGE dynamique (autres services de la ville + villes voisines).
         $html .= "[oa_maillage]\n";
+        $html .= "</div>\n[oa_sidebar]\n</div>\n";
 
         return "<div class=\"oa-page\">\n" . $html . "</div>\n";
     }

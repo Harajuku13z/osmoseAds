@@ -95,3 +95,15 @@
   }, { rootMargin: '200px' });
   vids.forEach(function (v) { io.observe(v); });
 })();
+
+/* Formulaire de devis : marque les envois faits par un vrai navigateur. */
+(function () {
+  document.addEventListener('focusin', function (e) {
+    var f = e.target.closest && e.target.closest('.oa-form');
+    if (f && f.oa_js) f.oa_js.value = '1';
+  });
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (f.classList && f.classList.contains('oa-form') && f.oa_js) f.oa_js.value = '1';
+  }, true);
+})();

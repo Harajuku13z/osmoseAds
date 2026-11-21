@@ -18,6 +18,11 @@ class OA_Public {
         add_shortcode('oa_services', array(__CLASS__, 'sc_services'));
         add_shortcode('oa_realisations', array(__CLASS__, 'sc_realisations'));
         add_shortcode('oa_cta_band', array(__CLASS__, 'sc_cta_band'));
+        add_shortcode('oa_avis', array(__CLASS__, 'sc_avis'));
+        add_shortcode('oa_sidebar', array(__CLASS__, 'sc_sidebar'));
+        add_action('init', array(__CLASS__, 'register_leads'));
+        add_action('admin_post_oa_lead', array(__CLASS__, 'lead'));
+        add_action('admin_post_nopriv_oa_lead', array(__CLASS__, 'lead'));
         add_action('wp_enqueue_scripts', array(__CLASS__, 'assets'));
         add_action('wp_footer', array(__CLASS__, 'sticky_bar'));
         add_filter('body_class', array(__CLASS__, 'body_class'));
@@ -67,7 +72,7 @@ class OA_Public {
         $home  = $s['quote_url'] && 0 === strpos($s['quote_url'], home_url()) ? $s['quote_url'] : home_url('/');
         $cta   = '<section class="oa-cta alignwide"><h2>' . esc_html('Un projet ? Parlons-en') . '</h2><p>' . esc_html('Décrivez-nous vos travaux : nous venons faire le diagnostic chez vous et vous remettons un devis gratuit et détaillé.') . '</p>'
             . ($s['company_name'] ? '<p class="oa-cta__company">' . esc_html($s['company_name']) . esc_html(', votre artisan de confiance.') . '</p>' : '') . self::sc_cta() . '</section>';
-        return '<div class="oa-page oa-post">' . $hero . '<div class="oa-article">' . $content . '</div>' . self::sc_cta_band() . self::sc_services() . self::sc_realisations() . $cta . '</div>';
+        return '<div class="oa-page oa-post">' . $hero . '<div class="oa-layout"><div class="oa-main"><div class="oa-article">' . $content . '</div>' . self::sc_cta_band() . self::sc_services() . self::sc_realisations() . self::sc_avis() . $cta . '</div>' . self::sc_sidebar() . '</div></div>';
     }
 
     /**
@@ -413,6 +418,209 @@ class OA_Public {
             echo '<a class="oa-sticky__quote" data-oa-track="quote" href="' . esc_url($s['quote_url']) . '">' . esc_html($s['quote_label'] ?: 'Devis gratuit') . '</a>';
         }
         echo '</div>';
+    }
+
+    /* ------------------------------------------------------------------ Avis */
+
+    private static $shown_reviews = array();
+
+    /** Les avis les plus proches du sujet de la page (mots communs), puis les autres. */
+    private static function pick_reviews($max, $exclude = array()) {
+        $items = OA_Settings::reviews();
+        if (!$items) {
+            return array();
+        }
+        $post_id = get_the_ID();
+        $main    = OA_Settings::words(get_post_meta($post_id, '_oa_keyword_label', true) ?: get_the_title($post_id));
+        $n       = count($items);
+        $scored  = array();
+        foreach ($items as $k => $it) {
+            if (in_array($k, $exclude, true)) {
+                continue;
+            }
+            $len   = mb_strlen($it['text']);
+            $score = 3 * count(array_intersect($main, OA_Settings::words($it['text'] . ' ' . $it['tags'])));
+            $score += ($len >= 70 && $len <= 420) ? 1 : 0;
+            // Départage stable mais différent d'une page à l'autre.
+            $scored[] = array($score, (($k + $post_id * 7) % $n) * -1, $k);
+        }
+        rsort($scored);
+        $keys = array_slice(wp_list_pluck($scored, 2), 0, $max);
+        $out  = array();
+        foreach ($keys as $k) {
+            $out[$k] = $items[$k];
+        }
+        return $out;
+    }
+
+    private static function google_g() {
+        return '<svg class="oa-g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.09A6.6 6.6 0 0 1 5.49 12c0-.73.13-1.43.35-2.09V7.07H2.18A11 11 0 0 0 1 12c0 1.78.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/></svg>';
+    }
+
+    /** Note globale : G · 5,0 ★★★★★ · +100 avis Google. */
+    private static function rating_badge() {
+        $count = trim((string) OA_Settings::get('reviews_count'));
+        $url   = OA_Settings::get('reviews_url');
+        $txt   = self::google_g() . '<strong>5,0</strong><span class="oa-stars" aria-label="5 étoiles sur 5">★★★★★</span><span>' . esc_html(($count ? $count . ' ' : '') . 'avis Google') . '</span>';
+        return $url ? '<a class="oa-rating" href="' . esc_url($url) . '" target="_blank" rel="noopener">' . $txt . '</a>' : '<p class="oa-rating">' . $txt . '</p>';
+    }
+
+    private static function review_html($r, $limit = 300) {
+        $text = $r['text'];
+        if (mb_strlen($text) > $limit) {
+            $text = rtrim(mb_substr($text, 0, $limit - 1), " ,.;") . '…';
+        }
+        $initial = mb_strtoupper(mb_substr($r['name'], 0, 1));
+        return '<figure class="oa-review"><div class="oa-review__head"><span class="oa-review__avatar" aria-hidden="true">' . esc_html($initial) . '</span><figcaption><strong>' . esc_html($r['name']) . '</strong><span class="oa-stars" aria-label="5 étoiles sur 5">★★★★★</span></figcaption>' . self::google_g() . '</div>'
+            . '<blockquote>' . esc_html($text) . '</blockquote></figure>';
+    }
+
+    /** Bloc « Avis clients » : 3 avis proches du sujet + note Google. */
+    public static function sc_avis() {
+        $picked = self::pick_reviews(3);
+        if (!$picked) {
+            return '';
+        }
+        self::$shown_reviews = array_keys($picked);
+        $out = '';
+        foreach ($picked as $r) {
+            $out .= self::review_html($r);
+        }
+        $url = OA_Settings::get('reviews_url');
+        return '<section class="oa-block oa-avis alignwide" id="avis"><div class="oa-avis__top"><div><p class="oa-eyebrow">' . esc_html('Témoignages') . '</p><h2>' . esc_html(OA_Settings::get('reviews_title') ?: 'Avis clients') . '</h2></div>' . self::rating_badge() . '</div>'
+            . '<div class="oa-reviews">' . $out . '</div>'
+            . ($url ? '<p class="oa-block__more"><a class="oa-btn oa-btn--ghost" href="' . esc_url($url) . '" target="_blank" rel="noopener">' . esc_html('Lire tous les avis sur Google') . '</a></p>' : '') . '</section>';
+    }
+
+    /* --------------------------------------------------- Colonne de droite */
+
+    public static function sc_sidebar() {
+        $s = OA_Settings::all();
+        if (!$s['sidebar'] && !$s['lead_form']) {
+            return '';
+        }
+        $out = '';
+        if ($s['sidebar']) {
+            $out .= '<div class="oa-side__card oa-side__cta"><p class="oa-side__title">' . esc_html('Devis gratuit en 48 h') . '</p><p>' . esc_html('Diagnostic sur place et devis détaillé, sans engagement.') . '</p>' . self::sc_cta() . self::sc_trust() . '</div>';
+            $side = self::pick_reviews(2, self::$shown_reviews);
+            if ($side) {
+                $out .= '<div class="oa-side__card oa-side__avis">' . self::rating_badge();
+                foreach ($side as $r) {
+                    $out .= self::review_html($r, 190);
+                }
+                $out .= '</div>';
+            }
+        }
+        if ($s['lead_form']) {
+            $out .= self::lead_form();
+        }
+        return '<aside class="oa-side' . ($s['sidebar'] ? '' : ' oa-side--form-only') . '" aria-label="' . esc_attr('Contact et devis') . '">' . $out . '</aside>';
+    }
+
+    private static function lead_form() {
+        $post_id = get_the_ID();
+        $topic   = get_post_meta($post_id, '_oa_keyword_label', true);
+        $state   = isset($_GET['oa_lead']) ? sanitize_key(wp_unslash($_GET['oa_lead'])) : '';
+        $head    = '<p class="oa-side__title">' . esc_html('Demandez votre devis') . '</p>';
+        if ('ok' === $state) {
+            return '<div class="oa-side__card oa-side__form" id="oa-devis">' . $head . '<p class="oa-form__ok" role="status">' . esc_html('Merci ! Votre demande est bien envoyée. Nous vous rappelons très vite.') . '</p></div>';
+        }
+        $opts = array();
+        if ($topic) {
+            $opts[] = $topic;
+        }
+        foreach (OA_Settings::cards('services_list') as $c) {
+            $opts[] = $c['title'];
+        }
+        $opts[] = 'Autre';
+        $select = '';
+        foreach (array_unique($opts) as $o) {
+            $select .= '<option>' . esc_html($o) . '</option>';
+        }
+        $f = function ($name, $label, $type, $extra = '') {
+            return '<label class="oa-form__f"><span>' . esc_html($label) . '</span><input type="' . $type . '" name="' . $name . '"' . $extra . '></label>';
+        };
+        return '<div class="oa-side__card oa-side__form" id="oa-devis">' . $head . '<p>' . esc_html('Réponse sous 48 h, sans engagement.') . '</p>'
+            . ('err' === $state ? '<p class="oa-form__err" role="alert">' . esc_html('Merci d\'indiquer votre nom et un téléphone ou un e-mail valide.') . '</p>' : '')
+            . '<form class="oa-form" method="post" action="' . esc_url(admin_url('admin-post.php')) . '">'
+            . '<input type="hidden" name="action" value="oa_lead"><input type="hidden" name="oa_page" value="' . (int) $post_id . '"><input type="hidden" name="oa_js" value="">'
+            . '<label class="oa-form__hp" aria-hidden="true">Site web <input type="text" name="oa_site" tabindex="-1" autocomplete="off"></label>'
+            . $f('oa_nom', 'Nom et prénom *', 'text', ' required autocomplete="name"')
+            . $f('oa_tel', 'Téléphone *', 'tel', ' required autocomplete="tel" inputmode="tel"')
+            . $f('oa_email', 'E-mail', 'email', ' autocomplete="email"')
+            . $f('oa_cp', 'Code postal', 'text', ' inputmode="numeric" maxlength="5" autocomplete="postal-code"')
+            . '<label class="oa-form__f"><span>' . esc_html('Type de travaux') . '</span><select name="oa_service">' . $select . '</select></label>'
+            . '<label class="oa-form__f"><span>' . esc_html('Votre projet') . '</span><textarea name="oa_msg" rows="3" placeholder="' . esc_attr('Surface, urgence, questions…') . '"></textarea></label>'
+            . '<button type="submit" class="oa-btn oa-btn--quote">' . esc_html('Recevoir mon devis gratuit') . '</button>'
+            . '<p class="oa-form__legal">' . esc_html('Vos coordonnées servent uniquement à vous recontacter pour ce projet.') . '</p></form></div>';
+    }
+
+    /** Demandes de devis : type de contenu privé, visible dans l'admin (Osmose Ads → Demandes). */
+    public static function register_leads() {
+        register_post_type('oa_lead', array(
+            'labels'          => array('name' => 'Demandes de devis', 'singular_name' => 'Demande de devis', 'menu_name' => 'Demandes de devis'),
+            'public'          => false,
+            'show_ui'         => true,
+            'show_in_menu'    => 'oa-dashboard',
+            'supports'        => array('title', 'editor'),
+            'capability_type' => 'post',
+            'capabilities'    => array('create_posts' => 'do_not_allow'),
+            'map_meta_cap'    => true,
+        ));
+    }
+
+    public static function lead() {
+        $post_id = isset($_POST['oa_page']) ? absint($_POST['oa_page']) : 0;
+        $back    = $post_id ? get_permalink($post_id) : home_url('/');
+        $back    = $back ?: home_url('/');
+        $get     = function ($k) {
+            return isset($_POST[$k]) ? trim(sanitize_text_field(wp_unslash($_POST[$k]))) : '';
+        };
+        // Robots : champ piège rempli ou JavaScript absent → on fait semblant d'accepter.
+        if ('' !== $get('oa_site') || '1' !== $get('oa_js')) {
+            wp_safe_redirect(add_query_arg('oa_lead', 'ok', $back) . '#oa-devis');
+            exit;
+        }
+        $name  = $get('oa_nom');
+        $tel   = $get('oa_tel');
+        $email = sanitize_email($get('oa_email'));
+        if ('' === $name || (strlen(preg_replace('/\D/', '', $tel)) < 9 && !is_email($email))) {
+            wp_safe_redirect(add_query_arg('oa_lead', 'err', $back) . '#oa-devis');
+            exit;
+        }
+        $ip  = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+        $key = 'oa_lead_' . md5($ip . wp_salt());
+        $hit = (int) get_transient($key);
+        if ($hit >= 5) {
+            wp_safe_redirect(add_query_arg('oa_lead', 'ok', $back) . '#oa-devis');
+            exit;
+        }
+        set_transient($key, $hit + 1, HOUR_IN_SECONDS);
+
+        $msg   = isset($_POST['oa_msg']) ? sanitize_textarea_field(wp_unslash($_POST['oa_msg'])) : '';
+        $lines = array(
+            'Nom : ' . $name,
+            'Téléphone : ' . $tel,
+            'E-mail : ' . ($email ?: '—'),
+            'Code postal : ' . ($get('oa_cp') ?: '—'),
+            'Travaux : ' . ($get('oa_service') ?: '—'),
+            'Page : ' . ($post_id ? get_the_title($post_id) . ' — ' . get_permalink($post_id) : '—'),
+            '',
+            'Projet :',
+            $msg ?: '—',
+        );
+        $body = implode("\n", $lines);
+        wp_insert_post(array(
+            'post_type'    => 'oa_lead',
+            'post_status'  => 'private',
+            'post_title'   => $name . ' — ' . ($get('oa_service') ?: 'Demande de devis'),
+            'post_content' => $body,
+        ));
+        $to      = OA_Settings::get('lead_email') ?: OA_Settings::get('email') ?: get_option('admin_email');
+        $headers = $email ? array('Reply-To: ' . $name . ' <' . $email . '>') : array();
+        wp_mail($to, 'Nouvelle demande de devis : ' . $name . ($get('oa_cp') ? ' (' . $get('oa_cp') . ')' : ''), $body, $headers);
+        wp_safe_redirect(add_query_arg('oa_lead', 'ok', $back) . '#oa-devis');
+        exit;
     }
 
     /** Clic sur « Appeler » / « Devis » (limité à 1 par minute par visiteur et par page). */

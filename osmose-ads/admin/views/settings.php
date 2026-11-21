@@ -242,6 +242,17 @@ $pages_dd = wp_dropdown_pages(array(
         <label class="oa-check"><input type="checkbox" name="<?php echo $name('text_photos'); ?>" value="1" <?php checked($s['text_photos']); ?>> Photos dans le texte des pages locales (sinon : photo du hero + réalisations uniquement)</label>
         <label class="oa-check"><input type="checkbox" name="<?php echo $name('style_posts'); ?>" value="1" <?php checked($s['style_posts']); ?>> Appliquer le design des pages locales aux articles du blog (hero, boutons, badges, bloc devis)</label>
         <label class="oa-field">Accroche du hero des articles <input type="text" name="<?php echo $name('post_tagline'); ?>" value="<?php echo esc_attr($s['post_tagline']); ?>"></label>
+        <h3>Avis clients et colonne de contact</h3>
+        <p class="description">Avis : une ligne par avis, <code>Nom | Texte de l'avis | mots-clés</code>. Chaque page affiche les 3 avis les plus proches de son sujet (toiture, isolation, façade…), et 2 autres dans la colonne de droite.</p>
+        <label class="oa-field">Titre du bloc avis <input type="text" name="<?php echo $name('reviews_title'); ?>" value="<?php echo esc_attr($s['reviews_title']); ?>"></label>
+        <label class="oa-field">Avis <textarea name="<?php echo $name('reviews_list'); ?>" rows="8"><?php echo esc_textarea($s['reviews_list']); ?></textarea></label>
+        <div class="oa-grid-2">
+            <label class="oa-field">Lien de la fiche Google (voir / écrire un avis) <input type="url" name="<?php echo $name('reviews_url'); ?>" value="<?php echo esc_attr($s['reviews_url']); ?>"></label>
+            <label class="oa-field">Nombre d'avis affiché <input type="text" name="<?php echo $name('reviews_count'); ?>" value="<?php echo esc_attr($s['reviews_count']); ?>" placeholder="ex. +100"></label>
+        </div>
+        <label class="oa-check"><input type="checkbox" name="<?php echo $name('sidebar'); ?>" value="1" <?php checked($s['sidebar']); ?>> Colonne de droite sur ordinateur (appel, devis, avis, formulaire) — masquée sur mobile</label>
+        <label class="oa-check"><input type="checkbox" name="<?php echo $name('lead_form'); ?>" value="1" <?php checked($s['lead_form']); ?>> Formulaire de demande de devis (colonne de droite ; en bas de page sur mobile)</label>
+        <label class="oa-field">E-mail qui reçoit les demandes <input type="email" name="<?php echo $name('lead_email'); ?>" value="<?php echo esc_attr($s['lead_email']); ?>" placeholder="vide = e-mail de l'entreprise"></label>
     </section>
 
     <div class="oa-savebar"><button class="button button-primary button-hero">Enregistrer les réglages</button></div>
