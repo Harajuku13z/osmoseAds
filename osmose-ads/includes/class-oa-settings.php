@@ -77,6 +77,7 @@ class OA_Settings {
             'quote_label'      => 'Devis gratuit',
             'sticky_cta'       => 1,
             'style_posts'      => 0,
+            'text_photos'      => 0,
             'services_list'    => '',
             'services_title'   => 'Nos services',
             'realisations_list'=> '',
@@ -158,7 +159,7 @@ class OA_Settings {
     }
 
     public static function checkboxes() {
-        return array('auto_retry', 'background', 'schema', 'external_links', 'nearby_links', 'sticky_cta', 'heading_upper', 'style_posts');
+        return array('auto_retry', 'background', 'schema', 'external_links', 'nearby_links', 'sticky_cta', 'heading_upper', 'style_posts', 'text_photos');
     }
 
     /** Clé API masquée pour l'affichage. */
@@ -174,6 +175,19 @@ class OA_Settings {
      * Liste « Titre | URL | Image | Texte » (une entrée par ligne) → tableau.
      * Sert aux blocs Services et Réalisations des pages.
      */
+    /** Mots « utiles » d'un texte (minuscules, sans accents, sans mots vides). */
+    public static function words($text) {
+        $text = strtolower(remove_accents((string) $text));
+        $stop = array('de', 'du', 'des', 'la', 'le', 'les', 'et', 'a', 'au', 'aux', 'en', 'sur', 'pour', 'par', 'un', 'une', 'pres', 'chalon', 'saone', 'avant', 'apres', 'votre', 'vos', 'nos', 'd', 'l');
+        $out  = array();
+        foreach (preg_split('/[^a-z0-9]+/', $text) as $w) {
+            if (strlen($w) > 2 && !in_array($w, $stop, true)) {
+                $out[] = substr($w, 0, 6); // racine grossière : démoussage / démousser, toiture / toitures…
+            }
+        }
+        return array_values(array_unique($out));
+    }
+
     public static function cards($key) {
         $out = array();
         foreach (preg_split('/\r\n|\r|\n/', (string) self::get($key)) as $line) {
@@ -181,11 +195,15 @@ class OA_Settings {
             if ('' === $p[0]) {
                 continue;
             }
+            $imgs  = isset($p[2]) ? array_values(array_filter(array_map('trim', explode(',', $p[2])))) : array();
             $out[] = array(
                 'title' => $p[0],
                 'url'   => isset($p[1]) ? $p[1] : '',
-                'img'   => isset($p[2]) ? $p[2] : '',
+                'img'   => $imgs ? $imgs[0] : '',
+                'imgs'  => $imgs,
                 'text'  => isset($p[3]) ? $p[3] : '',
+                'video' => isset($p[4]) ? $p[4] : '',
+                'tags'  => isset($p[5]) ? $p[5] : '',
             );
         }
         return $out;

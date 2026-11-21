@@ -233,12 +233,13 @@ $pages_dd = wp_dropdown_pages(array(
         <label class="oa-check"><input type="checkbox" name="<?php echo $name('heading_upper'); ?>" value="1" <?php checked($s['heading_upper']); ?>> Titres en majuscules (style affiche)</label>
         <label class="oa-check"><input type="checkbox" name="<?php echo $name('sticky_cta'); ?>" value="1" <?php checked($s['sticky_cta']); ?>> Barre « Appeler / Devis » fixe sur mobile</label>
         <h3>Blocs « landing page »</h3>
-        <p class="description">Une entrée par ligne : <code>Titre | Lien | URL de l'image | Texte court</code>. Ces blocs s'affichent sur toutes les pages locales et les articles, et se mettent à jour partout dès que vous modifiez la liste.</p>
+        <p class="description">Une entrée par ligne. Services : <code>Titre | Lien | Image | Texte court</code>. Réalisations : <code>Titre | Lien | image1, image2, image3 | Texte | Vidéo (.mp4) | mots-clés</code> — chaque page affiche les 2 ou 3 réalisations les plus proches de son mot-clé. Sur une page locale, le bloc services montre les autres prestations du même métier dans la ville. Ces blocs s'affichent sur toutes les pages locales et les articles, et se mettent à jour partout dès que vous modifiez la liste.</p>
         <label class="oa-field">Titre du bloc services <input type="text" name="<?php echo $name('services_title'); ?>" value="<?php echo esc_attr($s['services_title']); ?>"></label>
         <label class="oa-field">Services <textarea name="<?php echo $name('services_list'); ?>" rows="6"><?php echo esc_textarea($s['services_list']); ?></textarea></label>
         <label class="oa-field">Titre du bloc réalisations <input type="text" name="<?php echo $name('realisations_title'); ?>" value="<?php echo esc_attr($s['realisations_title']); ?>"></label>
         <label class="oa-field">Réalisations <textarea name="<?php echo $name('realisations_list'); ?>" rows="8"><?php echo esc_textarea($s['realisations_list']); ?></textarea></label>
         <label class="oa-field">Lien « Voir toutes nos réalisations » <input type="url" name="<?php echo $name('realisations_url'); ?>" value="<?php echo esc_attr($s['realisations_url']); ?>"></label>
+        <label class="oa-check"><input type="checkbox" name="<?php echo $name('text_photos'); ?>" value="1" <?php checked($s['text_photos']); ?>> Photos dans le texte des pages locales (sinon : photo du hero + réalisations uniquement)</label>
         <label class="oa-check"><input type="checkbox" name="<?php echo $name('style_posts'); ?>" value="1" <?php checked($s['style_posts']); ?>> Appliquer le design des pages locales aux articles du blog (hero, boutons, badges, bloc devis)</label>
         <label class="oa-field">Accroche du hero des articles <input type="text" name="<?php echo $name('post_tagline'); ?>" value="<?php echo esc_attr($s['post_tagline']); ?>"></label>
     </section>

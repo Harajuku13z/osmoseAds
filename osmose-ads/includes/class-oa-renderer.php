@@ -147,7 +147,9 @@ class OA_Renderer {
         $sections = (array) $d['sections'];
         $ext_done = false;
         foreach ($sections as $i => $sec) {
-            if ($this->chrono) {
+            if (!OA_Settings::get('text_photos')) {
+                $img = '';
+            } elseif ($this->chrono) {
                 $img = $this->next_image('large', 'oa-figure oa-figure--wide', array('loading' => 'lazy', 'decoding' => 'async'));
             } else {
                 $img = (0 === $i % 2) ? $this->next_image('large', 'oa-figure oa-figure--' . ((0 === $i % 4) ? 'right' : 'left'), array('loading' => 'lazy', 'decoding' => 'async')) : '';
@@ -199,7 +201,7 @@ class OA_Renderer {
 
         // GALERIE (images restantes)
         $rest = array();
-        while (isset($this->order[$this->img_i]) && count($rest) < 6) {
+        while (OA_Settings::get('text_photos') && isset($this->order[$this->img_i]) && count($rest) < 6) {
             $rest[] = $this->next_image('medium_large', 'oa-gallery__item', array('loading' => 'lazy', 'decoding' => 'async'));
         }
         $rest = array_filter($rest);

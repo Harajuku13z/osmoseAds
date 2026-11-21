@@ -83,3 +83,15 @@
     });
   });
 })();
+
+/* Vidéos de réalisations : chargées et lues seulement quand elles sont visibles. */
+(function () {
+  var vids = document.querySelectorAll('.oa-rcard__video video[data-src]');
+  if (!vids.length) return;
+  function load(v) { if (!v.src) { v.src = v.getAttribute('data-src'); } var p = v.play(); if (p && p.catch) p.catch(function () { v.controls = true; }); }
+  if (!('IntersectionObserver' in window)) { vids.forEach(load); return; }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { if (e.isIntersecting) { load(e.target); } else if (e.target.src) { e.target.pause(); } });
+  }, { rootMargin: '200px' });
+  vids.forEach(function (v) { io.observe(v); });
+})();

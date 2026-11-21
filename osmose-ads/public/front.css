@@ -218,3 +218,25 @@ html.oa-lb-lock{overflow:hidden}
   .oa-card__more{font-size:.8rem}
   .oa-block{padding:1.25rem .9rem;margin:2.5rem 0}
 }
+
+/* Réalisations : cartes façon page « Réalisations » du site */
+.oa-rcards{display:grid;gap:1.25rem}
+.oa-rcard{background:#fff;border:1px solid var(--oa-line);border-radius:calc(var(--oa-radius) + 6px);padding:clamp(1.1rem,3vw,2rem);box-shadow:0 2px 12px color-mix(in srgb,var(--oa-ink) 6%,transparent)}
+.oa-page .oa-rcard__title{margin:0 0 .6rem;font-family:var(--oa-body-font);font-weight:800;font-size:clamp(1.15rem,1rem + .6vw,1.5rem);line-height:1.25;color:var(--oa-ink);text-transform:none}
+.oa-page .oa-rcard__title a{color:inherit;text-decoration:none}
+.oa-page .oa-rcard__text{margin:0 0 1.1rem;font-size:.98rem}
+.oa-rcard__thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem}
+.oa-rcard__thumb{border-radius:var(--oa-radius);overflow:hidden;aspect-ratio:4/3;border:1px solid var(--oa-line)}
+.oa-rcard__thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.oa-rcard__thumb:hover img{transform:scale(1.05)}
+.oa-rcard__thumb.oa-zoom::after{width:1.8rem;height:1.8rem;font-size:.85rem;top:.45rem;right:.45rem}
+.oa-page .oa-rcard__more{display:grid;place-items:center;border-radius:var(--oa-radius);background:var(--oa-brand);color:var(--oa-btn-ink);font-weight:800;font-size:1.15rem;text-decoration:none;box-shadow:0 10px 24px color-mix(in srgb,var(--oa-brand) 30%,transparent);aspect-ratio:4/3}
+.oa-page .oa-rcard__more:hover{filter:brightness(1.05)}
+.oa-rcard__video{position:relative;border-radius:var(--oa-radius);overflow:hidden;background:#0b1220;border:1px solid var(--oa-line)}
+.oa-rcard__video video{display:block;width:100%;height:auto;max-height:560px;object-fit:contain}
+.oa-rcard__badge{position:absolute;top:.8rem;left:.8rem;z-index:1;background:#dc2626;color:#fff;font-weight:800;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;padding:.35rem .8rem;border-radius:999px}
+.oa-page .oa-rcard__cta{margin:1rem 0 0}
+@media (max-width:640px){
+  .oa-rcard__thumbs{grid-template-columns:1fr 1fr;gap:.5rem}
+  .oa-page .oa-rcard__more{font-size:1rem}
+}

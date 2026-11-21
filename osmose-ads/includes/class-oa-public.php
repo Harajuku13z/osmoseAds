@@ -191,7 +191,52 @@ class OA_Public {
         return $out . '</div>';
     }
 
+    /** Pages sœurs (même métier, même ville) d'une page locale. */
+    private static function siblings($post_id) {
+        $city  = get_post_meta($post_id, '_oa_city_code', true);
+        $trade = get_post_meta($post_id, '_oa_trade', true);
+        if (!$city || !$trade) {
+            return array();
+        }
+        return get_posts(array(
+            'post_type'      => 'page',
+            'post_status'    => 'publish',
+            'posts_per_page' => 12,
+            'post__not_in'   => array($post_id),
+            'orderby'        => 'menu_order title',
+            'order'          => 'ASC',
+            'meta_query'     => array(
+                array('key' => '_oa_city_code', 'value' => $city),
+                array('key' => '_oa_trade', 'value' => $trade),
+            ),
+        ));
+    }
+
+    /**
+     * Bloc services. Sur une page locale : les sous-services du métier dans la ville
+     * (autres pages générées). Ailleurs : la liste des services des réglages.
+     */
     public static function sc_services() {
+        $post_id  = get_the_ID();
+        $siblings = ($post_id && get_post_meta($post_id, '_oa_generated', true)) ? self::siblings($post_id) : array();
+        if ($siblings) {
+            $city  = get_post_meta($post_id, '_oa_city', true);
+            $items = array();
+            foreach ($siblings as $p) {
+                $thumb   = get_the_post_thumbnail_url($p, 'medium_large');
+                $text    = wp_strip_all_tags(get_the_excerpt($p));
+                $text    = mb_strlen($text) > 105 ? rtrim(mb_substr($text, 0, mb_strrpos(mb_substr($text, 0, 105), ' ')), ' ,;:') . '…' : $text;
+                $items[] = array(
+                    'title' => OA_Prompts::ucfirst(get_post_meta($p->ID, '_oa_keyword_label', true) ?: $p->post_title),
+                    'url'   => get_permalink($p),
+                    'img'   => $thumb ?: '',
+                    'text'  => $text,
+                );
+            }
+            $where = is_array($city) && !empty($city['name']) ? ' ' . OA_Trades::preposition_city($city['name']) : '';
+            return '<section class="oa-block oa-services alignwide"><p class="oa-eyebrow">' . esc_html('Nos prestations') . '</p><h2>' . esc_html('Nos autres services' . $where) . '</h2>'
+                . self::cards_html($items, 'oa-cards--services', 'Découvrir') . '</section>';
+        }
         $items = OA_Settings::cards('services_list');
         if (!$items) {
             return '';
@@ -200,15 +245,67 @@ class OA_Public {
             . self::cards_html($items, 'oa-cards--services', 'Découvrir') . '</section>';
     }
 
+    /** Les 2 ou 3 réalisations les plus proches du sujet de la page. */
+    private static function pick_realisations($items, $max = 3) {
+        $post_id = get_the_ID();
+        $topic   = get_post_meta($post_id, '_oa_keyword_label', true) ?: get_the_title($post_id);
+        $main    = OA_Settings::words($topic);
+        $scored  = array();
+        foreach ($items as $k => $it) {
+            $hay   = OA_Settings::words($it['title'] . ' ' . $it['tags']);
+            $score = 3 * count(array_intersect($main, $hay));
+            if ($score > 0) {
+                $score += $it['video'] ? 1 : 0; // une vidéo avant/après convertit mieux
+                $scored[] = array($score, -$k, $it);
+            }
+        }
+        rsort($scored);
+        $picked = array_slice(wp_list_pluck($scored, 2), 0, $max);
+        if (count($picked) < 2) {
+            // Pas assez de chantiers proches : on complète avec les plus récents.
+            foreach ($items as $it) {
+                if (count($picked) >= 2) {
+                    break;
+                }
+                if (!in_array($it, $picked, true)) {
+                    $picked[] = $it;
+                }
+            }
+        }
+        return $picked;
+    }
+
     public static function sc_realisations() {
         $items = OA_Settings::cards('realisations_list');
         if (!$items) {
             return '';
         }
-        $url = OA_Settings::get('realisations_url');
+        $out = '';
+        foreach (self::pick_realisations($items) as $it) {
+            $url  = $it['url'] ? esc_url($it['url']) : '';
+            $out .= '<article class="oa-rcard"><h3 class="oa-rcard__title">' . ($url ? '<a href="' . $url . '">' . esc_html($it['title']) . '</a>' : esc_html($it['title'])) . '</h3>';
+            if ($it['text']) {
+                $out .= '<p class="oa-rcard__text">' . esc_html($it['text']) . '</p>';
+            }
+            if ($it['video']) {
+                $out .= '<div class="oa-rcard__video"><span class="oa-rcard__badge">Vidéo</span><video muted loop playsinline preload="none" data-src="' . esc_url($it['video']) . '"' . ($it['img'] ? ' poster="' . esc_url($it['img']) . '"' : '') . ' aria-label="' . esc_attr($it['title']) . '"></video></div>'
+                    . ($url ? '<p class="oa-rcard__cta"><a class="oa-btn oa-btn--quote" href="' . $url . '">Voir le projet →</a></p>' : '');
+            } elseif ($it['imgs']) {
+                $out .= '<div class="oa-rcard__thumbs">';
+                foreach (array_slice($it['imgs'], 0, 3) as $i => $src) {
+                    $out .= '<a class="oa-zoom oa-rcard__thumb" href="' . esc_url($src) . '"><img src="' . esc_url($src) . '" alt="' . esc_attr($it['title'] . ' – photo ' . ($i + 1)) . '" loading="lazy" decoding="async"></a>';
+                }
+                if ($url) {
+                    $out .= '<a class="oa-rcard__more" href="' . $url . '">Voir plus</a>';
+                }
+                $out .= '</div>';
+            }
+            $out .= '</article>';
+        }
+        $all = OA_Settings::get('realisations_url');
         return '<section class="oa-block oa-realisations alignwide"><p class="oa-eyebrow">' . esc_html('Nos chantiers') . '</p><h2>' . esc_html(OA_Settings::get('realisations_title') ?: 'Nos réalisations') . '</h2>'
-            . self::cards_html($items, 'oa-cards--real', 'Voir le projet')
-            . ($url ? '<p class="oa-block__more"><a class="oa-btn oa-btn--ghost" href="' . esc_url($url) . '">' . esc_html('Voir toutes nos réalisations') . '</a></p>' : '') . '</section>';
+            . '<div class="oa-rcards">' . $out . '</div>'
+            . ($all ? '<p class="oa-block__more"><a class="oa-btn oa-btn--ghost" href="' . esc_url($all) . '">' . esc_html('Voir toutes nos réalisations') . '</a></p>' : '') . '</section>';
     }
 
     /** Bandeau d'appel à l'action en milieu de page. */
@@ -257,7 +354,7 @@ class OA_Public {
         ));
 
         $html = '';
-        if ($siblings) {
+        if ($siblings && false === strpos((string) get_post_field('post_content', $post_id), '[oa_services]')) {
             $html .= '<nav class="oa-mesh__block" aria-label="Autres prestations"><h2 class="oa-mesh__title">Nos autres prestations ' . esc_html(OA_Trades::preposition_city($city['name'])) . '</h2><ul class="oa-mesh__list">';
             foreach ($siblings as $p) {
                 $html .= '<li><a href="' . esc_url(get_permalink($p)) . '">' . esc_html(get_post_meta($p->ID, '_oa_keyword_label', true) ?: $p->post_title) . '</a></li>';
