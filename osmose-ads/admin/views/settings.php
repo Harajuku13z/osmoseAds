@@ -232,6 +232,8 @@ $pages_dd = wp_dropdown_pages(array(
         </div>
         <label class="oa-check"><input type="checkbox" name="<?php echo $name('heading_upper'); ?>" value="1" <?php checked($s['heading_upper']); ?>> Titres en majuscules (style affiche)</label>
         <label class="oa-check"><input type="checkbox" name="<?php echo $name('sticky_cta'); ?>" value="1" <?php checked($s['sticky_cta']); ?>> Barre « Appeler / Devis » fixe sur mobile</label>
+        <label class="oa-check"><input type="checkbox" name="<?php echo $name('style_posts'); ?>" value="1" <?php checked($s['style_posts']); ?>> Appliquer le design des pages locales aux articles du blog (hero, boutons, badges, bloc devis)</label>
+        <label class="oa-field">Accroche du hero des articles <input type="text" name="<?php echo $name('post_tagline'); ?>" value="<?php echo esc_attr($s['post_tagline']); ?>"></label>
     </section>
 
     <div class="oa-savebar"><button class="button button-primary button-hero">Enregistrer les réglages</button></div>

@@ -76,6 +76,8 @@ class OA_Settings {
             'radius'           => 14,
             'quote_label'      => 'Devis gratuit',
             'sticky_cta'       => 1,
+            'style_posts'      => 0,
+            'post_tagline'     => 'Des conseils d\'artisans et un devis gratuit, sur place.',
         );
     }
 
@@ -151,7 +153,7 @@ class OA_Settings {
     }
 
     public static function checkboxes() {
-        return array('auto_retry', 'background', 'schema', 'external_links', 'nearby_links', 'sticky_cta', 'heading_upper');
+        return array('auto_retry', 'background', 'schema', 'external_links', 'nearby_links', 'sticky_cta', 'heading_upper', 'style_posts');
     }
 
     /** Clé API masquée pour l'affichage. */

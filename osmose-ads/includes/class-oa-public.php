@@ -8,6 +8,9 @@ if (!defined('ABSPATH')) {
  */
 class OA_Public {
 
+    /** Vrai pendant que le plugin construit le hero d'un article (l'image à la une y est autorisée). */
+    private static $building = false;
+
     public static function hooks() {
         add_shortcode('oa_cta', array(__CLASS__, 'sc_cta'));
         add_shortcode('oa_trust', array(__CLASS__, 'sc_trust'));
@@ -16,6 +19,7 @@ class OA_Public {
         add_action('wp_footer', array(__CLASS__, 'sticky_bar'));
         add_filter('body_class', array(__CLASS__, 'body_class'));
         add_filter('post_thumbnail_html', array(__CLASS__, 'hide_duplicate_thumbnail'), 10, 2);
+        add_filter('the_content', array(__CLASS__, 'wrap_post'), 20);
         add_action('wp_ajax_oa_track', array(__CLASS__, 'track'));
         add_action('wp_ajax_nopriv_oa_track', array(__CLASS__, 'track'));
         add_action('save_post_page', array(__CLASS__, 'bump_mesh'));
@@ -23,14 +27,44 @@ class OA_Public {
     }
 
     private static function is_oa() {
-        return is_singular('page') && OA_Seo::is_oa_page();
+        return (is_singular('page') && OA_Seo::is_oa_page()) || self::is_styled_post();
+    }
+
+    /** Article de blog habillé avec le design des pages locales (option « style_posts »). */
+    private static function is_styled_post() {
+        return is_singular('post') && OA_Settings::get('style_posts');
     }
 
     public static function body_class($classes) {
         if (self::is_oa()) {
             $classes[] = 'oa-local-page';
         }
+        if (self::is_styled_post()) {
+            $classes[] = 'oa-blog-post';
+        }
         return $classes;
+    }
+
+    /** Habille le contenu d'un article : hero (image à la une), contenu stylé, bloc devis final. */
+    public static function wrap_post($content) {
+        if (is_admin() || !self::is_styled_post() || !in_the_loop() || !is_main_query() || get_the_ID() !== get_queried_object_id()) {
+            return $content;
+        }
+        $s     = OA_Settings::all();
+        self::$building = true;
+        $img   = get_the_post_thumbnail(get_the_ID(), 'full', array('loading' => 'eager', 'fetchpriority' => 'high', 'decoding' => 'async'));
+        self::$building = false;
+        $cats  = get_the_category();
+        $cats  = array_values(array_filter($cats, function ($c) {
+            return (int) $c->term_id !== (int) get_option('default_category');
+        }));
+        $kick  = $cats ? '<p class="oa-hero__kicker">' . esc_html($cats[0]->name) . '</p>' : '';
+        $hero  = '<div class="oa-hero alignwide' . ($img ? ' has-media' : '') . '">' . ($img ? '<figure class="oa-hero__media">' . $img . '</figure>' : '')
+            . '<div class="oa-hero__inner">' . $kick . '<p class="oa-hero__tagline">' . esc_html($s['post_tagline']) . '</p>' . self::sc_cta() . self::sc_trust() . '</div></div>';
+        $home  = $s['quote_url'] && 0 === strpos($s['quote_url'], home_url()) ? $s['quote_url'] : home_url('/');
+        $cta   = '<section class="oa-cta alignwide"><h2>' . esc_html('Un projet ? Parlons-en') . '</h2><p>' . esc_html('Décrivez-nous vos travaux : nous venons faire le diagnostic chez vous et vous remettons un devis gratuit et détaillé.') . '</p>'
+            . ($s['company_name'] ? '<p class="oa-cta__company">' . esc_html($s['company_name']) . esc_html(', votre artisan de confiance.') . '</p>' : '') . self::sc_cta() . '</section>';
+        return '<div class="oa-page oa-post">' . $hero . '<div class="oa-article">' . $content . '</div>' . $cta . '</div>';
     }
 
     /**
@@ -38,6 +72,9 @@ class OA_Public {
      * la répète au-dessus du titre (l'image reste l'image à la une pour l'OG / Google).
      */
     public static function hide_duplicate_thumbnail($html, $post_id) {
+        if (!is_admin() && self::is_styled_post() && (int) $post_id === get_queried_object_id() && !self::$building) {
+            return '';
+        }
         if (is_admin() || !is_singular('page') || (int) $post_id !== get_queried_object_id() || !OA_Seo::is_oa_page($post_id)) {
             return $html;
         }
