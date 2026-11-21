@@ -15,6 +15,9 @@ class OA_Public {
         add_shortcode('oa_cta', array(__CLASS__, 'sc_cta'));
         add_shortcode('oa_trust', array(__CLASS__, 'sc_trust'));
         add_shortcode('oa_maillage', array(__CLASS__, 'sc_maillage'));
+        add_shortcode('oa_services', array(__CLASS__, 'sc_services'));
+        add_shortcode('oa_realisations', array(__CLASS__, 'sc_realisations'));
+        add_shortcode('oa_cta_band', array(__CLASS__, 'sc_cta_band'));
         add_action('wp_enqueue_scripts', array(__CLASS__, 'assets'));
         add_action('wp_footer', array(__CLASS__, 'sticky_bar'));
         add_filter('body_class', array(__CLASS__, 'body_class'));
@@ -64,7 +67,7 @@ class OA_Public {
         $home  = $s['quote_url'] && 0 === strpos($s['quote_url'], home_url()) ? $s['quote_url'] : home_url('/');
         $cta   = '<section class="oa-cta alignwide"><h2>' . esc_html('Un projet ? Parlons-en') . '</h2><p>' . esc_html('Décrivez-nous vos travaux : nous venons faire le diagnostic chez vous et vous remettons un devis gratuit et détaillé.') . '</p>'
             . ($s['company_name'] ? '<p class="oa-cta__company">' . esc_html($s['company_name']) . esc_html(', votre artisan de confiance.') . '</p>' : '') . self::sc_cta() . '</section>';
-        return '<div class="oa-page oa-post">' . $hero . '<div class="oa-article">' . $content . '</div>' . $cta . '</div>';
+        return '<div class="oa-page oa-post">' . $hero . '<div class="oa-article">' . $content . '</div>' . self::sc_cta_band() . self::sc_services() . self::sc_realisations() . $cta . '</div>';
     }
 
     /**
@@ -164,6 +167,58 @@ class OA_Public {
             $out .= '<li><span aria-hidden="true">✓</span> ' . esc_html($it) . '</li>';
         }
         return $out . '</ul>';
+    }
+
+    /** Grille de cartes (services / réalisations). */
+    private static function cards_html($items, $class, $more = '') {
+        $out = '<div class="oa-cards ' . esc_attr($class) . '">';
+        foreach ($items as $it) {
+            $tag  = $it['url'] ? 'a' : 'div';
+            $href = $it['url'] ? ' href="' . esc_url($it['url']) . '"' : '';
+            $out .= '<' . $tag . ' class="oa-card"' . $href . '>';
+            if ($it['img']) {
+                $out .= '<span class="oa-card__img"><img src="' . esc_url($it['img']) . '" alt="' . esc_attr($it['title']) . '" loading="lazy" decoding="async"></span>';
+            }
+            $out .= '<span class="oa-card__body"><strong class="oa-card__title">' . esc_html($it['title']) . '</strong>';
+            if ($it['text']) {
+                $out .= '<span class="oa-card__text">' . esc_html($it['text']) . '</span>';
+            }
+            if ($it['url']) {
+                $out .= '<span class="oa-card__more">' . esc_html($more ?: 'En savoir plus') . ' →</span>';
+            }
+            $out .= '</span></' . $tag . '>';
+        }
+        return $out . '</div>';
+    }
+
+    public static function sc_services() {
+        $items = OA_Settings::cards('services_list');
+        if (!$items) {
+            return '';
+        }
+        return '<section class="oa-block oa-services alignwide"><p class="oa-eyebrow">' . esc_html('Ce que nous faisons') . '</p><h2>' . esc_html(OA_Settings::get('services_title') ?: 'Nos services') . '</h2>'
+            . self::cards_html($items, 'oa-cards--services', 'Découvrir') . '</section>';
+    }
+
+    public static function sc_realisations() {
+        $items = OA_Settings::cards('realisations_list');
+        if (!$items) {
+            return '';
+        }
+        $url = OA_Settings::get('realisations_url');
+        return '<section class="oa-block oa-realisations alignwide"><p class="oa-eyebrow">' . esc_html('Nos chantiers') . '</p><h2>' . esc_html(OA_Settings::get('realisations_title') ?: 'Nos réalisations') . '</h2>'
+            . self::cards_html($items, 'oa-cards--real', 'Voir le projet')
+            . ($url ? '<p class="oa-block__more"><a class="oa-btn oa-btn--ghost" href="' . esc_url($url) . '">' . esc_html('Voir toutes nos réalisations') . '</a></p>' : '') . '</section>';
+    }
+
+    /** Bandeau d'appel à l'action en milieu de page. */
+    public static function sc_cta_band($atts = array()) {
+        $atts = shortcode_atts(array('title' => 'Un devis gratuit en 48 h', 'text' => 'Diagnostic sur place, devis détaillé, sans engagement.'), $atts);
+        $cta  = self::sc_cta();
+        if (!$cta) {
+            return '';
+        }
+        return '<aside class="oa-band alignwide"><div class="oa-band__txt"><strong>' . esc_html($atts['title']) . '</strong><span>' . esc_html($atts['text']) . '</span></div>' . $cta . '</aside>';
     }
 
     public static function bump_mesh() {

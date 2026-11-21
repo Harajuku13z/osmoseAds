@@ -112,7 +112,13 @@ class OA_Renderer {
         foreach ($attrs as $k => $v) {
             $extra .= ' ' . $k . '="' . esc_attr($v) . '"';
         }
-        return '<figure class="' . esc_attr($class) . '"><img class="wp-image-' . $id . '" src="' . esc_url($src[0]) . '" width="' . (int) $src[1] . '" height="' . (int) $src[2] . '" alt="' . esc_attr($alt) . '"' . $extra . ' />' . $caption . "</figure>\n";
+        $img = '<img class="wp-image-' . $id . '" src="' . esc_url($src[0]) . '" width="' . (int) $src[1] . '" height="' . (int) $src[2] . '" alt="' . esc_attr($alt) . '"' . $extra . ' />';
+        if (false === strpos($class, 'oa-hero__media')) {
+            // Clic = photo entière en grand (visionneuse).
+            $full = wp_get_attachment_image_src($id, 'full');
+            $img  = '<a class="oa-zoom" href="' . esc_url($full ? $full[0] : $src[0]) . '">' . $img . '</a>';
+        }
+        return '<figure class="' . esc_attr($class) . '">' . $img . $caption . "</figure>\n";
     }
 
     public function html() {
@@ -133,6 +139,9 @@ class OA_Renderer {
         if (!empty($ctx['hub_url']) && !empty($ctx['hub_label'])) {
             $html .= '<p class="oa-hublink">' . esc_html('Cette prestation fait partie de notre offre de ') . '<a href="' . esc_url($ctx['hub_url']) . '">' . esc_html(mb_strtolower($ctx['hub_label'])) . ' ' . esc_html(OA_Trades::preposition_city($ctx['city']['name'])) . "</a>.</p>\n";
         }
+
+        // LANDING : nos services juste après l'introduction.
+        $html .= "[oa_services]\n";
 
         // SECTIONS (une image toutes les deux sections, alternée gauche/droite)
         $sections = (array) $d['sections'];
@@ -162,6 +171,9 @@ class OA_Renderer {
                 $ext_done = true;
             }
             $html .= "</section>\n";
+            if (1 === $i) {
+                $html .= "[oa_cta_band]\n";
+            }
         }
 
         // ÉTAPES
@@ -172,6 +184,9 @@ class OA_Renderer {
             }
             $html .= "</ol>\n</section>\n";
         }
+
+        // LANDING : toutes nos réalisations + appel à l'action.
+        $html .= "[oa_realisations]\n";
 
         // LOCAL
         if (!empty($d['local']['paragraphs'])) {
@@ -189,7 +204,7 @@ class OA_Renderer {
         }
         $rest = array_filter($rest);
         if ($rest) {
-            $html .= "<section class=\"oa-gallery\">\n<h2>" . esc_html('Nos réalisations en images') . "</h2>\n<div class=\"oa-gallery__grid\">\n" . implode('', $rest) . "</div>\n</section>\n";
+            $html .= "<section class=\"oa-gallery\">\n<h2>" . esc_html($this->chrono ? 'Le chantier en images' : 'Nos réalisations en images') . "</h2>\n<div class=\"oa-gallery__grid\">\n" . implode('', $rest) . "</div>\n</section>\n";
         }
 
         // FAQ — le titre contient toujours l'expression-clé (critère « sous-titres »).

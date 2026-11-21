@@ -77,6 +77,11 @@ class OA_Settings {
             'quote_label'      => 'Devis gratuit',
             'sticky_cta'       => 1,
             'style_posts'      => 0,
+            'services_list'    => '',
+            'services_title'   => 'Nos services',
+            'realisations_list'=> '',
+            'realisations_url' => '',
+            'realisations_title' => 'Nos réalisations',
             'post_tagline'     => 'Des conseils d\'artisans et un devis gratuit, sur place.',
         );
     }
@@ -113,9 +118,9 @@ class OA_Settings {
             $value = wp_unslash($input[$key]);
             if (is_int($default)) {
                 $clean[$key] = (int) $value;
-            } elseif (in_array($key, array('usps', 'extra_rules', 'certifications', 'address'), true)) {
+            } elseif (in_array($key, array('usps', 'extra_rules', 'certifications', 'address', 'services_list', 'realisations_list'), true)) {
                 $clean[$key] = sanitize_textarea_field($value);
-            } elseif (in_array($key, array('quote_url', 'ai_base_url'), true)) {
+            } elseif (in_array($key, array('quote_url', 'ai_base_url', 'realisations_url'), true)) {
                 $clean[$key] = esc_url_raw(trim($value));
             } elseif (in_array($key, array('brand_color', 'brand_color2', 'button_ink', 'accent_color', 'accent_ink', 'ink_color'), true)) {
                 $clean[$key] = sanitize_hex_color($value) ?: $default;
@@ -163,5 +168,26 @@ class OA_Settings {
             return $key ? '••••' : '';
         }
         return substr($key, 0, 5) . str_repeat('•', 12) . substr($key, -4);
+    }
+
+    /**
+     * Liste « Titre | URL | Image | Texte » (une entrée par ligne) → tableau.
+     * Sert aux blocs Services et Réalisations des pages.
+     */
+    public static function cards($key) {
+        $out = array();
+        foreach (preg_split('/\r\n|\r|\n/', (string) self::get($key)) as $line) {
+            $p = array_map('trim', explode('|', $line));
+            if ('' === $p[0]) {
+                continue;
+            }
+            $out[] = array(
+                'title' => $p[0],
+                'url'   => isset($p[1]) ? $p[1] : '',
+                'img'   => isset($p[2]) ? $p[2] : '',
+                'text'  => isset($p[3]) ? $p[3] : '',
+            );
+        }
+        return $out;
     }
 }
